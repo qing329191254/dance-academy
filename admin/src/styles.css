@@ -56,10 +56,14 @@ body,
 
 .toolbar {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 12px;
   margin-bottom: 16px;
   align-items: center;
+}
+
+.toolbar > .el-button {
+  margin-left: auto;
 }
 
 .filters {
@@ -67,6 +71,12 @@ body,
   flex-wrap: wrap;
   gap: 12px;
   align-items: center;
+  margin-right: auto;
+}
+
+.el-table th.el-table__cell,
+.el-table td.el-table__cell {
+  text-align: left;
 }
 
 .table-actions {

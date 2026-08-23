@@ -24,7 +24,7 @@
       <el-button type="primary" @click="edit()">新增课表</el-button>
     </div>
     <el-table :data="list">
-      <el-table-column prop="type" label="类型" width="90">
+      <el-table-column prop="type" label="类型" width="90" align="left" header-align="left">
         <template #default="{ row }">{{ typeLabel[row.type] || row.type }}</template>
       </el-table-column>
       <el-table-column prop="name" label="名称" />

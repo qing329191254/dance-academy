@@ -7,18 +7,20 @@
       </div>
     </div>
     <el-table :data="list">
-      <el-table-column prop="id" label="ID" width="70" />
-      <el-table-column prop="nickname" label="昵称" width="120" />
-      <el-table-column prop="gender" label="性别" width="80" />
-      <el-table-column prop="birthday" label="生日" width="120" />
-      <el-table-column prop="workLevel" label="勤工等级" width="100" />
-      <el-table-column prop="workStage" label="勤工阶段" width="100" />
-      <el-table-column prop="danceLevel" label="舞蹈等级" width="100" />
-      <el-table-column prop="danceStage" label="舞蹈阶段" width="100" />
-      <el-table-column prop="openid" label="微信ID" />
-      <el-table-column label="操作" width="120">
+      <el-table-column prop="id" label="ID" width="70" align="left" header-align="left" />
+      <el-table-column prop="nickname" label="昵称" width="120" align="left" header-align="left" />
+      <el-table-column prop="gender" label="性别" width="80" align="left" header-align="left" />
+      <el-table-column prop="birthday" label="生日" width="120" align="left" header-align="left" />
+      <el-table-column prop="workLevel" label="勤工等级" width="100" align="left" header-align="left" />
+      <el-table-column prop="workStage" label="勤工阶段" width="100" align="left" header-align="left" />
+      <el-table-column prop="danceLevel" label="舞蹈等级" width="100" align="left" header-align="left" />
+      <el-table-column prop="danceStage" label="舞蹈阶段" width="100" align="left" header-align="left" />
+      <el-table-column prop="openid" label="微信ID" align="left" header-align="left" />
+      <el-table-column label="操作" width="120" align="left" header-align="left">
         <template #default="{ row }">
-          <el-button text type="primary" @click="edit(row)">编辑</el-button>
+          <div class="table-actions">
+            <el-button link type="primary" @click="edit(row)">编辑</el-button>
+          </div>
         </template>
       </el-table-column>
     </el-table>

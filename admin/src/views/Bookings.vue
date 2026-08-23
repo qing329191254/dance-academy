@@ -12,17 +12,19 @@
       </div>
     </div>
     <el-table :data="list">
-      <el-table-column prop="nickname" label="学员" width="120" />
-      <el-table-column prop="name" label="课程" />
-      <el-table-column prop="classDate" label="日期" width="120" />
-      <el-table-column prop="timeText" label="时间" width="140" />
-      <el-table-column prop="teacherName" label="老师" width="100" />
-      <el-table-column prop="room" label="教室" width="130" />
-      <el-table-column prop="status" label="状态" width="100" />
-      <el-table-column label="操作" width="200">
+      <el-table-column prop="nickname" label="学员" width="120" align="left" header-align="left" />
+      <el-table-column prop="name" label="课程" align="left" header-align="left" />
+      <el-table-column prop="classDate" label="日期" width="120" align="left" header-align="left" />
+      <el-table-column prop="timeText" label="时间" width="140" align="left" header-align="left" />
+      <el-table-column prop="teacherName" label="老师" width="100" align="left" header-align="left" />
+      <el-table-column prop="room" label="教室" width="130" align="left" header-align="left" />
+      <el-table-column prop="status" label="状态" width="100" align="left" header-align="left" />
+      <el-table-column label="操作" width="200" align="left" header-align="left">
         <template #default="{ row }">
-          <el-button v-if="row.status === '待上课'" text type="primary" @click="setStatus(row, '已完成')">完成</el-button>
-          <el-button v-if="row.status === '待上课'" text type="danger" @click="setStatus(row, '已取消')">取消</el-button>
+          <div class="table-actions">
+            <el-button v-if="row.status === '待上课'" link type="primary" @click="setStatus(row, '已完成')">完成</el-button>
+            <el-button v-if="row.status === '待上课'" link type="danger" @click="setStatus(row, '已取消')">取消</el-button>
+          </div>
         </template>
       </el-table-column>
     </el-table>

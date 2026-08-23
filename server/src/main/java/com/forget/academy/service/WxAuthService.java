@@ -143,5 +143,26 @@ public class WxAuthService {
         return http.send(request, HttpResponse.BodyHandlers.ofString()).body();
     }
 
+    public String postJsonFirstOk(String body, String... urls) throws Exception {
+        Exception last = null;
+        for (String url : urls) {
+            try {
+                return postJson(url, body);
+            } catch (Exception e) {
+                last = e;
+                log.warn("weixin api miss {}: {}", redact(url), e.toString());
+            }
+        }
+        throw last == null ? new IllegalStateException("weixin api unreachable") : last;
+    }
+
+    private String redact(String url) {
+        String value = url == null ? "" : url;
+        if (secret != null && !secret.isBlank()) {
+            value = value.replace(secret, "***");
+        }
+        return value.replaceAll("access_token=[^&]+", "access_token=***");
+    }
+
     public record WxSession(String openid, String unionid) {}
 }

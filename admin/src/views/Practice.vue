@@ -7,13 +7,13 @@
       </div>
     </div>
     <el-table :data="list">
-      <el-table-column prop="userId" label="学员ID" width="90" />
-      <el-table-column prop="name" label="课程" />
-      <el-table-column prop="classDate" label="日期" width="120" />
-      <el-table-column prop="timeText" label="时间" width="140" />
-      <el-table-column prop="teacherName" label="老师" width="100" />
-      <el-table-column prop="room" label="教室" width="130" />
-      <el-table-column prop="duration" label="时长" width="100" />
+      <el-table-column prop="userId" label="学员ID" width="90" align="left" header-align="left" />
+      <el-table-column prop="name" label="课程" align="left" header-align="left" />
+      <el-table-column prop="classDate" label="日期" width="120" align="left" header-align="left" />
+      <el-table-column prop="timeText" label="时间" width="140" align="left" header-align="left" />
+      <el-table-column prop="teacherName" label="老师" width="100" align="left" header-align="left" />
+      <el-table-column prop="room" label="教室" width="130" align="left" header-align="left" />
+      <el-table-column prop="duration" label="时长" width="100" align="left" header-align="left" />
     </el-table>
     <el-pagination
       style="margin-top: 16px"

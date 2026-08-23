@@ -60,11 +60,16 @@ public class WxSubscribeService {
 
     private void send(Map<String, Object> payload, boolean retryOnToken) throws Exception {
         String token = wxAuthService.getAccessToken();
-        String url = "https://api.weixin.qq.com/cgi-bin/message/subscribe/send?access_token=" + token;
+        String query = "access_token=" + token;
         String body = mapper.writeValueAsString(payload);
-        JsonNode node = mapper.readTree(wxAuthService.postJson(url, body));
+        JsonNode node = mapper.readTree(wxAuthService.postJsonFirstOk(
+                body,
+                "http://api.weixin.qq.com/cgi-bin/message/subscribe/send?" + query,
+                "https://api.weixin.qq.com/cgi-bin/message/subscribe/send?" + query
+        ));
         int errcode = node.path("errcode").asInt(0);
         if (errcode == 0) {
+            log.info("预约订阅消息发送成功");
             return;
         }
         if (retryOnToken && (errcode == 40001 || errcode == 42001)) {

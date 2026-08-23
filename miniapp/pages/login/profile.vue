@@ -2,9 +2,7 @@
   <page-meta root-background-color="#111111" background-color="#111111" page-style="background-color:#111111;" />
   <view class="page">
     <view class="section">
-      <text class="page-title">{{ pageTitle }}</text>
-
-      <button
+      <button>
         class="avatar-btn"
         open-type="chooseAvatar"
         hover-class="none"
@@ -34,13 +32,14 @@
           <input
             v-model="nickname"
             class="input"
-            type="text"
+            type="nickname"
             maxlength="20"
-            placeholder="请输入昵称"
+            placeholder="点击填写微信昵称"
             placeholder-class="placeholder"
             :adjust-position="false"
             @input="onNickname"
             @blur="onNickname"
+            @nicknamereview="onNickname"
           />
         </view>
 
@@ -201,17 +200,10 @@ async function submit() {
   background: #111111;
 }
 
-.page-title {
-  display: block;
-  font-size: 44rpx;
-  font-weight: 700;
-  margin-bottom: 48rpx;
-}
-
 .avatar-btn {
   display: flex;
   justify-content: center;
-  margin: 0 auto 48rpx;
+  margin: 24rpx auto 48rpx;
   padding: 0;
   background: transparent;
   border: none;

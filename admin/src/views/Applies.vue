@@ -13,14 +13,16 @@
       </div>
     </div>
     <el-table :data="list">
-      <el-table-column prop="nickname" label="学员" width="120" />
-      <el-table-column prop="title" label="机会" />
-      <el-table-column prop="trackKey" label="赛道" width="120" />
-      <el-table-column prop="status" label="状态" width="120" />
-      <el-table-column label="操作" width="180">
+      <el-table-column prop="nickname" label="学员" width="120" align="left" header-align="left" />
+      <el-table-column prop="title" label="机会" align="left" header-align="left" />
+      <el-table-column prop="trackKey" label="赛道" width="120" align="left" header-align="left" />
+      <el-table-column prop="status" label="状态" width="120" align="left" header-align="left" />
+      <el-table-column label="操作" width="180" align="left" header-align="left">
         <template #default="{ row }">
-          <el-button v-if="row.status === 'pending'" text type="primary" @click="setStatus(row, 'approved')">通过</el-button>
-          <el-button v-if="row.status === 'pending'" text type="danger" @click="setStatus(row, 'rejected')">拒绝</el-button>
+          <div class="table-actions">
+            <el-button v-if="row.status === 'pending'" link type="primary" @click="setStatus(row, 'approved')">通过</el-button>
+            <el-button v-if="row.status === 'pending'" link type="danger" @click="setStatus(row, 'rejected')">拒绝</el-button>
+          </div>
         </template>
       </el-table-column>
     </el-table>

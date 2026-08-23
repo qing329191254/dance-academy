@@ -5,11 +5,6 @@ const file = path.join(__dirname, '..', 'pages', 'login', 'profile.vue')
 let content = fs.readFileSync(file, 'utf8')
 
 content = content.replace(
-  '            type="nickname"\r\n',
-  '            type="text"\r\n'
-)
-
-content = content.replace(
   `          <view class="gender-group">
             <view class="gender-item" @click="gender = '男'">
               <view class="radio" :class="{ active: gender === '男' }">
