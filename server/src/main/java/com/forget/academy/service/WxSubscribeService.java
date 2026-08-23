@@ -46,11 +46,11 @@ public class WxSubscribeService {
             payload.put("miniprogram_state", mpState);
             payload.put("lang", "zh_CN");
             Map<String, Object> data = new LinkedHashMap<>();
-            data.put("thing1", field(clip(booking.getName(), 20)));
-            data.put("time2", field(formatClassTime(booking.getClassDate(), booking.getTimeText())));
-            data.put("thing3", field(clip(defaultText(booking.getTeacherName(), "授课老师"), 20)));
-            data.put("thing4", field(clip(defaultText(booking.getRoom(), "教室见课表"), 20)));
-            data.put("thing5", field("请提前10分钟到场热身"));
+            data.put("thing25", field(clip(booking.getName(), 20)));
+            data.put("time27", field(formatClassTime(booking.getClassDate(), booking.getTimeText())));
+            data.put("thing24", field(clip(defaultText(booking.getTeacherName(), "授课老师"), 20)));
+            data.put("thing28", field(clip(defaultText(booking.getRoom(), "教室见课表"), 20)));
+            data.put("thing9", field("请提前10分钟到场热身"));
             payload.put("data", data);
             send(payload, true);
         } catch (Exception e) {
@@ -98,7 +98,7 @@ public class WxSubscribeService {
 
     private static String startClock(String timeText) {
         if (timeText == null || timeText.isBlank()) {
-            return "待定";
+            return "00:00";
         }
         String text = timeText.trim();
         int dash = text.indexOf('-');
