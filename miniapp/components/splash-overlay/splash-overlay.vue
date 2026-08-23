@@ -1,6 +1,6 @@
 <template>
   <view v-if="visible" class="splash" :class="{ hiding }">
-    <image class="bg" :src="src || '/static/splash.jpg'" mode="aspectFill" />
+    <image v-if="src" class="bg" :src="src" mode="aspectFill" />
     <view class="mask" />
     <button
       class="skip-btn"

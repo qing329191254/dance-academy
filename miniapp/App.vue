@@ -24,7 +24,6 @@ export default {
       })
     }
     // #endif
-    uni.getImageInfo({ src: '/static/splash.jpg' })
     preloadTabPagesAsync()
     const path = options?.path || ''
     if (path.includes('splash/splash')) {

@@ -1,48 +1,75 @@
-import { API_BASE, USE_CLOUD } from './config.js'
+import { API_BASE, USE_CLOUD, USER_STORAGE_KEY } from './config.js'
 
-const USER_KEY = 'forget_user'
 const CLOUD_ENV_ID = 'prod-d0g3w5hfzfd320462'
 const CLOUD_SERVICE = 'springboot-1g7c'
 
 function getToken() {
   try {
-    return uni.getStorageSync(USER_KEY)?.token || ''
+    return uni.getStorageSync(USER_STORAGE_KEY)?.token || ''
   } catch (e) {
     return ''
   }
 }
 
+function parseBody(raw) {
+  if (raw == null || raw === '') return {}
+  if (typeof raw === 'string') {
+    try {
+      return JSON.parse(raw)
+    } catch (e) {
+      return { message: raw }
+    }
+  }
+  return raw
+}
+
+function authHeader() {
+  const header = {}
+  const token = getToken()
+  if (token) {
+    header.Authorization = `Bearer ${token}`
+    header['X-App-Token'] = token
+    header['X-Token'] = token
+  }
+  return header
+}
+
+function failMessage(body, fallback) {
+  return body?.message || body?.msg || body?.error || fallback
+}
+
 function unwrap(res, reject, resolve) {
-  const body = res.data || {}
+  const body = parseBody(res.data)
   const status = res.statusCode
   if (status === 401 || body.code === 401) {
     try {
-      uni.removeStorageSync(USER_KEY)
+      uni.removeStorageSync(USER_STORAGE_KEY)
     } catch (e) {}
-    reject(new Error(body.message || '请先登录'))
+    reject(new Error(failMessage(body, '请先登录')))
     return
   }
   if (status >= 400 || (typeof body.code === 'number' && body.code !== 0)) {
-    reject(new Error(body.message || '请求失败'))
+    reject(new Error(failMessage(body, '请求失败')))
     return
   }
   resolve(body.data)
 }
 
+function isUnauthorized(res) {
+  const body = parseBody(res?.data)
+  return res?.statusCode === 401 || body.code === 401
+}
+
 function httpRequest({ url, method = 'GET', data } = {}) {
   return new Promise((resolve, reject) => {
-    const header = {
-      'Content-Type': 'application/json',
-    }
-    const token = getToken()
-    if (token) {
-      header.Authorization = `Bearer ${token}`
-    }
     uni.request({
       url: `${API_BASE}${url}`,
       method,
       data,
-      header,
+      header: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
       timeout: 15000,
       success(res) {
         unwrap(res, reject, resolve)
@@ -61,21 +88,22 @@ function containerRequest({ url, method = 'GET', data } = {}) {
       httpRequest({ url, method, data }).then(resolve).catch(reject)
       return
     }
-    const header = {
-      'content-type': 'application/json',
-      'X-WX-SERVICE': CLOUD_SERVICE,
-    }
-    const token = getToken()
-    if (token) {
-      header.Authorization = `Bearer ${token}`
-    }
     wxApi.cloud.callContainer({
       config: { env: CLOUD_ENV_ID },
       path: `/api/app${url}`,
       method,
       data: data || {},
-      header,
+      header: {
+        'content-type': 'application/json',
+        'X-WX-SERVICE': CLOUD_SERVICE,
+        ...authHeader(),
+      },
       success(res) {
+        // 云托管可能覆盖 Authorization，401 时改走 HTTPS 带上 JWT
+        if (isUnauthorized(res) && getToken()) {
+          httpRequest({ url, method, data }).then(resolve).catch(reject)
+          return
+        }
         unwrap(res, reject, resolve)
       },
       fail() {

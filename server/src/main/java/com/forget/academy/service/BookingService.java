@@ -11,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -25,6 +27,7 @@ public class BookingService {
     private final ScheduleRepo scheduleRepo;
     private final BookingRepo bookingRepo;
     private final AppUserRepo appUserRepo;
+    private final WxSubscribeService wxSubscribeService;
 
     public List<Map<String, Object>> listSchedules(String type, String date, Long userId) {
         String tab = type == null || type.isBlank() ? "group" : type;
@@ -99,7 +102,22 @@ public class BookingService {
         } catch (DataIntegrityViolationException e) {
             throw new BizException("请勿重复预约");
         }
+        notifyBooked(user.getOpenid(), booking);
         return Map.of("booked", true, "message", "预约成功", "booking", toBookingMap(booking));
+    }
+
+    private void notifyBooked(String openid, Booking booking) {
+        Runnable send = () -> wxSubscribeService.sendBookingNotice(openid, booking);
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    send.run();
+                }
+            });
+            return;
+        }
+        send.run();
     }
 
     public List<Map<String, Object>> myBookings(Long userId) {

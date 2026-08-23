@@ -44,7 +44,7 @@ public class AppUserController {
     }
 
     @PostMapping("/auth/profile")
-    public ApiResponse<?> saveProfile(@RequestBody Map<String, String> body) {
+    public ApiResponse<?> saveProfile(@RequestBody Map<String, Object> body) {
         return ApiResponse.ok(appAuthService.completeProfile(AuthContext.requireApp().id(), body));
     }
 

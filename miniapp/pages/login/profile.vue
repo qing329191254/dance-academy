@@ -27,6 +27,10 @@
             maxlength="20"
             placeholder="请输入昵称"
             placeholder-class="placeholder"
+            @input="onNickname"
+            @blur="onNickname"
+            @change="onNickname"
+            @nicknamereview="onNickname"
           />
         </view>
 
@@ -73,7 +77,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { nextTick, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { completeProfile, getUser, isLoggedIn } from '@/common/auth.js'
 import { showToast, showSuccess as showSuccessToast } from '@/common/toast.js'
@@ -84,6 +88,7 @@ const gender = ref('')
 const birthday = ref('')
 const today = ref('')
 const defaultBirthday = '2000-01-01'
+const submitting = ref(false)
 
 onLoad(() => {
   if (!isLoggedIn()) {
@@ -115,6 +120,13 @@ function onChooseAvatar(e) {
   }
 }
 
+function onNickname(e) {
+  const value = e?.detail?.value
+  if (typeof value === 'string') {
+    nickname.value = value
+  }
+}
+
 function onBirthdayChange(e) {
   birthday.value = e.detail.value
 }
@@ -123,12 +135,19 @@ function selectGender(value) {
   gender.value = value
 }
 
-function submit() {
+async function submit() {
+  if (submitting.value) return
+  try {
+    uni.hideKeyboard()
+  } catch (e) {}
+  await nextTick()
+
+  const name = nickname.value.trim()
   if (!avatar.value) {
     showToast('请选择头像')
     return
   }
-  if (!nickname.value.trim()) {
+  if (!name) {
     showToast('请输入昵称')
     return
   }
@@ -137,18 +156,21 @@ function submit() {
     return
   }
 
-  completeProfile({
-    nickname: nickname.value.trim(),
-    avatar: avatar.value,
-    gender: gender.value,
-    birthday: birthday.value,
-  }).then(() => {
-    showSuccessToast('保存成功').then(() => {
-      uni.switchTab({ url: '/pages/mine/mine' })
+  submitting.value = true
+  try {
+    await completeProfile({
+      nickname: name,
+      avatar: avatar.value,
+      gender: gender.value,
+      birthday: birthday.value,
     })
-  }).catch((err) => {
-    showToast(err.message || '保存失败')
-  })
+    await showSuccessToast('保存成功')
+    uni.switchTab({ url: '/pages/mine/mine' })
+  } catch (err) {
+    showToast(err?.message || '保存失败')
+  } finally {
+    submitting.value = false
+  }
 }
 </script>
 

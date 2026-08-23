@@ -36,6 +36,14 @@
         },
         "usingComponents" : true,
         "lazyCodeLoading" : "requiredComponents",
+        "packOptions" : {
+            "ignore" : [
+                {
+                    "type" : "folder",
+                    "value" : "scripts"
+                }
+            ]
+        },
         "window" : {
             "backgroundColor" : "#111111",
             "backgroundColorTop" : "#111111",

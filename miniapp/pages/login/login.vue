@@ -2,7 +2,7 @@
   <page-meta root-background-color="#111111" background-color="#111111" page-style="background-color:#111111;" />
   <view class="page">
     <view class="brand">
-      <image class="logo" src="/static/logo.png" mode="aspectFit" />
+      <image v-if="logo" class="logo" :src="logo" mode="aspectFit" />
       <text class="title">高校FOR一GET街舞俱乐部</text>
       <text class="muted subtitle">登录后同步课程、卡包与习练记录</text>
     </view>
@@ -22,8 +22,19 @@
 </template>
 
 <script setup>
+import { onMounted, ref } from 'vue'
 import { weixinOneTapLogin, navigateAfterLogin, isProfileComplete } from '@/common/auth.js'
 import { showSuccess, showError } from '@/common/toast.js'
+import { getBrand } from '@/common/api.js'
+
+const logo = ref('')
+
+onMounted(async () => {
+  try {
+    const data = await getBrand()
+    if (data.studio?.logo) logo.value = data.studio.logo
+  } catch (e) {}
+})
 
 async function onLogin() {
   try {

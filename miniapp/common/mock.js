@@ -10,23 +10,17 @@ export const studio = {
   phoneDisplay: '028-8888-1234',
 }
 
-export const brandPhotos = [
-  '/static/brand/shop-1.jpg',
-  '/static/brand/shop-2.jpg',
-  '/static/brand/shop-3.jpg',
-  '/static/brand/shop-4.jpg',
-]
+export const brandPhotos = []
 
 export const teachers = [
-  { id: 1, name: '金大铭', style: 'HipHop', intro: '校队主力，擅长编舞与舞台表现', avatar: '/static/avatars/t1.jpg' },
-  { id: 2, name: '龙龙', style: 'Jazz', intro: 'Jazz 体系主教，课程节奏感强', avatar: '/static/avatars/t2.jpg' },
-  { id: 3, name: '90', style: 'Breaking', intro: 'Breaking 专项，带队比赛经验丰富', avatar: '/static/avatars/t3.jpg' },
-  { id: 4, name: '小朱', style: 'Waacking', intro: 'Waacking / 女团风，舞台感突出', avatar: '/static/avatars/t4.jpg' },
+  { id: 1, name: '金大铭', style: 'HipHop', intro: '校队主力，擅长编舞与舞台表现', avatar: '' },
+  { id: 2, name: '龙龙', style: 'Jazz', intro: 'Jazz 体系主教，课程节奏感强', avatar: '' },
+  { id: 3, name: '90', style: 'Breaking', intro: 'Breaking 专项，带队比赛经验丰富', avatar: '' },
+  { id: 4, name: '小朱', style: 'Waacking', intro: 'Waacking / 女团风，舞台感突出', avatar: '' },
 ]
 
 export function getTeacherAvatar(name) {
-  const teacher = teachers.find((t) => t.name === name)
-  return teacher?.avatar || '/static/avatars/default.jpg'
+  return teachers.find((t) => t.name === name)?.avatar || ''
 }
 
 export const courses = [
@@ -138,8 +132,7 @@ export const myCards = [
     remain: 6,
     total: 10,
     expire: '2026-12-31',
-    // 整图背景，由机构后台配置图片 URL
-    cover: '/static/banners/banner-1.jpg',
+    cover: '',
   },
   {
     id: 2,
@@ -148,7 +141,7 @@ export const myCards = [
     remain: 1,
     total: 2,
     expire: '2026-10-15',
-    cover: '/static/banners/banner-3.jpg',
+    cover: '',
   },
 ]
 

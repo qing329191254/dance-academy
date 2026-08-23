@@ -16,6 +16,7 @@ public class AppUser extends BaseEntity {
     private String openid;
     private String unionid;
     private String nickname;
+    @Column(length = 2048)
     private String avatar;
     private String gender;
     private String birthday;

@@ -2,13 +2,12 @@ package com.forget.academy.config;
 
 import com.forget.academy.entity.AdminUser;
 import com.forget.academy.entity.AppUser;
-import com.forget.academy.entity.Banner;
-import com.forget.academy.entity.BrandPhoto;
 import com.forget.academy.entity.Course;
 import com.forget.academy.entity.Opportunity;
 import com.forget.academy.entity.Schedule;
 import com.forget.academy.entity.Studio;
 import com.forget.academy.entity.Teacher;
+import com.forget.academy.entity.UserCard;
 import com.forget.academy.repo.AdminUserRepo;
 import com.forget.academy.repo.AppUserRepo;
 import com.forget.academy.repo.BannerRepo;
@@ -62,6 +61,7 @@ public class DataSeeder implements ApplicationRunner {
     public void run(ApplicationArguments args) {
         seedAdmin();
         removeDemoUsers();
+        clearPackagedMedia();
         studioRepo.findAll().stream().findFirst().ifPresent(studio -> {
             if (studio.getLogo() == null || studio.getLogo().isBlank() || studio.getLogo().startsWith("/uploads/")) {
                 studio.setLogo("/logo.png");
@@ -72,12 +72,47 @@ public class DataSeeder implements ApplicationRunner {
             return;
         }
         seedStudio();
-        seedBanners();
-        seedPhotos();
         seedTeachers();
         seedCourses();
         seedSchedules();
         seedOpportunities();
+    }
+
+    private void clearPackagedMedia() {
+        bannerRepo.findAll().stream()
+                .filter(item -> isPackagedMedia(item.getImageUrl()))
+                .forEach(bannerRepo::delete);
+        brandPhotoRepo.findAll().stream()
+                .filter(item -> isPackagedMedia(item.getImageUrl()))
+                .forEach(brandPhotoRepo::delete);
+        teacherRepo.findAll().forEach(teacher -> {
+            if (isPackagedMedia(teacher.getAvatar())) {
+                teacher.setAvatar(null);
+                teacherRepo.save(teacher);
+            }
+        });
+        courseRepo.findAll().forEach(course -> {
+            if (isPackagedMedia(course.getCover())) {
+                course.setCover(null);
+                courseRepo.save(course);
+            }
+        });
+        userCardRepo.findAll().forEach(card -> {
+            if (isPackagedMedia(card.getCover())) {
+                card.setCover(null);
+                userCardRepo.save(card);
+            }
+        });
+        studioRepo.findAll().forEach(studio -> {
+            if (isPackagedMedia(studio.getSplashImage())) {
+                studio.setSplashImage(null);
+                studioRepo.save(studio);
+            }
+        });
+    }
+
+    private boolean isPackagedMedia(String url) {
+        return url != null && (url.startsWith("/static/") || url.startsWith("static/"));
     }
 
     private void removeDemoUsers() {
@@ -132,42 +167,11 @@ public class DataSeeder implements ApplicationRunner {
         studioRepo.save(studio);
     }
 
-    private void seedBanners() {
-        String[] urls = {
-                "/static/banners/banner-1.jpg",
-                "/static/banners/banner-2.jpg",
-                "/static/banners/banner-3.jpg",
-                "/static/banners/banner-4.jpg"
-        };
-        for (int i = 0; i < urls.length; i++) {
-            Banner banner = new Banner();
-            banner.setImageUrl(urls[i]);
-            banner.setSortOrder(i + 1);
-            banner.setEnabled(true);
-            bannerRepo.save(banner);
-        }
-    }
-
-    private void seedPhotos() {
-        String[] urls = {
-                "/static/brand/shop-1.jpg",
-                "/static/brand/shop-2.jpg",
-                "/static/brand/shop-3.jpg",
-                "/static/brand/shop-4.jpg"
-        };
-        for (int i = 0; i < urls.length; i++) {
-            BrandPhoto photo = new BrandPhoto();
-            photo.setImageUrl(urls[i]);
-            photo.setSortOrder(i + 1);
-            brandPhotoRepo.save(photo);
-        }
-    }
-
     private void seedTeachers() {
-        saveTeacher("金大铭", "HipHop", "校队主力，擅长编舞与舞台表现", "/static/avatars/t1.jpg", 1);
-        saveTeacher("龙龙", "Jazz", "Jazz 体系主教，课程节奏感强", "/static/avatars/t2.jpg", 2);
-        saveTeacher("90", "Breaking", "Breaking 专项，带队比赛经验丰富", "/static/avatars/t3.jpg", 3);
-        saveTeacher("小朱", "Waacking", "Waacking / 女团风，舞台感突出", "/static/avatars/t4.jpg", 4);
+        saveTeacher("金大铭", "HipHop", "校队主力，擅长编舞与舞台表现", "", 1);
+        saveTeacher("龙龙", "Jazz", "Jazz 体系主教，课程节奏感强", "", 2);
+        saveTeacher("90", "Breaking", "Breaking 专项，带队比赛经验丰富", "", 3);
+        saveTeacher("小朱", "Waacking", "Waacking / 女团风，舞台感突出", "", 4);
     }
 
     private void saveTeacher(String name, String style, String intro, String avatar, int sort) {

@@ -41,5 +41,7 @@ app:
     meta-url: ${WX_COS_META_URL:http://api.weixin.qq.com/_/cos/metaid/encode}
   wx-appid: ${WX_APPID:wxac2808104a5b6503}
   wx-secret: ${WX_SECRET:}
+  wx-subscribe-template-id: ${WX_SUBSCRIBE_TEMPLATE_ID:Nqnze6AWP7p9Jm7x5HtI3jioASw0MLp5DUtWHHBx1v8}
+  wx-mp-state: ${WX_MP_STATE:formal}
   admin-username: ${ADMIN_USERNAME:admin}
   admin-password: ${ADMIN_PASSWORD:admin123}

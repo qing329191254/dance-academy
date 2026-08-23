@@ -2,7 +2,8 @@
   <page-meta root-background-color="#111111" background-color="#111111" page-style="background-color:#111111;" />
   <view class="page" v-if="teacher">
     <view class="hero card">
-      <image class="avatar" :src="teacher.avatar" mode="aspectFill" />
+      <image v-if="teacher.avatar" class="avatar" :src="teacher.avatar" mode="aspectFill" />
+      <view v-else class="avatar" />
       <view class="meta">
         <text class="name">{{ teacher.name }}</text>
         <text class="style accent">{{ teacher.style }}</text>

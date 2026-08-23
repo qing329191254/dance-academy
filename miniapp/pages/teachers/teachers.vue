@@ -8,7 +8,8 @@
         class="card teacher"
         @click="go(`/pages/teachers/detail?id=${t.id}`)"
       >
-        <image class="avatar" :src="t.avatar" mode="aspectFill" />
+        <image v-if="t.avatar" class="avatar" :src="t.avatar" mode="aspectFill" />
+        <view v-else class="avatar" />
         <view class="info">
           <text class="name">{{ t.name }}</text>
           <text class="accent">{{ t.style }}</text>

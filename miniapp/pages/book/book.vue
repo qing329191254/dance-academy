@@ -47,7 +47,8 @@
     <view class="section">
       <view v-if="!currentList.length" class="empty muted">当日暂无团课安排</view>
       <view v-for="item in currentList" :key="item.id" class="card class-card">
-        <image class="avatar" :src="getTeacherAvatar(item.teacher)" mode="aspectFill" />
+        <image v-if="getTeacherAvatar(item.teacher)" class="avatar" :src="getTeacherAvatar(item.teacher)" mode="aspectFill" />
+        <view v-else class="avatar" />
         <view class="info">
           <text class="name">{{ item.name }}</text>
           <view class="meta">
@@ -83,6 +84,7 @@ import { getSchedules, getTeachers, toggleBooking } from '@/common/api.js'
 import { ensureLogin } from '@/common/auth.js'
 import { showSuccess, showToast, showError } from '@/common/toast.js'
 import { getStatusBarHeight } from '@/common/statusBar.js'
+import { BOOKING_TMPL_ID } from '@/common/config.js'
 
 const statusBarHeight = getStatusBarHeight()
 
@@ -119,7 +121,7 @@ function buildWeekDates() {
 }
 
 function getTeacherAvatar(name) {
-  return teacherAvatars.value[name] || '/static/avatars/default.jpg'
+  return teacherAvatars.value[name] || ''
 }
 
 onLoad(async () => {
@@ -162,12 +164,32 @@ function isBooked(item) {
   return !!item.booked
 }
 
+function askBookingSubscribe() {
+  return new Promise((resolve) => {
+    // #ifdef MP-WEIXIN
+    uni.requestSubscribeMessage({
+      tmplIds: [BOOKING_TMPL_ID],
+      complete() {
+        resolve()
+      },
+    })
+    // #endif
+    // #ifndef MP-WEIXIN
+    resolve()
+    // #endif
+  })
+}
+
 async function toggleBook(item) {
   if (!ensureLogin()) return
   const toastOptions = { offsetTop: TOAST_OFFSET }
   const date =
     active.value === 'group' ? weekDates.value[selectedDateIndex.value]?.date : undefined
+  const booking = isBooked(item)
   try {
+    if (!booking) {
+      await askBookingSubscribe()
+    }
     const result = await toggleBooking(item.id, date)
     await loadSchedules()
     if (result.booked) {

@@ -2,6 +2,7 @@
   <page-meta root-background-color="#111111" background-color="#111111" page-style="background-color:#111111;" />
   <view class="page">
     <swiper
+      v-if="brandPhotos.length"
       class="gallery"
       circular
       autoplay
@@ -19,12 +20,14 @@
         />
       </swiper-item>
     </swiper>
+    <view v-else class="gallery gallery-empty" />
 
     <view class="section studio-section">
       <view class="studio-block card">
         <view class="studio">
           <view class="studio-left">
-            <image class="studio-logo" :src="mediaUrl(studio.logo) || '/static/logo.png'" mode="aspectFill" />
+            <image v-if="studio.logo" class="studio-logo" :src="studio.logo" mode="aspectFill" />
+            <view v-else class="studio-logo logo-ph" />
             <view class="studio-info">
               <text class="studio-name">{{ studio.name }}</text>
               <text class="studio-hours muted">{{ studio.businessHours }}</text>
@@ -85,7 +88,7 @@ onLoad(async () => {
   try {
     const data = await getBrand()
     if (data.studio) Object.assign(studio, data.studio)
-    if (data.photos?.length) brandPhotos.value = data.photos.map(mediaUrl)
+    brandPhotos.value = (data.photos || []).map(mediaUrl).filter(Boolean)
     if (data.studio?.intro) intro.value = data.studio.intro
     if (data.studio?.business) business.value = data.studio.business
     if (data.studio?.slogan) slogan.value = data.studio.slogan
@@ -150,6 +153,10 @@ function previewPhoto(index) {
   width: 100%;
   height: 420rpx;
   display: block;
+}
+
+.gallery-empty {
+  background: #161616;
 }
 
 .studio-section {

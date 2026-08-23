@@ -47,17 +47,28 @@ public class AppAuthService {
     }
 
     @Transactional
-    public Map<String, Object> completeProfile(Long userId, Map<String, String> body) {
+    public Map<String, Object> completeProfile(Long userId, Map<String, ?> body) {
         AppUser user = appUserRepo.findById(userId).orElseThrow(() -> new BizException("用户不存在"));
-        String nickname = safe(body.get("nickname"));
+        String nickname = str(body == null ? null : body.get("nickname"));
         if (nickname.isBlank()) {
             nickname = "学员";
         }
         user.setNickname(nickname);
-        user.setAvatar(firstNonBlank(body.get("avatar"), user.getAvatar(), "/static/avatars/guest.png"));
-        user.setGender(firstNonBlank(body.get("gender"), user.getGender(), "女"));
-        if (body.containsKey("birthday")) {
-            user.setBirthday(body.get("birthday"));
+        String avatar = str(body == null ? null : body.get("avatar"));
+        if (isUsableAvatar(avatar)) {
+            user.setAvatar(avatar.length() > 2048 ? avatar.substring(0, 2048) : avatar);
+        } else if (user.getAvatar() == null || user.getAvatar().isBlank()) {
+            user.setAvatar("/static/avatars/guest.png");
+        }
+        String gender = str(body == null ? null : body.get("gender"));
+        if (!gender.isBlank()) {
+            user.setGender(gender);
+        } else if (user.getGender() == null || user.getGender().isBlank()) {
+            user.setGender("女");
+        }
+        if (body != null && body.containsKey("birthday")) {
+            String birthday = str(body.get("birthday"));
+            user.setBirthday(birthday.isBlank() ? null : birthday);
         }
         user.setProfileComplete(true);
         appUserRepo.save(user);
@@ -84,16 +95,18 @@ public class AppAuthService {
         return map;
     }
 
-    private static String safe(String value) {
-        return value == null ? "" : value.trim();
+    private static String str(Object value) {
+        return value == null ? "" : String.valueOf(value).trim();
     }
 
-    private static String firstNonBlank(String... values) {
-        for (String value : values) {
-            if (value != null && !value.isBlank()) {
-                return value;
-            }
+    private static boolean isUsableAvatar(String avatar) {
+        if (avatar == null || avatar.isBlank()) {
+            return false;
         }
-        return "";
+        String value = avatar.toLowerCase();
+        return !(value.startsWith("wxfile://")
+                || value.startsWith("http://tmp/")
+                || value.startsWith("https://tmp/")
+                || value.startsWith("file://"));
     }
 }

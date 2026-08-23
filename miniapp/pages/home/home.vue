@@ -1,7 +1,7 @@
 <template>
   <page-meta root-background-color="#000000" background-color="#000000" page-style="background-color:#000000;" />
   <view class="page">
-    <view v-show="showSplash" class="launch-splash">
+    <view v-show="showSplash && splashSrc" class="launch-splash">
       <image class="launch-bg" :src="splashSrc" mode="aspectFill" />
       <view class="launch-mask" />
       <button class="launch-skip" plain hover-class="launch-skip-hover" @tap.stop="dismissSplash">
@@ -20,6 +20,7 @@
 
     <view class="page-content">
       <swiper
+        v-if="banners.length"
         class="hero"
         circular
         autoplay
@@ -37,6 +38,7 @@
           />
         </swiper-item>
       </swiper>
+      <view v-else class="hero hero-empty" />
 
       <view class="nav-row">
         <view class="nav-item" @click="go('/pages/book/book', true)">
@@ -70,7 +72,8 @@
         <scroll-view scroll-x class="teacher-scroll" :show-scrollbar="false">
           <view class="teacher-list">
             <view v-for="t in teachers" :key="t.id" class="teacher-item" @click="go(`/pages/teachers/detail?id=${t.id}`)">
-              <image class="avatar" :src="t.avatar" mode="aspectFill" />
+              <image v-if="t.avatar" class="avatar" :src="t.avatar" mode="aspectFill" />
+              <view v-else class="avatar avatar-ph" />
               <text class="name">{{ t.name }}</text>
               <text class="muted style">{{ t.style }}</text>
             </view>
@@ -101,7 +104,8 @@
       <view class="section">
         <view class="studio card">
           <view class="studio-left">
-            <image class="studio-logo" src="/static/logo.png" mode="aspectFit" />
+            <image v-if="studio.logo" class="studio-logo" :src="studio.logo" mode="aspectFit" />
+            <view v-else class="studio-logo avatar-ph" />
             <view>
               <text class="studio-name">{{ studio.name }}</text>
               <text class="muted">{{ studio.location }}</text>
@@ -126,10 +130,15 @@ import { teachers as mockTeachers, courses as mockCourses, studio as mockStudio 
 import { preloadTabPagesAsync } from '@/common/preloadTabs.js'
 import { openPage, switchTabPage } from '@/common/navigate.js'
 import { applyPageBackground, PAGE_BG, SPLASH_BG } from '@/common/pageTheme.js'
+import { mediaUrl } from '@/common/config.js'
+
+function readSplashCache() {
+  return mediaUrl(uni.getStorageSync('splashImage') || '')
+}
 
 let launchSplashPending = true
 
-const showSplash = ref(launchSplashPending)
+const showSplash = ref(!!readSplashCache())
 const splashCountdown = ref(3)
 const showNavTitle = ref(false)
 const statusBarHeight = ref(44)
@@ -159,27 +168,30 @@ function dismissSplash() {
   uni.showTabBar({ animation: false })
 }
 
+function startSplashTimer() {
+  if (!showSplash.value || !splashSrc.value) {
+    dismissSplash()
+    return
+  }
+  applyPageBackground(SPLASH_BG)
+  uni.hideTabBar({ animation: false })
+  splashTimer = setInterval(() => {
+    if (splashCountdown.value <= 1) {
+      dismissSplash()
+      return
+    }
+    splashCountdown.value -= 1
+  }, 1000)
+  splashSafetyTimer = setTimeout(() => {
+    if (showSplash.value) dismissSplash()
+  }, 4500)
+}
+
 onLoad(() => {
-  if (showSplash.value) {
-    applyPageBackground(SPLASH_BG)
-    uni.hideTabBar({ animation: false })
-    preloadTabPagesAsync()
-  }
+  preloadTabPagesAsync()
   loadHome()
-  if (showSplash.value) {
-    splashTimer = setInterval(() => {
-      if (splashCountdown.value <= 1) {
-        dismissSplash()
-        return
-      }
-      splashCountdown.value -= 1
-    }, 1000)
-    splashSafetyTimer = setTimeout(() => {
-      if (showSplash.value) dismissSplash()
-    }, 4500)
-  } else {
-    preloadTabPagesAsync()
-  }
+  if (showSplash.value) startSplashTimer()
+  else applyPageBackground(PAGE_BG)
   try {
     const info = uni.getSystemInfoSync()
     statusBarHeight.value = info.statusBarHeight || 44
@@ -208,19 +220,14 @@ onUnload(() => {
   uni.showTabBar({ animation: false })
 })
 
-const banners = ref([
-  '/static/banners/banner-1.jpg',
-  '/static/banners/banner-2.jpg',
-  '/static/banners/banner-3.jpg',
-  '/static/banners/banner-4.jpg',
-])
+const banners = ref([])
 const teachers = ref(mockTeachers)
 const courses = ref(mockCourses)
 const studio = reactive({
   ...mockStudio,
-  splashImage: uni.getStorageSync('splashImage') || '',
+  splashImage: readSplashCache(),
 })
-const splashSrc = computed(() => studio.splashImage || '/static/splash.jpg')
+const splashSrc = computed(() => studio.splashImage || '')
 
 const bannerPreviewUrls = ref([...banners.value])
 
@@ -239,7 +246,7 @@ function resolveBannerPreviewUrls() {
 async function loadHome() {
   try {
     const data = await getHome()
-    if (data.banners?.length) banners.value = data.banners
+    banners.value = (data.banners || []).filter(Boolean)
     if (data.teachers?.length) teachers.value = data.teachers
     if (data.courses?.length) courses.value = data.courses
     if (data.studio) Object.assign(studio, data.studio)
@@ -394,6 +401,14 @@ function callStudio() {
   width: 100%;
   height: 560rpx;
   display: block;
+}
+
+.hero-empty {
+  background: #161616;
+}
+
+.avatar-ph {
+  background: #2a2a2a;
 }
 
 .nav-row {
