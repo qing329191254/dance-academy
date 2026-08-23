@@ -83,9 +83,20 @@ function httpRequest({ url, method = 'GET', data } = {}) {
 
 function containerRequest({ url, method = 'GET', data } = {}) {
   return new Promise((resolve, reject) => {
+    let settled = false
+    const finish = (fn, value) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      fn(value)
+    }
+    const goHttp = () => {
+      httpRequest({ url, method, data }).then((v) => finish(resolve, v)).catch((e) => finish(reject, e))
+    }
+    const timer = setTimeout(goHttp, 8000)
     const wxApi = typeof wx !== 'undefined' ? wx : null
     if (!wxApi?.cloud?.callContainer) {
-      httpRequest({ url, method, data }).then(resolve).catch(reject)
+      goHttp()
       return
     }
     wxApi.cloud.callContainer({
@@ -99,15 +110,14 @@ function containerRequest({ url, method = 'GET', data } = {}) {
         ...authHeader(),
       },
       success(res) {
-        // 云托管可能覆盖 Authorization，401 时改走 HTTPS 带上 JWT
         if (isUnauthorized(res) && getToken()) {
-          httpRequest({ url, method, data }).then(resolve).catch(reject)
+          goHttp()
           return
         }
-        unwrap(res, reject, resolve)
+        unwrap(res, (err) => finish(reject, err), (data) => finish(resolve, data))
       },
       fail() {
-        httpRequest({ url, method, data }).then(resolve).catch(reject)
+        goHttp()
       },
     })
   })

@@ -3,19 +3,27 @@ package com.forget.academy.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.forget.academy.common.BizException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
 @Service
 public class WxAuthService {
+    private static final Logger log = LoggerFactory.getLogger(WxAuthService.class);
     private final ObjectMapper mapper;
-    private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(8)).build();
+    private final HttpClient http = HttpClient.newBuilder()
+            .version(HttpClient.Version.HTTP_1_1)
+            .connectTimeout(Duration.ofSeconds(8))
+            .build();
     private final Object tokenLock = new Object();
     private String cachedToken;
     private long tokenExpireAt;
@@ -38,13 +46,15 @@ public class WxAuthService {
             throw new BizException("未配置微信小程序 AppID / AppSecret，无法登录");
         }
         try {
-            String url = "https://api.weixin.qq.com/sns/jscode2session?appid=" + appid
-                    + "&secret=" + secret
-                    + "&js_code=" + code
+            String queryNoSecret = "appid=" + encode(appid)
+                    + "&js_code=" + encode(code)
                     + "&grant_type=authorization_code";
-            HttpRequest request = HttpRequest.newBuilder(URI.create(url)).GET().timeout(Duration.ofSeconds(8)).build();
-            HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
-            JsonNode node = mapper.readTree(response.body());
+            String query = queryNoSecret + "&secret=" + encode(secret);
+            JsonNode node = getJson(
+                    "http://api.weixin.qq.com/sns/jscode2session?" + queryNoSecret,
+                    "http://api.weixin.qq.com/sns/jscode2session?" + query,
+                    "https://api.weixin.qq.com/sns/jscode2session?" + query
+            );
             if (node.hasNonNull("errcode") && node.get("errcode").asInt() != 0) {
                 throw new BizException("微信登录失败：" + node.path("errmsg").asText());
             }
@@ -57,6 +67,7 @@ public class WxAuthService {
         } catch (BizException e) {
             throw e;
         } catch (Exception e) {
+            log.warn("jscode2session failed: {}", e.toString());
             throw new BizException("微信登录服务异常");
         }
     }
@@ -71,11 +82,11 @@ public class WxAuthService {
             throw new BizException("未配置微信小程序 AppID / AppSecret");
         }
         try {
-            String url = "https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid="
-                    + appid + "&secret=" + secret;
-            HttpRequest request = HttpRequest.newBuilder(URI.create(url)).GET().timeout(Duration.ofSeconds(8)).build();
-            HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
-            JsonNode node = mapper.readTree(response.body());
+            String query = "grant_type=client_credential&appid=" + encode(appid) + "&secret=" + encode(secret);
+            JsonNode node = getJson(
+                    "http://api.weixin.qq.com/cgi-bin/token?" + query,
+                    "https://api.weixin.qq.com/cgi-bin/token?" + query
+            );
             if (node.hasNonNull("errcode") && node.get("errcode").asInt() != 0) {
                 throw new BizException("获取微信 access_token 失败：" + node.path("errmsg").asText());
             }
@@ -92,8 +103,28 @@ public class WxAuthService {
         } catch (BizException e) {
             throw e;
         } catch (Exception e) {
+            log.warn("access_token failed: {}", e.toString());
             throw new BizException("获取微信 access_token 异常");
         }
+    }
+
+    private JsonNode getJson(String... urls) throws Exception {
+        Exception last = null;
+        for (String url : urls) {
+            try {
+                HttpRequest request = HttpRequest.newBuilder(URI.create(url)).GET().timeout(Duration.ofSeconds(8)).build();
+                HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
+                return mapper.readTree(response.body());
+            } catch (Exception e) {
+                last = e;
+                log.warn("weixin api miss {}: {}", url.replace(secret, "***"), e.toString());
+            }
+        }
+        throw last == null ? new IllegalStateException("weixin api unreachable") : last;
+    }
+
+    private static String encode(String value) {
+        return URLEncoder.encode(value == null ? "" : value, StandardCharsets.UTF_8);
     }
 
     public void invalidateAccessToken() {

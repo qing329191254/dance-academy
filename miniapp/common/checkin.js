@@ -1,3 +1,5 @@
+import { checkin } from './api.js'
+
 const CHECKIN_TYPE = 'checkin'
 const STORAGE_KEY = 'forget_practice_records'
 
@@ -132,7 +134,6 @@ export function handleCheckInScan(result) {
 }
 
 async function handleCheckInScanRemote(result) {
-  const { checkin } = await import('./api.js')
   try {
     const data = await checkin(result)
     return {

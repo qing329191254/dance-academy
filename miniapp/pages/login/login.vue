@@ -8,16 +8,24 @@
     </view>
 
     <view class="actions">
-      <view class="login-btn" @click="onLogin">微信一键登录</view>
+      <button
+        class="login-btn"
+        hover-class="login-btn-hover"
+        :loading="loading"
+        :disabled="loading"
+        @click="onLogin"
+      >
+        {{ loading ? '登录中...' : '微信一键登录' }}
+      </button>
 
       <view class="agreement">
         <text class="muted">登录即表示同意</text>
-        <text class="link" @click="goLegal('user')">《用户协议》</text>
+        <text class="link" @tap="goLegal('user')">《用户协议》</text>
         <text class="muted">和</text>
-        <text class="link" @click="goLegal('privacy')">《隐私政策》</text>
+        <text class="link" @tap="goLegal('privacy')">《隐私政策》</text>
       </view>
     </view>
-      <app-toast />
+    <app-toast />
   </view>
 </template>
 
@@ -28,6 +36,7 @@ import { showSuccess, showError } from '@/common/toast.js'
 import { getBrand } from '@/common/api.js'
 
 const logo = ref('')
+const loading = ref(false)
 
 onMounted(async () => {
   try {
@@ -37,6 +46,8 @@ onMounted(async () => {
 })
 
 async function onLogin() {
+  if (loading.value) return
+  loading.value = true
   try {
     await weixinOneTapLogin()
     if (isProfileComplete()) {
@@ -44,7 +55,9 @@ async function onLogin() {
     }
     navigateAfterLogin()
   } catch (err) {
-    showError('登录失败，请稍后重试')
+    showError(err?.errMsg || err?.message || '登录失败，请稍后重试')
+  } finally {
+    loading.value = false
   }
 }
 
@@ -103,15 +116,28 @@ function goLegal(type) {
 .login-btn {
   width: 100%;
   height: 96rpx;
+  line-height: 96rpx;
   border-radius: 999rpx;
   background: linear-gradient(135deg, #9b86eb 0%, #8a74e5 55%, #7560d4 100%);
   color: #ffffff;
   font-size: 32rpx;
   font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   box-shadow: 0 12rpx 36rpx rgba(138, 116, 229, 0.35);
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+.login-btn::after {
+  border: none;
+}
+
+.login-btn-hover {
+  opacity: 0.88;
+}
+
+.login-btn[disabled] {
+  opacity: 0.7;
 }
 
 .agreement {

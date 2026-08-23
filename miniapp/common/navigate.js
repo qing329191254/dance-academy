@@ -1,23 +1,31 @@
 function preloadOne(url) {
-  return new Promise((resolve) => {
-    if (typeof uni.preloadPage !== 'function') {
-      resolve(false)
-      return
+  try {
+    if (typeof uni.preloadPage === 'function') {
+      uni.preloadPage({ url })
     }
-    uni.preloadPage({
-      url,
-      success: () => resolve(true),
-      fail: () => resolve(false),
-    })
-  })
+  } catch (e) {}
 }
 
 export function openPage(url) {
-  preloadOne(url).finally(() => {
-    uni.navigateTo({ url })
+  preloadOne(url)
+  uni.navigateTo({
+    url,
+    fail() {
+      uni.redirectTo({
+        url,
+        fail() {
+          uni.reLaunch({ url })
+        },
+      })
+    },
   })
 }
 
 export function switchTabPage(url) {
-  uni.switchTab({ url })
+  uni.switchTab({
+    url,
+    fail() {
+      uni.reLaunch({ url })
+    },
+  })
 }

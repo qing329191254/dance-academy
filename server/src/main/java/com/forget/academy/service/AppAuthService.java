@@ -21,7 +21,17 @@ public class AppAuthService {
 
     @Transactional
     public Map<String, Object> login(String code) {
-        WxAuthService.WxSession wx = wxAuthService.resolveOpenid(code);
+        return login(code, null, null);
+    }
+
+    @Transactional
+    public Map<String, Object> login(String code, String openid, String unionid) {
+        WxAuthService.WxSession wx;
+        if (openid != null && !openid.isBlank()) {
+            wx = new WxAuthService.WxSession(openid, unionid == null || unionid.isBlank() ? null : unionid);
+        } else {
+            wx = wxAuthService.resolveOpenid(code);
+        }
         AppUser user = appUserRepo.findByOpenid(wx.openid()).orElseGet(() -> {
             AppUser created = new AppUser();
             created.setOpenid(wx.openid());

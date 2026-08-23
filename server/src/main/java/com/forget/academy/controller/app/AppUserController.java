@@ -34,8 +34,43 @@ public class AppUserController {
     private final UserCourseRepo userCourseRepo;
 
     @PostMapping("/auth/login")
-    public ApiResponse<?> login(@RequestBody Map<String, String> body) {
-        return ApiResponse.ok(appAuthService.login(body.get("code")));
+    public ApiResponse<?> login(@RequestBody(required = false) Map<String, String> body,
+                               jakarta.servlet.http.HttpServletRequest request) {
+        String code = body == null ? null : body.get("code");
+        String openid = header(request, "X-WX-OPENID", "x-wx-openid", "X-WX-FROM-OPENID", "x-wx-from-openid");
+        if (openid == null) {
+            openid = findHeader(request, "openid");
+        }
+        String unionid = header(request, "X-WX-UNIONID", "x-wx-unionid");
+        return ApiResponse.ok(appAuthService.login(code, openid, unionid));
+    }
+
+    private static String header(jakarta.servlet.http.HttpServletRequest request, String... names) {
+        for (String name : names) {
+            String value = request.getHeader(name);
+            if (value != null && !value.isBlank()) {
+                return value.trim();
+            }
+        }
+        return null;
+    }
+
+    private static String findHeader(jakarta.servlet.http.HttpServletRequest request, String keyword) {
+        var names = request.getHeaderNames();
+        if (names == null) {
+            return null;
+        }
+        String key = keyword.toLowerCase();
+        while (names.hasMoreElements()) {
+            String name = names.nextElement();
+            if (name != null && name.toLowerCase().contains(key)) {
+                String value = request.getHeader(name);
+                if (value != null && !value.isBlank()) {
+                    return value.trim();
+                }
+            }
+        }
+        return null;
     }
 
     @GetMapping("/auth/profile")
