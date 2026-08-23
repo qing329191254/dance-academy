@@ -1,0 +1,45 @@
+server:
+  port: ${SERVER_PORT:80}
+
+spring:
+  servlet:
+    multipart:
+      max-file-size: 12MB
+      max-request-size: 12MB
+  datasource:
+    url: jdbc:mysql://${MYSQL_ADDRESS:127.0.0.1:3306}/${MYSQL_DATABASE:dance_academy}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
+    username: ${MYSQL_USERNAME:root}
+    password: ${MYSQL_PASSWORD:root}
+    hikari:
+      maximum-pool-size: 8
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: false
+    show-sql: false
+  jackson:
+    time-zone: Asia/Shanghai
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+
+app:
+  name: 高校FOR一GET街舞俱乐部
+  jwt-secret: ${JWT_SECRET:forget-academy-dev-secret-change-me-32bytes!!}
+  jwt-expire-hours: ${JWT_EXPIRE_HOURS:168}
+  upload-dir: ${UPLOAD_DIR:./uploads}
+  storage: ${STORAGE_TYPE:local}
+  cos:
+    region: ${COS_REGION:}
+    bucket: ${COS_BUCKET:}
+    public-base-url: ${COS_PUBLIC_BASE_URL:}
+  wx-cos:
+    auth-url: ${WX_COS_AUTH_URL:http://api.weixin.qq.com/_/cos/getauth}
+    meta-url: ${WX_COS_META_URL:http://api.weixin.qq.com/_/cos/metaid/encode}
+  wx-appid: ${WX_APPID:wxac2808104a5b6503}
+  wx-secret: ${WX_SECRET:}
+  admin-username: ${ADMIN_USERNAME:admin}
+  admin-password: ${ADMIN_PASSWORD:admin123}

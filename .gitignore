@@ -1,0 +1,7 @@
+.env
+**/uploads/
+admin/node_modules/
+admin/dist/
+server/target/
+miniapp/unpackage/
+miniapp/node_modules/

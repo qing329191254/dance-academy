@@ -1,0 +1,265 @@
+{
+  "easycom": {
+    "autoscan": true,
+    "custom": {
+      "^app-(.*)": "@/components/app-$1/app-$1.vue"
+    }
+  },
+  "pages": [
+    {
+      "path": "pages/home/home",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "高校FOR一GET街舞俱乐部",
+        "navigationBarBackgroundColor": "#000000",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#000000",
+        "backgroundColorContent": "#000000"
+      }
+    },
+    {
+      "path": "pages/book/book",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "高校FOR一GET街舞俱乐部",
+        "navigationBarBackgroundColor": "#111111",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#111111",
+        "backgroundColorContent": "#111111"
+      }
+    },
+    {
+      "path": "pages/growth/index",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "高校FOR一GET街舞俱乐部",
+        "navigationBarBackgroundColor": "#111111",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#111111",
+        "backgroundColorContent": "#111111"
+      }
+    },
+    {
+      "path": "pages/mine/mine",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "我的",
+        "navigationBarBackgroundColor": "#111111",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#111111",
+        "backgroundColorContent": "#111111"
+      }
+    },
+    {
+      "path": "pages/login/login",
+      "style": {
+        "navigationBarTitleText": "登录",
+        "navigationBarBackgroundColor": "#111111",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#111111",
+        "backgroundColorContent": "#111111"
+      }
+    },
+    {
+      "path": "pages/login/profile",
+      "style": {
+        "navigationBarTitleText": "完善资料",
+        "navigationBarBackgroundColor": "#111111",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#111111",
+        "backgroundColorContent": "#111111"
+      }
+    },
+    {
+      "path": "pages/legal/user-agreement",
+      "style": {
+        "navigationBarTitleText": "用户协议",
+        "navigationBarBackgroundColor": "#111111",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#111111",
+        "backgroundColorContent": "#111111"
+      }
+    },
+    {
+      "path": "pages/legal/privacy-policy",
+      "style": {
+        "navigationBarTitleText": "隐私政策",
+        "navigationBarBackgroundColor": "#111111",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#111111",
+        "backgroundColorContent": "#111111"
+      }
+    },
+    {
+      "path": "pages/brand/brand",
+      "style": {
+        "navigationBarTitleText": "品牌介绍",
+        "navigationBarBackgroundColor": "#111111",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#111111",
+        "backgroundColorContent": "#111111"
+      }
+    },
+    {
+      "path": "pages/teachers/teachers",
+      "style": {
+        "navigationBarTitleText": "老师介绍",
+        "navigationBarBackgroundColor": "#111111",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#111111",
+        "backgroundColorContent": "#111111"
+      }
+    },
+    {
+      "path": "pages/teachers/detail",
+      "style": {
+        "navigationBarTitleText": "老师详情",
+        "navigationBarBackgroundColor": "#111111",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#111111",
+        "backgroundColorContent": "#111111"
+      }
+    },
+    {
+      "path": "pages/course/detail",
+      "style": {
+        "navigationBarTitleText": "课程详情",
+        "navigationBarBackgroundColor": "#111111",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#111111",
+        "backgroundColorContent": "#111111"
+      }
+    },
+    {
+      "path": "pages/course/list",
+      "style": {
+        "navigationBarTitleText": "课程介绍",
+        "navigationBarBackgroundColor": "#111111",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#111111",
+        "backgroundColorContent": "#111111"
+      }
+    },
+    {
+      "path": "pages/growth/work",
+      "style": {
+        "navigationBarTitleText": "勤工俭学",
+        "navigationBarBackgroundColor": "#111111",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#111111",
+        "backgroundColorContent": "#111111"
+      }
+    },
+    {
+      "path": "pages/growth/dance",
+      "style": {
+        "navigationBarTitleText": "舞蹈发展",
+        "navigationBarBackgroundColor": "#111111",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#111111",
+        "backgroundColorContent": "#111111"
+      }
+    },
+    {
+      "path": "pages/growth/track",
+      "style": {
+        "navigationBarTitleText": "成长路径",
+        "navigationBarBackgroundColor": "#111111",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#111111",
+        "backgroundColorContent": "#111111"
+      }
+    },
+    {
+      "path": "pages/growth/opportunity",
+      "style": {
+        "navigationBarTitleText": "机会详情",
+        "navigationBarBackgroundColor": "#111111",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#111111",
+        "backgroundColorContent": "#111111"
+      }
+    },
+    {
+      "path": "pages/mine/cards",
+      "style": {
+        "navigationBarTitleText": "我的卡包",
+        "navigationBarBackgroundColor": "#111111",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#111111",
+        "backgroundColorContent": "#111111"
+      }
+    },
+    {
+      "path": "pages/mine/courses",
+      "style": {
+        "navigationBarTitleText": "我的课程",
+        "navigationBarBackgroundColor": "#111111",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#111111",
+        "backgroundColorContent": "#111111"
+      }
+    },
+    {
+      "path": "pages/mine/bookings",
+      "style": {
+        "navigationBarTitleText": "已约课程",
+        "navigationBarBackgroundColor": "#111111",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#111111",
+        "backgroundColorContent": "#111111"
+      }
+    },
+    {
+      "path": "pages/mine/practice",
+      "style": {
+        "navigationBarTitleText": "习练记录",
+        "navigationBarBackgroundColor": "#111111",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#111111",
+        "backgroundColorContent": "#111111"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "white",
+    "navigationBarTitleText": "高校FOR一GET街舞俱乐部",
+    "navigationBarBackgroundColor": "#111111",
+    "backgroundColor": "#111111",
+    "backgroundColorTop": "#111111",
+    "backgroundColorBottom": "#111111",
+    "backgroundColorContent": "#111111"
+  },
+  "tabBar": {
+    "color": "#8a8a8a",
+    "selectedColor": "#8a74e5",
+    "backgroundColor": "#111111",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/home/home",
+        "text": "首页",
+        "iconPath": "static/tab/home.png",
+        "selectedIconPath": "static/tab/home-active.png"
+      },
+      {
+        "pagePath": "pages/book/book",
+        "text": "约课",
+        "iconPath": "static/tab/book.png",
+        "selectedIconPath": "static/tab/book-active.png"
+      },
+      {
+        "pagePath": "pages/growth/index",
+        "text": "成长中心",
+        "iconPath": "static/tab/growth.png",
+        "selectedIconPath": "static/tab/growth-active.png"
+      },
+      {
+        "pagePath": "pages/mine/mine",
+        "text": "我的",
+        "iconPath": "static/tab/mine.png",
+        "selectedIconPath": "static/tab/mine-active.png"
+      }
+    ]
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "name": "dance-academy-miniapp",
+  "private": true,
+  "scripts": {
+    "patch:mp-weixin": "node scripts/patch-weixin-theme.js"
+  }
+}

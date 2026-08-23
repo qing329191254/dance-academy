@@ -1,0 +1,50 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: forget-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD:-root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-dance_academy}
+      TZ: Asia/Shanghai
+    volumes:
+      - academy-mysql:/var/lib/mysql
+    ports:
+      - "${MYSQL_HOST_PORT:-3307}:3306"
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  server:
+    build:
+      context: ./server
+    container_name: forget-server
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      SERVER_PORT: 80
+      MYSQL_ADDRESS: ${MYSQL_ADDRESS:-mysql:3306}
+      MYSQL_USERNAME: ${MYSQL_USERNAME:-root}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-dance_academy}
+      TZ: Asia/Shanghai
+      WX_APPID: ${WX_APPID:-wxac2808104a5b6503}
+      WX_SECRET: ${WX_SECRET:-}
+      UPLOAD_DIR: /app/uploads
+      STORAGE_TYPE: ${STORAGE_TYPE:-local}
+      COS_REGION: ${COS_REGION:-}
+      COS_BUCKET: ${COS_BUCKET:-}
+      COS_PUBLIC_BASE_URL: ${COS_PUBLIC_BASE_URL:-}
+    ports:
+      - "8080:80"
+    volumes:
+      - academy-uploads:/app/uploads
+
+volumes:
+  academy-uploads:
+  academy-mysql:

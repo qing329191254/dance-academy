@@ -1,0 +1,441 @@
+const fs = require('fs')
+const path = require('path')
+
+const file = path.join(__dirname, '..', 'pages', 'home', 'home.vue')
+
+const content = `<template>
+  <page-meta root-background-color="#111111" background-color="#111111" page-style="background-color:#111111;" />
+  <view class="page">
+    <splash-overlay v-if="showSplash" @done="onSplashDone" />
+    <view
+      class="custom-navbar"
+      :class="{ 'navbar-visible': showNavTitle }"
+      :style="{ paddingTop: statusBarHeight + 'px' }"
+    >
+      <view class="navbar-inner">
+        <text class="navbar-title" :class="{ show: showNavTitle }">高校FOR一GET街舞俱乐部</text>
+      </view>
+    </view>
+
+    <scroll-view
+      scroll-y
+      class="page-scroll"
+      :style="{ height: scrollHeight + 'px' }"
+      :show-scrollbar="false"
+      @scroll="handleScroll"
+    >
+      <swiper
+        class="hero"
+        circular
+        autoplay
+        interval="4000"
+        indicator-dots
+        indicator-color="rgba(255,255,255,.35)"
+        indicator-active-color="#ffffff"
+      >
+        <swiper-item v-for="(item, index) in banners" :key="index">
+          <image
+            class="hero-img"
+            :src="item"
+            mode="aspectFill"
+            @click.stop="previewBanner(index)"
+          />
+        </swiper-item>
+      </swiper>
+
+      <view class="nav-row">
+        <view class="nav-item" @click="go('/pages/book/book', true)">
+          <view class="nav-icon">
+            <image class="nav-icon-img" src="/static/nav/book.png" mode="aspectFit" />
+          </view>
+          <text>约课</text>
+        </view>
+        <view class="nav-item" @click="go('/pages/brand/brand')">
+          <view class="nav-icon">
+            <image class="nav-icon-img" src="/static/nav/brand.png" mode="aspectFit" />
+          </view>
+          <text>品牌</text>
+        </view>
+        <view class="nav-item" @click="go('/pages/course/list')">
+          <view class="nav-icon">
+            <image class="nav-icon-img" src="/static/nav/course.png" mode="aspectFit" />
+          </view>
+          <text>课程介绍</text>
+        </view>
+      </view>
+
+      <view class="section">
+        <view class="section-head">
+          <text class="section-title">明星老师</text>
+          <view class="section-more" @click="go('/pages/teachers/teachers')">
+            <text>查看更多</text>
+            <view class="link-arrow" />
+          </view>
+        </view>
+        <scroll-view scroll-x class="teacher-scroll" :show-scrollbar="false">
+          <view class="teacher-list">
+            <view v-for="t in teachers" :key="t.id" class="teacher-item" @click="go('/pages/teachers/teachers')">
+              <image class="avatar" :src="t.avatar" mode="aspectFill" />
+              <text class="name">{{ t.name }}</text>
+              <text class="muted style">{{ t.style }}</text>
+            </view>
+          </view>
+        </scroll-view>
+      </view>
+
+      <view class="section">
+        <view class="section-head">
+          <text class="section-title">课程介绍</text>
+          <view class="section-more" @click="go('/pages/course/list')">
+            <text>去看看</text>
+            <view class="link-arrow" />
+          </view>
+        </view>
+        <view v-for="c in courses" :key="c.id" class="course-card card" @click="go(\`/pages/course/detail?id=\${c.id}\`)">
+          <view class="course-main">
+            <text class="course-name">{{ c.name }}</text>
+            <text class="muted">{{ c.desc }}</text>
+          </view>
+          <view class="course-side">
+            <text class="price">¥{{ c.price }}</text>
+            <text class="tag">{{ c.level }}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="section">
+        <view class="studio card">
+          <view class="studio-left">
+            <image class="studio-logo" src="/static/logo.png" mode="aspectFit" />
+            <view>
+              <text class="studio-name">高校FOR一GET街舞俱乐部</text>
+              <text class="muted">四川成都 · 高校街舞俱乐部</text>
+            </view>
+          </view>
+          <view class="phone" @click.stop="callStudio">
+            <image class="phone-icon" src="/static/nav/phone.png" mode="aspectFit" />
+          </view>
+        </view>
+      </view>
+
+      <view class="page-bottom" />
+    </scroll-view>
+  </view>
+</template>
+
+<script setup>
+import { ref } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
+import { teachers, courses, studio } from '@/common/mock.js'
+import { preloadTabPagesAsync } from '@/common/preloadTabs.js'
+import { openPage, switchTabPage } from '@/common/navigate.js'
+
+let launchSplashPending = true
+
+const showSplash = ref(launchSplashPending)
+const showNavTitle = ref(false)
+const statusBarHeight = ref(44)
+const scrollHeight = ref(600)
+
+onLoad(() => {
+  resolveBannerPreviewUrls()
+  if (showSplash.value) {
+    uni.hideTabBar({ animation: false })
+    preloadTabPagesAsync()
+  }
+  try {
+    const info = uni.getSystemInfoSync()
+    statusBarHeight.value = info.statusBarHeight || 44
+    scrollHeight.value = info.windowHeight || 600
+  } catch (e) {
+    statusBarHeight.value = 44
+    scrollHeight.value = 600
+  }
+})
+
+function onSplashDone() {
+  showSplash.value = false
+  launchSplashPending = false
+  uni.showTabBar({ animation: false })
+}
+
+function handleScroll(e) {
+  showNavTitle.value = e.detail.scrollTop > 120
+}
+
+const banners = [
+  '/static/banners/banner-1.jpg',
+  '/static/banners/banner-2.jpg',
+  '/static/banners/banner-3.jpg',
+  '/static/banners/banner-4.jpg',
+]
+
+const bannerPreviewUrls = ref([...banners])
+
+function resolveBannerPreviewUrls() {
+  banners.forEach((src, index) => {
+    uni.getImageInfo({
+      src,
+      success(res) {
+        bannerPreviewUrls.value[index] = res.path
+      },
+    })
+  })
+}
+
+function previewBanner(index) {
+  const urls = bannerPreviewUrls.value
+  const current = urls[index] || banners[index]
+  uni.previewImage({
+    current,
+    urls,
+    fail() {
+      uni.showToast({ title: '图片预览失败', icon: 'none' })
+    },
+  })
+}
+
+function go(url, tab = false) {
+  if (tab) {
+    switchTabPage(url)
+    return
+  }
+  openPage(url)
+}
+
+function callStudio() {
+  uni.makePhoneCall({
+    phoneNumber: studio.phone,
+  })
+}
+</script>
+
+<style scoped>
+.page {
+  width: 100%;
+  height: 100%;
+  background: #111111;
+}
+
+.page-scroll {
+  width: 100%;
+}
+
+.custom-navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  pointer-events: none;
+  background: transparent;
+  transition: background 0.25s ease;
+}
+
+.custom-navbar.navbar-visible {
+  background: #111111;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.35);
+}
+
+.navbar-inner {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 100rpx;
+}
+
+.navbar-title {
+  display: block;
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #ffffff;
+  text-align: center;
+  line-height: 44px;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.navbar-title.show {
+  opacity: 1;
+}
+
+.page-bottom {
+  height: 24rpx;
+}
+
+.hero {
+  width: 100%;
+  height: 560rpx;
+}
+
+.hero-img {
+  width: 100%;
+  height: 560rpx;
+  display: block;
+}
+
+.nav-row {
+  display: flex;
+  justify-content: space-around;
+  padding: 36rpx 24rpx 8rpx;
+}
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 24rpx;
+  color: #fff;
+}
+
+.nav-item text {
+  margin-top: 14rpx;
+}
+
+.nav-icon {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 18rpx;
+  background: #1a1a1a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1rpx solid #2a2a2a;
+}
+
+.nav-icon-img {
+  width: 52rpx;
+  height: 52rpx;
+}
+
+.teacher-scroll {
+  width: 100%;
+  white-space: nowrap;
+}
+
+.teacher-list {
+  display: inline-flex;
+  padding-right: 24rpx;
+}
+
+.teacher-item {
+  width: 140rpx;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  margin-right: 36rpx;
+}
+
+.teacher-item .name {
+  margin-top: 10rpx;
+}
+
+.teacher-item .style {
+  margin-top: 6rpx;
+}
+
+.avatar {
+  width: 110rpx;
+  height: 110rpx;
+  border-radius: 50%;
+  background: #2a2a2a;
+  flex-shrink: 0;
+}
+
+.name {
+  font-size: 26rpx;
+  color: #fff;
+}
+
+.style {
+  font-size: 22rpx;
+}
+
+.course-card {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20rpx;
+}
+
+.course-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding-right: 20rpx;
+}
+
+.course-main .muted {
+  margin-top: 10rpx;
+}
+
+.course-name {
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.course-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+}
+
+.course-side .tag {
+  margin-top: 12rpx;
+}
+
+.price {
+  color: #8a74e5;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.studio {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24rpx;
+}
+
+.studio-left {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.studio-logo {
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 12rpx;
+  margin-right: 20rpx;
+  flex-shrink: 0;
+}
+
+.studio-name {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 600;
+  margin-bottom: 8rpx;
+}
+
+.phone {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  background: #8a74e5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.phone-icon {
+  width: 36rpx;
+  height: 36rpx;
+}
+</style>
+`
+
+fs.writeFileSync(file, content, 'utf8')
+console.log('restored', file)

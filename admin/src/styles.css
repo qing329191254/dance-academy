@@ -1,0 +1,122 @@
+:root {
+  --brand: #8a74e5;
+  --brand-dark: #6f5cc4;
+  --side: #16161c;
+  --side-text: #c9c7d4;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: #f4f5f8;
+  color: #1f1f24;
+}
+
+.el-button--primary {
+  --el-button-bg-color: var(--brand);
+  --el-button-border-color: var(--brand);
+  --el-button-hover-bg-color: var(--brand-dark);
+  --el-button-hover-border-color: var(--brand-dark);
+}
+
+.el-menu {
+  --el-menu-active-color: var(--brand);
+  --el-menu-bg-color: var(--side);
+  --el-menu-text-color: var(--side-text);
+  --el-menu-hover-bg-color: #23232d;
+  border-right: none !important;
+}
+
+.el-menu-item {
+  margin: 4px 10px;
+  border-radius: 8px;
+  height: 44px;
+  line-height: 44px;
+}
+
+.el-menu-item.is-active {
+  color: #fff !important;
+  background: var(--brand) !important;
+  font-weight: 600;
+}
+
+.el-menu-item:hover {
+  color: #fff !important;
+}
+
+.page-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px 22px;
+  box-shadow: 0 8px 24px rgba(22, 22, 28, 0.04);
+}
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  align-items: center;
+}
+
+.table-actions {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 12px;
+  white-space: nowrap;
+}
+
+.table-actions .el-button {
+  margin: 0;
+  padding: 0 4px;
+}
+
+.thumb {
+  width: 64px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 6px;
+  background: #eee;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 8px 24px rgba(22, 22, 28, 0.04);
+}
+
+.stat-card .label {
+  color: #8a8a96;
+  font-size: 13px;
+}
+
+.stat-card .num {
+  font-size: 32px;
+  font-weight: 700;
+  margin-top: 8px;
+  color: #16161c;
+}
+
+.el-image-viewer__wrapper {
+  z-index: 4000 !important;
+}
+
+.el-image-viewer__img {
+  max-width: 90vw !important;
+  max-height: 90vh !important;
+  min-width: 240px;
+  min-height: 240px;
+  object-fit: contain;
+}
