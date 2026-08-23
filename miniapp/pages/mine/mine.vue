@@ -132,6 +132,7 @@ import { startCheckInScan } from '@/common/checkin.js'
 import { getUser, isLoggedIn, logout, isProfileComplete } from '@/common/auth.js'
 import { openPage, switchTabPage } from '@/common/navigate.js'
 import { showSuccess, showError } from '@/common/toast.js'
+import { mediaUrl } from '@/common/config.js'
 
 const statusBarHeight = ref(44)
 const headerTop = ref(88)
@@ -150,18 +151,22 @@ const userAvatar = ref('/static/avatars/guest.png')
 const userNickname = ref('点击登录')
 const userSubtitle = ref('微信一键登录')
 
+function displayAvatar(url) {
+  return mediaUrl(url) || '/static/avatars/guest.png'
+}
+
 function refreshUser() {
   loggedIn.value = isLoggedIn()
   profileReady.value = loggedIn.value && isProfileComplete()
   const user = getUser()
   if (profileReady.value && user) {
-    userAvatar.value = user.avatar || '/static/avatars/guest.png'
+    userAvatar.value = displayAvatar(user.avatar)
     userNickname.value = user.nickname || '学员'
     userSubtitle.value = '已登录 · 高校街舞学员'
     return
   }
   if (loggedIn.value) {
-    userAvatar.value = user?.avatar || '/static/avatars/guest.png'
+    userAvatar.value = displayAvatar(user?.avatar)
     userNickname.value = '请完善资料'
     userSubtitle.value = '完善后即可使用全部功能'
     return
@@ -192,7 +197,7 @@ async function loadMine() {
       ]
     }
     if (data.user) {
-      userAvatar.value = data.user.avatar || userAvatar.value
+      userAvatar.value = displayAvatar(data.user.avatar) || userAvatar.value
       userNickname.value = data.user.nickname || userNickname.value
     }
   } catch (e) {
@@ -251,11 +256,7 @@ function goProfile() {
 }
 
 function onProfileTap() {
-  if (loggedIn.value && !isProfileComplete()) {
-    goProfile()
-    return
-  }
-  if (profileReady.value) {
+  if (loggedIn.value) {
     goProfile()
     return
   }

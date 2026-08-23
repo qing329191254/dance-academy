@@ -61,16 +61,10 @@ public class AdminOpsController {
                                   @RequestParam(defaultValue = "") String status,
                                   @RequestParam(defaultValue = "1") int page,
                                   @RequestParam(defaultValue = "20") int size) {
-        var pageable = PageRequest.of(Math.max(page - 1, 0), size, Sort.by(Sort.Direction.DESC, "id"));
-        Page<Booking> result;
-        if (status != null && !status.isBlank()) {
-            result = bookingRepo.findByStatus(status, pageable);
-        } else if (keyword != null && !keyword.isBlank()) {
-            result = bookingRepo.findByNameContainingOrNicknameContaining(keyword, keyword, pageable);
-        } else {
-            result = bookingRepo.findAll(pageable);
-        }
-        return ApiResponse.ok(PageResult.of(result));
+        var pageable = PageRequest.of(Math.max(page - 1, 0), size);
+        String query = keyword == null ? "" : keyword.trim();
+        String st = status == null ? "" : status.trim();
+        return ApiResponse.ok(PageResult.of(bookingRepo.search(query, st, pageable)));
     }
 
     @PutMapping("/bookings/{id}")
@@ -110,6 +104,7 @@ public class AdminOpsController {
         if (body.getEnabled() == null) {
             body.setEnabled(true);
         }
+        body.setCode(nextOpportunityCode(body.getTrackKey()));
         return ApiResponse.ok(opportunityRepo.save(body));
     }
 
@@ -117,7 +112,9 @@ public class AdminOpsController {
     public ApiResponse<Opportunity> updateOpportunity(@PathVariable Long id, @RequestBody Opportunity body) {
         Opportunity item = opportunityRepo.findById(id).orElseThrow(() -> new BizException("机会不存在"));
         item.setTrackKey(body.getTrackKey());
-        item.setCode(body.getCode());
+        if (item.getCode() == null || item.getCode().isBlank()) {
+            item.setCode(nextOpportunityCode(body.getTrackKey()));
+        }
         item.setTitle(body.getTitle());
         item.setDeadline(body.getDeadline());
         item.setSpots(body.getSpots());
@@ -168,5 +165,17 @@ public class AdminOpsController {
                 ? practiceRecordRepo.findAll(pageable)
                 : practiceRecordRepo.findByNameContaining(keyword, pageable);
         return ApiResponse.ok(PageResult.of(result));
+    }
+
+    private String nextOpportunityCode(String trackKey) {
+        String prefix = switch (trackKey == null ? "" : trackKey) {
+            case "show", "commercial", "teacher" -> "d";
+            default -> "w";
+        };
+        int seq = 1;
+        while (opportunityRepo.findByCode(prefix + seq).isPresent()) {
+            seq++;
+        }
+        return prefix + seq;
     }
 }

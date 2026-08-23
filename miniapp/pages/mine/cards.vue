@@ -1,7 +1,7 @@
 <template>
   <page-meta root-background-color="#111111" background-color="#111111" page-style="background-color:#111111;" />
   <view class="page">
-    <view class="section">
+    <view v-if="cardList.length" class="section">
       <view v-for="item in cardList" :key="item.id" class="pass-card">
         <image class="pass-bg" :src="item.cover" mode="aspectFill" />
         <view class="pass-mask" />
@@ -25,6 +25,10 @@
         </view>
       </view>
     </view>
+    <view v-else class="empty">
+      <text class="empty-title">暂无卡包</text>
+      <text class="muted">购卡后会显示在这里，可到前台或联系老师办理</text>
+    </view>
     <app-toast />
   </view>
 </template>
@@ -40,7 +44,8 @@ const cardList = ref([])
 onShow(async () => {
   if (!ensureLogin()) return
   try {
-    cardList.value = await getCards()
+    const list = await getCards()
+    cardList.value = Array.isArray(list) ? list : []
   } catch (e) {
     cardList.value = []
   }
@@ -143,5 +148,25 @@ onShow(async () => {
 
 .accent {
   color: #e8deff;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 160rpx 48rpx;
+  text-align: center;
+  gap: 16rpx;
+}
+
+.empty-title {
+  font-size: 32rpx;
+  font-weight: 600;
+}
+
+.muted {
+  font-size: 26rpx;
+  color: #9a9a9a;
 }
 </style>

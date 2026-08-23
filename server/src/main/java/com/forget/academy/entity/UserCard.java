@@ -2,6 +2,7 @@ package com.forget.academy.entity;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -19,4 +20,9 @@ public class UserCard extends BaseEntity {
     private Integer total;
     private LocalDate expireDate;
     private String cover;
+
+    @Transient
+    private String nickname;
+    @Transient
+    private String openid;
 }

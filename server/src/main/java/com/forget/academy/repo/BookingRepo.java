@@ -4,6 +4,8 @@ import com.forget.academy.entity.Booking;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -20,6 +22,19 @@ public interface BookingRepo extends JpaRepository<Booking, Long> {
     Page<Booking> findByStatus(String status, Pageable pageable);
 
     Page<Booking> findByNameContainingOrNicknameContaining(String name, String nickname, Pageable pageable);
+
+    @Query("""
+            select b from Booking b
+            where (:keyword = ''
+                or lower(coalesce(b.name, '')) like lower(concat('%', :keyword, '%'))
+                or lower(coalesce(b.nickname, '')) like lower(concat('%', :keyword, '%'))
+                or lower(coalesce(b.teacherName, '')) like lower(concat('%', :keyword, '%')))
+              and (:status = '' or b.status = :status)
+            order by case when b.status = '待上课' then 0 when b.status = '已完成' then 1 else 2 end, b.id desc
+            """)
+    Page<Booking> search(@Param("keyword") String keyword,
+                         @Param("status") String status,
+                         Pageable pageable);
 
     void deleteByUserId(Long userId);
 }

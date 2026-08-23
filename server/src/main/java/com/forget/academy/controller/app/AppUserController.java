@@ -10,6 +10,7 @@ import com.forget.academy.service.AppAuthService;
 import com.forget.academy.service.BookingService;
 import com.forget.academy.service.CheckinService;
 import com.forget.academy.service.GrowthService;
+import com.forget.academy.service.StorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -32,6 +33,7 @@ public class AppUserController {
     private final AppUserRepo appUserRepo;
     private final UserCardRepo userCardRepo;
     private final UserCourseRepo userCourseRepo;
+    private final StorageService storageService;
 
     @PostMapping("/auth/login")
     public ApiResponse<?> login(@RequestBody(required = false) Map<String, String> body,
@@ -81,6 +83,27 @@ public class AppUserController {
     @PostMapping("/auth/profile")
     public ApiResponse<?> saveProfile(@RequestBody Map<String, Object> body) {
         return ApiResponse.ok(appAuthService.completeProfile(AuthContext.requireApp().id(), body));
+    }
+
+    @PostMapping("/upload")
+    public ApiResponse<?> upload(@RequestBody Map<String, String> body) {
+        AuthContext.requireApp();
+        String raw = body == null ? null : body.get("imageBase64");
+        if (raw == null || raw.isBlank()) {
+            throw new com.forget.academy.common.BizException("请选择图片");
+        }
+        int comma = raw.indexOf(',');
+        if (comma >= 0) {
+            raw = raw.substring(comma + 1);
+        }
+        byte[] bytes;
+        try {
+            bytes = java.util.Base64.getDecoder().decode(raw);
+        } catch (IllegalArgumentException e) {
+            throw new com.forget.academy.common.BizException("图片格式不正确");
+        }
+        String filename = body.get("filename");
+        return ApiResponse.ok(storageService.saveImageBytes(bytes, filename));
     }
 
     @GetMapping("/mine")

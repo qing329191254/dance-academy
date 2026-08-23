@@ -54,7 +54,6 @@
   <el-dialog v-model="visible" :title="form.id ? '编辑机会' : '新增机会'" width="560px">
     <el-form :model="form" label-width="90px">
       <el-form-item label="标题"><el-input v-model="form.title" /></el-form-item>
-      <el-form-item label="编码"><el-input v-model="form.code" /></el-form-item>
       <el-form-item label="赛道">
         <el-select v-model="form.trackKey">
           <el-option v-for="(label, key) in trackLabel" :key="key" :label="label" :value="key" />
@@ -114,7 +113,7 @@ function search() {
   return load()
 }
 function edit(row) {
-  Object.assign(form, { id: null, title: '', code: '', trackKey: 'parttime', level: 'T1', spots: 4, deadline: '', summary: '', enabled: true }, row || {})
+  Object.assign(form, { id: null, title: '', trackKey: 'parttime', level: 'T1', spots: 4, deadline: '', summary: '', enabled: true }, row || {})
   visible.value = true
 }
 async function save() {

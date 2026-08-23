@@ -1,6 +1,7 @@
 package com.forget.academy.service;
 
 import com.forget.academy.common.BizException;
+import com.forget.academy.storage.ByteArrayMultipartFile;
 import com.forget.academy.storage.ObjectStorage;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -26,11 +27,31 @@ public class StorageService {
         this.storages = storages;
     }
 
+    public Map<String, String> saveImageBytes(byte[] bytes, String filename) {
+        if (bytes == null || bytes.length == 0) {
+            throw new BizException("请选择文件");
+        }
+        if (bytes.length > 8 * 1024 * 1024) {
+            throw new BizException("图片过大");
+        }
+        String name = (filename == null || filename.isBlank()) ? "avatar.jpg" : filename;
+        String ext = extension(name);
+        if (ext.isEmpty()) {
+            ext = ".jpg";
+            name = name + ext;
+        }
+        String contentType = contentType(ext);
+        return saveImage(new ByteArrayMultipartFile("file", name, contentType, bytes));
+    }
+
     public Map<String, String> saveImage(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new BizException("请选择文件");
         }
         String ext = extension(file.getOriginalFilename());
+        if (ext.isEmpty()) {
+            ext = ".jpg";
+        }
         if (!ALLOWED_EXT.contains(ext)) {
             throw new BizException("仅支持图片文件");
         }
@@ -49,5 +70,14 @@ public class StorageService {
         }
         int dot = original.lastIndexOf('.');
         return dot >= 0 ? original.substring(dot).toLowerCase(Locale.ROOT) : "";
+    }
+
+    private static String contentType(String ext) {
+        return switch (ext) {
+            case ".png" -> "image/png";
+            case ".gif" -> "image/gif";
+            case ".webp" -> "image/webp";
+            default -> "image/jpeg";
+        };
     }
 }

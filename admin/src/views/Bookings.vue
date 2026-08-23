@@ -1,13 +1,15 @@
 <template>
   <div class="page-card">
     <div class="toolbar">
-      <el-input v-model="keyword" placeholder="搜索学员/课程" style="width: 240px" clearable @keyup.enter="load" />
-      <el-select v-model="status" placeholder="状态" clearable style="width: 140px" @change="load">
-        <el-option label="待上课" value="待上课" />
-        <el-option label="已完成" value="已完成" />
-        <el-option label="已取消" value="已取消" />
-      </el-select>
-      <el-button @click="load">查询</el-button>
+      <div class="filters">
+        <el-input v-model="keyword" placeholder="搜索学员/课程" style="width: 240px" clearable @keyup.enter="load" />
+        <el-select v-model="status" placeholder="状态" clearable style="width: 140px" @change="load">
+          <el-option label="待上课" value="待上课" />
+          <el-option label="已完成" value="已完成" />
+          <el-option label="已取消" value="已取消" />
+        </el-select>
+        <el-button @click="load">查询</el-button>
+      </div>
     </div>
     <el-table :data="list">
       <el-table-column prop="nickname" label="学员" width="120" />

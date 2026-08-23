@@ -117,6 +117,7 @@ public class AppAuthService {
         return !(value.startsWith("wxfile://")
                 || value.startsWith("http://tmp/")
                 || value.startsWith("https://tmp/")
-                || value.startsWith("file://"));
+                || value.startsWith("file://")
+                || value.contains("://tmp/"));
     }
 }

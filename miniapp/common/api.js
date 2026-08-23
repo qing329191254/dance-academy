@@ -81,6 +81,50 @@ export function saveProfile(payload) {
   return request({ url: '/auth/profile', method: 'POST', data: payload })
 }
 
+export function uploadAvatar(filePath) {
+  return compressImage(filePath)
+    .then(readFileBase64)
+    .then((imageBase64) => request({
+      url: '/upload',
+      method: 'POST',
+      data: {
+        imageBase64,
+        filename: 'avatar.jpg',
+      },
+    }))
+}
+
+function compressImage(filePath) {
+  return new Promise((resolve) => {
+    uni.compressImage({
+      src: filePath,
+      quality: 80,
+      success(res) {
+        resolve(res.tempFilePath || filePath)
+      },
+      fail() {
+        resolve(filePath)
+      },
+    })
+  })
+}
+
+function readFileBase64(filePath) {
+  return new Promise((resolve, reject) => {
+    const fs = uni.getFileSystemManager()
+    fs.readFile({
+      filePath,
+      encoding: 'base64',
+      success(res) {
+        resolve(res.data)
+      },
+      fail() {
+        reject(new Error('读取头像失败'))
+      },
+    })
+  })
+}
+
 export function getMine() {
   return request({ url: '/mine' })
 }

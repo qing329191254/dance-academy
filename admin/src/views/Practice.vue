@@ -1,8 +1,10 @@
 <template>
   <div class="page-card">
     <div class="toolbar">
-      <el-input v-model="keyword" placeholder="搜索课程名" style="width: 240px" clearable @keyup.enter="load" />
-      <el-button @click="load">查询</el-button>
+      <div class="filters">
+        <el-input v-model="keyword" placeholder="搜索课程名" style="width: 240px" clearable @keyup.enter="load" />
+        <el-button @click="load">查询</el-button>
+      </div>
     </div>
     <el-table :data="list">
       <el-table-column prop="userId" label="学员ID" width="90" />

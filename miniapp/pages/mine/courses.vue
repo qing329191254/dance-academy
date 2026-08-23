@@ -1,7 +1,7 @@
 <template>
   <page-meta root-background-color="#111111" background-color="#111111" page-style="background-color:#111111;" />
   <view class="page">
-    <view class="section">
+    <view v-if="myCourses.length" class="section">
       <view v-for="item in myCourses" :key="item.id" class="card item">
         <view class="head">
           <text class="name">{{ item.name }}</text>
@@ -13,6 +13,10 @@
           <text class="accent">{{ item.progress }}</text>
         </view>
       </view>
+    </view>
+    <view v-else class="empty">
+      <text class="empty-title">暂无课程</text>
+      <text class="muted">报名课程后会显示在这里</text>
     </view>
   </view>
 </template>
@@ -28,7 +32,8 @@ const myCourses = ref([])
 onShow(async () => {
   if (!ensureLogin()) return
   try {
-    myCourses.value = await getMyCourses()
+    const list = await getMyCourses()
+    myCourses.value = Array.isArray(list) ? list : []
   } catch (e) {
     myCourses.value = []
   }
@@ -69,5 +74,20 @@ onShow(async () => {
   padding-top: 16rpx;
   border-top: 1rpx solid #2a2a2a;
   font-size: 26rpx;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 160rpx 48rpx;
+  text-align: center;
+  gap: 16rpx;
+}
+
+.empty-title {
+  font-size: 32rpx;
+  font-weight: 600;
 }
 </style>

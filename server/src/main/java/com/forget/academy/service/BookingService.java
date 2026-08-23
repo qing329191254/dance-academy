@@ -48,8 +48,11 @@ public class BookingService {
             row.put("bookedCount", booked);
             row.put("status", resolveStatus(item, booked));
             if (userId != null) {
-                String key = buildKey(tab, item.getId(), date);
-                row.put("booked", bookingRepo.findByUserIdAndBookingKey(userId, key).isPresent());
+                String classDate = "group".equals(tab) ? date : "default";
+                String key = buildKey(tab, item.getId(), classDate);
+                row.put("booked", bookingRepo.findByUserIdAndBookingKey(userId, key)
+                        .filter(b -> "待上课".equals(b.getStatus()))
+                        .isPresent());
             } else {
                 row.put("booked", false);
             }
@@ -68,12 +71,19 @@ public class BookingService {
         }
         String key = buildKey(tab, scheduleId, classDate);
         var existing = bookingRepo.findByUserIdAndBookingKey(userId, key);
-        if (existing.isPresent()) {
+        if (existing.isPresent() && "待上课".equals(existing.get().getStatus())) {
             Booking booking = existing.get();
             booking.setBookingKey(key + ":x:" + booking.getId());
             booking.setStatus("已取消");
             bookingRepo.save(booking);
             return Map.of("booked", false, "message", "已取消预约");
+        }
+        if (existing.isPresent()) {
+            Booking booking = existing.get();
+            booking.setStatus("待上课");
+            booking.setNickname(appUserRepo.findById(userId).map(AppUser::getNickname).orElse(booking.getNickname()));
+            bookingRepo.save(booking);
+            return Map.of("booked", true, "message", "预约成功", "booking", toBookingMap(booking));
         }
 
         if ("group".equals(tab)) {

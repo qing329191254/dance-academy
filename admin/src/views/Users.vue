@@ -1,13 +1,16 @@
 <template>
   <div class="page-card">
     <div class="toolbar">
-      <el-input v-model="keyword" placeholder="搜索昵称" style="width: 260px" clearable @keyup.enter="load" />
-      <el-button @click="load">查询</el-button>
+      <div class="filters">
+        <el-input v-model="keyword" placeholder="搜索昵称" style="width: 260px" clearable @keyup.enter="load" />
+        <el-button @click="load">查询</el-button>
+      </div>
     </div>
     <el-table :data="list">
       <el-table-column prop="id" label="ID" width="70" />
       <el-table-column prop="nickname" label="昵称" width="120" />
       <el-table-column prop="gender" label="性别" width="80" />
+      <el-table-column prop="birthday" label="生日" width="120" />
       <el-table-column prop="workLevel" label="勤工等级" width="100" />
       <el-table-column prop="workStage" label="勤工阶段" width="100" />
       <el-table-column prop="danceLevel" label="舞蹈等级" width="100" />
@@ -33,7 +36,15 @@
   <el-dialog v-model="visible" title="编辑学员" width="520px">
     <el-form :model="form" label-width="100px">
       <el-form-item label="昵称"><el-input v-model="form.nickname" /></el-form-item>
-      <el-form-item label="性别"><el-input v-model="form.gender" /></el-form-item>
+      <el-form-item label="性别">
+        <el-select v-model="form.gender" placeholder="请选择" clearable>
+          <el-option label="男" value="男" />
+          <el-option label="女" value="女" />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="生日">
+        <el-date-picker v-model="form.birthday" type="date" value-format="YYYY-MM-DD" placeholder="选择生日" />
+      </el-form-item>
       <el-form-item label="勤工等级">
         <el-select v-model="form.workLevel">
           <el-option label="T1" value="T1" /><el-option label="T2" value="T2" /><el-option label="T3" value="T3" />

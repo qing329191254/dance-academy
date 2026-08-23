@@ -2,18 +2,29 @@
   <page-meta root-background-color="#111111" background-color="#111111" page-style="background-color:#111111;" />
   <view class="page">
     <view class="section">
-      <text class="page-title">完善资料</text>
+      <text class="page-title">{{ pageTitle }}</text>
 
-      <button class="avatar-btn" open-type="chooseAvatar" @chooseavatar="onChooseAvatar">
+      <button
+        class="avatar-btn"
+        open-type="chooseAvatar"
+        hover-class="none"
+        :loading="false"
+        @chooseavatar="onChooseAvatar"
+      >
         <image
           v-if="avatar"
           class="avatar-img"
           :src="avatar"
           mode="aspectFill"
+          @load="onAvatarReady"
+          @error="onAvatarReady"
         />
         <view v-else class="avatar-placeholder">
           <view class="camera-icon">+</view>
           <text class="upload-text">选择头像</text>
+        </view>
+        <view v-if="avatarLoading" class="avatar-loading">
+          <view class="avatar-spinner" />
         </view>
       </button>
 
@@ -23,14 +34,13 @@
           <input
             v-model="nickname"
             class="input"
-            type="nickname"
+            type="text"
             maxlength="20"
             placeholder="请输入昵称"
             placeholder-class="placeholder"
+            :adjust-position="false"
             @input="onNickname"
             @blur="onNickname"
-            @change="onNickname"
-            @nicknamereview="onNickname"
           />
         </view>
 
@@ -89,6 +99,9 @@ const birthday = ref('')
 const today = ref('')
 const defaultBirthday = '2000-01-01'
 const submitting = ref(false)
+const pageTitle = ref('完善资料')
+const avatarLoading = ref(false)
+let avatarTimer = null
 
 onLoad(() => {
   if (!isLoggedIn()) {
@@ -96,14 +109,6 @@ onLoad(() => {
     return
   }
   const user = getUser()
-  if (user?.profileComplete) {
-    uni.navigateBack({
-      fail() {
-        uni.switchTab({ url: '/pages/mine/mine' })
-      },
-    })
-    return
-  }
   nickname.value = user?.nickname || ''
   avatar.value = user?.avatar || ''
   gender.value = user?.gender || ''
@@ -111,13 +116,27 @@ onLoad(() => {
   const d = new Date()
   const pad = (n) => String(n).padStart(2, '0')
   today.value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+  pageTitle.value = user?.profileComplete ? '个人资料' : '完善资料'
+  uni.setNavigationBarTitle({ title: pageTitle.value })
 })
 
 function onChooseAvatar(e) {
   const url = e.detail?.avatarUrl
-  if (url) {
-    avatar.value = url
+  if (!url) return
+  avatarLoading.value = true
+  avatar.value = url
+  if (avatarTimer) clearTimeout(avatarTimer)
+  avatarTimer = setTimeout(() => {
+    avatarLoading.value = false
+  }, 1600)
+}
+
+function onAvatarReady() {
+  if (avatarTimer) {
+    clearTimeout(avatarTimer)
+    avatarTimer = null
   }
+  avatarLoading.value = false
 }
 
 function onNickname(e) {
@@ -157,6 +176,7 @@ async function submit() {
   }
 
   submitting.value = true
+  avatarLoading.value = true
   try {
     await completeProfile({
       nickname: name,
@@ -170,6 +190,7 @@ async function submit() {
     showToast(err?.message || '保存失败')
   } finally {
     submitting.value = false
+    avatarLoading.value = false
   }
 }
 </script>
@@ -195,6 +216,11 @@ async function submit() {
   background: transparent;
   border: none;
   line-height: normal;
+  position: relative;
+  width: 200rpx;
+  height: 200rpx;
+  overflow: hidden;
+  border-radius: 50%;
 }
 
 .avatar-btn::after {
@@ -235,6 +261,32 @@ async function submit() {
 .upload-text {
   font-size: 24rpx;
   color: #999999;
+}
+
+.avatar-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: 50%;
+  background: rgba(17, 17, 17, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-spinner {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 50%;
+  border: 4rpx solid rgba(255, 255, 255, 0.18);
+  border-top-color: #8a74e5;
+  animation: avatar-spin 0.8s linear infinite;
+}
+
+@keyframes avatar-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .form {

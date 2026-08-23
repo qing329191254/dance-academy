@@ -1,5 +1,5 @@
 import { USER_STORAGE_KEY } from './config.js'
-import { loginByCode, saveProfile } from './api.js'
+import { loginByCode, saveProfile, uploadAvatar } from './api.js'
 
 const STORAGE_KEY = USER_STORAGE_KEY
 
@@ -70,7 +70,11 @@ export async function completeProfile(data) {
     nickname: data.nickname?.trim() || '学员',
     gender: data.gender || '女',
   }
-  const avatar = String(data.avatar || '').trim()
+  let avatar = String(data.avatar || '').trim()
+  if (avatar && isLocalFile(avatar)) {
+    const uploaded = await uploadAvatar(avatar)
+    avatar = uploaded?.url || ''
+  }
   if (avatar && !isLocalFile(avatar)) {
     payload.avatar = avatar
   }
@@ -83,6 +87,7 @@ export async function completeProfile(data) {
   return saveUser({
     ...user,
     ...profile,
+    avatar: profile?.avatar || avatar || user.avatar,
     profileComplete: true,
   })
 }
@@ -93,6 +98,7 @@ function isLocalFile(url) {
     || value.startsWith('http://tmp/')
     || value.startsWith('https://tmp/')
     || value.startsWith('file://')
+    || value.includes('://tmp/')
 }
 
 export function weixinOneTapLogin() {

@@ -89,7 +89,7 @@
             <view class="link-arrow" />
           </view>
         </view>
-        <view v-for="c in courses" :key="c.id" class="course-card card" @click="go(`/pages/course/detail?id=${c.id}`)">
+        <view v-for="c in homeCourses" :key="c.id" class="course-card card" @click="go(`/pages/course/detail?id=${c.id}`)">
           <view class="course-main">
             <text class="course-name">{{ c.name }}</text>
             <text class="muted">{{ c.desc }}</text>
@@ -223,6 +223,7 @@ onUnload(() => {
 const banners = ref([])
 const teachers = ref(mockTeachers)
 const courses = ref(mockCourses)
+const homeCourses = computed(() => (courses.value || []).slice(0, 3))
 const studio = reactive({
   ...mockStudio,
   splashImage: readSplashCache(),

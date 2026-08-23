@@ -49,7 +49,7 @@
 
   <el-dialog v-model="visible" :title="form.id ? '编辑卡' : '发放卡包'" width="560px">
     <el-form :model="form" label-width="90px">
-      <el-form-item label="学员ID"><el-input-number v-model="form.userId" :min="1" /></el-form-item>
+      <el-form-item label="微信ID"><el-input v-model="form.openid" /></el-form-item>
       <el-form-item label="卡名"><el-input v-model="form.name" /></el-form-item>
       <el-form-item label="类型">
         <el-select v-model="form.type">
@@ -102,12 +102,18 @@ function search() {
   return load()
 }
 function edit(row) {
-  Object.assign(form, { id: null, userId: 1, name: '团课 10 次卡', type: '团课', remain: 10, total: 10, expireDate: '', cover: '' }, row || {})
+  Object.assign(form, { id: null, userId: null, openid: '', name: '团课 10 次卡', type: '团课', remain: 10, total: 10, expireDate: '', cover: '' }, row || {})
   visible.value = true
 }
 async function save() {
-  if (form.id) await http.put(`/admin/cards/${form.id}`, form)
-  else await http.post('/admin/cards', form)
+  const openid = String(form.openid || '').trim()
+  if (!openid) {
+    ElMessage.warning('请填写微信ID')
+    return
+  }
+  const payload = { ...form, userId: null, openid }
+  if (form.id) await http.put(`/admin/cards/${form.id}`, payload)
+  else await http.post('/admin/cards', payload)
   visible.value = false
   ElMessage.success('已保存')
   await load()

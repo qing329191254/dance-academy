@@ -22,6 +22,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
 @RestController
 @RequestMapping("/api/admin")
 @RequiredArgsConstructor
@@ -87,23 +93,24 @@ public class AdminMemberController {
                                 @RequestParam(defaultValue = "") String keyword,
                                 @RequestParam(defaultValue = "") String type) {
         if (page == null) {
-            if (userId != null) {
-                return ApiResponse.ok(userCardRepo.findByUserIdOrderByIdDesc(userId));
-            }
-            return ApiResponse.ok(userCardRepo.findAll());
+            List<UserCard> cards = userId != null
+                    ? userCardRepo.findByUserIdOrderByIdDesc(userId)
+                    : userCardRepo.findAll();
+            fillCardUsers(cards);
+            return ApiResponse.ok(cards);
         }
         int pageSize = size == null ? 20 : Math.min(Math.max(size, 1), 100);
         var pageable = PageRequest.of(Math.max(page - 1, 0), pageSize, Sort.by(Sort.Direction.DESC, "id"));
         String query = keyword == null ? "" : keyword.trim();
         String cardType = type == null ? "" : type.trim();
-        return ApiResponse.ok(PageResult.of(userCardRepo.search(query, userId, cardType, pageable)));
+        var result = userCardRepo.search(query, userId, cardType, pageable);
+        fillCardUsers(result.getContent());
+        return ApiResponse.ok(PageResult.of(result));
     }
 
     @PostMapping("/cards")
     public ApiResponse<UserCard> createCard(@RequestBody UserCard body) {
-        if (body.getUserId() == null) {
-            throw new BizException("请选择学员");
-        }
+        body.setUserId(resolveUserId(body));
         body.setId(null);
         return ApiResponse.ok(userCardRepo.save(body));
     }
@@ -111,7 +118,7 @@ public class AdminMemberController {
     @PutMapping("/cards/{id}")
     public ApiResponse<UserCard> updateCard(@PathVariable Long id, @RequestBody UserCard body) {
         UserCard card = userCardRepo.findById(id).orElseThrow(() -> new BizException("卡包不存在"));
-        card.setUserId(body.getUserId());
+        card.setUserId(resolveUserId(body));
         card.setName(body.getName());
         card.setType(body.getType());
         card.setRemain(body.getRemain());
@@ -157,5 +164,41 @@ public class AdminMemberController {
     public ApiResponse<Void> deleteUserCourse(@PathVariable Long id) {
         userCourseRepo.deleteById(id);
         return ApiResponse.ok();
+    }
+
+    private Long resolveUserId(UserCard body) {
+        if (body.getUserId() != null) {
+            if (!appUserRepo.existsById(body.getUserId())) {
+                throw new BizException("学员不存在");
+            }
+            return body.getUserId();
+        }
+        if (body.getOpenid() != null && !body.getOpenid().isBlank()) {
+            return appUserRepo.findByOpenid(body.getOpenid().trim())
+                    .map(AppUser::getId)
+                    .orElseThrow(() -> new BizException("找不到该 OpenID 对应的学员，请到学员管理核对"));
+        }
+        throw new BizException("请选择学员");
+    }
+
+    private void fillCardUsers(List<UserCard> cards) {
+        if (cards == null || cards.isEmpty()) {
+            return;
+        }
+        var ids = cards.stream().map(UserCard::getUserId).filter(Objects::nonNull).collect(Collectors.toSet());
+        if (ids.isEmpty()) {
+            return;
+        }
+        Map<Long, AppUser> users = new HashMap<>();
+        for (AppUser user : appUserRepo.findAllById(ids)) {
+            users.put(user.getId(), user);
+        }
+        for (UserCard card : cards) {
+            AppUser user = users.get(card.getUserId());
+            if (user != null) {
+                card.setNickname(user.getNickname());
+                card.setOpenid(user.getOpenid());
+            }
+        }
     }
 }
