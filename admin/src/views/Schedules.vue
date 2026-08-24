@@ -133,6 +133,7 @@ const qrLoading = ref(false)
 const qrDataUrl = ref('')
 const qrMeta = reactive({ className: '', date: '', time: '', teacher: '', room: '' })
 const form = reactive({})
+const original = reactive({ timeText: '', weekday: null, type: '' })
 
 function queryParams() {
   const params = { keyword: keyword.value, page: page.value, size: size.value }
@@ -160,6 +161,11 @@ function edit(row) {
     id: null, type: 'group', name: '', timeText: '', teacherId: null, teacherName: '',
     room: '', weekday: 1, stars: 3, capacity: 20, status: '可预约', sortOrder: 0, enabled: true,
   }, row || {})
+  Object.assign(original, {
+    timeText: form.timeText || '',
+    weekday: form.weekday,
+    type: form.type || '',
+  })
   visible.value = true
 }
 function onTeacher(id) {
@@ -167,6 +173,25 @@ function onTeacher(id) {
   form.teacherName = t ? t.name : ''
 }
 async function save() {
+  if (form.id && form.type === 'group') {
+    const timeChanged = String(form.timeText || '') !== String(original.timeText || '')
+    const weekdayChanged = Number(form.weekday) !== Number(original.weekday)
+    if (timeChanged || weekdayChanged) {
+      const res = await http.get(`/admin/schedules/${form.id}/pending-count`)
+      const n = Number(res.data?.count || 0)
+      if (n > 0) {
+        try {
+          await ElMessageBox.confirm(
+            `该团课已有 ${n} 人预约。改时间或星期后，学员预约记录和课前提醒仍按原时间，不会自动重发。请自行通知学员。`,
+            '提示',
+            { type: 'warning', confirmButtonText: '仍要保存', cancelButtonText: '取消' },
+          )
+        } catch {
+          return
+        }
+      }
+    }
+  }
   if (form.id) await http.put(`/admin/schedules/${form.id}`, form)
   else await http.post('/admin/schedules', form)
   visible.value = false

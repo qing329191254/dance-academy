@@ -69,16 +69,14 @@
             <view class="link-arrow" />
           </view>
         </view>
-        <scroll-view scroll-x class="teacher-scroll" :show-scrollbar="false">
-          <view class="teacher-list">
-            <view v-for="t in teachers" :key="t.id" class="teacher-item" @click="go(`/pages/teachers/detail?id=${t.id}`)">
-              <image v-if="t.avatar" class="avatar" :src="t.avatar" mode="aspectFill" />
-              <view v-else class="avatar avatar-ph" />
-              <text class="name">{{ t.name }}</text>
-              <text class="muted style">{{ t.style }}</text>
-            </view>
+        <view class="teacher-list">
+          <view v-for="t in homeTeachers" :key="t.id" class="teacher-item" @click="go(`/pages/teachers/detail?id=${t.id}`)">
+            <image v-if="t.avatar" class="avatar" :src="t.avatar" mode="aspectFill" />
+            <view v-else class="avatar avatar-ph" />
+            <text class="name">{{ t.name }}</text>
+            <text class="muted style">{{ t.style }}</text>
           </view>
-        </scroll-view>
+        </view>
       </view>
 
       <view class="section">
@@ -223,6 +221,7 @@ onUnload(() => {
 const banners = ref([])
 const teachers = ref(mockTeachers)
 const courses = ref(mockCourses)
+const homeTeachers = computed(() => (teachers.value || []).slice(0, 4))
 const homeCourses = computed(() => (courses.value || []).slice(0, 3))
 const studio = reactive({
   ...mockStudio,
@@ -446,30 +445,34 @@ function callStudio() {
   height: 52rpx;
 }
 
-.teacher-scroll {
-  width: 100%;
-  white-space: nowrap;
-}
-
 .teacher-list {
-  display: inline-flex;
-  padding-right: 24rpx;
+  display: flex;
+  justify-content: flex-start;
 }
 
 .teacher-item {
-  width: 140rpx;
-  display: inline-flex;
+  width: 25%;
+  display: flex;
   flex-direction: column;
   align-items: center;
-  margin-right: 36rpx;
 }
 
 .teacher-item .name {
   margin-top: 10rpx;
+  max-width: 100%;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .teacher-item .style {
   margin-top: 6rpx;
+  max-width: 100%;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .avatar {

@@ -20,7 +20,9 @@
     </div>
     <el-table :data="list">
       <el-table-column label="头像" width="80">
-        <template #default="{ row }"><img class="thumb" :src="row.avatar" /></template>
+        <template #default="{ row }">
+          <img v-if="mediaSrc(row.avatar)" class="thumb" :src="mediaSrc(row.avatar)" alt="" />
+        </template>
       </el-table-column>
       <el-table-column prop="name" label="姓名" width="120" />
       <el-table-column prop="style" label="风格" width="120" />
@@ -69,6 +71,7 @@ import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import http from '../api/http'
 import ImageField from '../components/ImageField.vue'
+import { mediaSrc } from '../utils/media'
 
 const list = ref([])
 const total = ref(0)

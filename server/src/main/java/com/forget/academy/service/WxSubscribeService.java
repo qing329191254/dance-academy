@@ -6,7 +6,6 @@ import com.forget.academy.entity.Booking;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -33,10 +32,9 @@ public class WxSubscribeService {
         this.mapper = mapper;
     }
 
-    @Async
-    public void sendBookingNotice(String openid, Booking booking) {
+    public boolean sendBookingNotice(String openid, Booking booking) {
         if (templateId == null || templateId.isBlank() || openid == null || openid.isBlank() || openid.startsWith("dev_")) {
-            return;
+            return true;
         }
         try {
             Map<String, Object> payload = new LinkedHashMap<>();
@@ -52,13 +50,14 @@ public class WxSubscribeService {
             data.put("thing28", field(clip(defaultText(booking.getRoom(), "教室见课表"), 20)));
             data.put("thing9", field("请提前10分钟到场热身"));
             payload.put("data", data);
-            send(payload, true);
+            return send(payload, true);
         } catch (Exception e) {
             log.warn("发送预约订阅消息失败: {}", e.getMessage());
+            return false;
         }
     }
 
-    private void send(Map<String, Object> payload, boolean retryOnToken) throws Exception {
+    private boolean send(Map<String, Object> payload, boolean retryOnToken) throws Exception {
         String token = wxAuthService.getAccessToken();
         String query = "access_token=" + token;
         String body = mapper.writeValueAsString(payload);
@@ -70,14 +69,14 @@ public class WxSubscribeService {
         int errcode = node.path("errcode").asInt(0);
         if (errcode == 0) {
             log.info("预约订阅消息发送成功");
-            return;
+            return true;
         }
         if (retryOnToken && (errcode == 40001 || errcode == 42001)) {
             wxAuthService.invalidateAccessToken();
-            send(payload, false);
-            return;
+            return send(payload, false);
         }
         log.warn("微信订阅消息返回失败: {} {}", errcode, node.path("errmsg").asText());
+        return errcode == 43101;
     }
 
     private static Map<String, String> field(String value) {

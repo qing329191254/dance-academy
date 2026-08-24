@@ -187,7 +187,7 @@ async function toggleBook(item) {
     active.value === 'group' ? weekDates.value[selectedDateIndex.value]?.date : undefined
   const booking = isBooked(item)
   try {
-    if (!booking) {
+    if (!booking && active.value === 'group') {
       await askBookingSubscribe()
     }
     const result = await toggleBooking(item.id, date)

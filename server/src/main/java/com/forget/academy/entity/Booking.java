@@ -28,4 +28,6 @@ public class Booking extends BaseEntity {
     private String room;
     /** 待上课 / 已完成 / 已取消 */
     private String status;
+    /** 团课开课前提醒是否已发送（或已跳过） */
+    private Boolean remindSent = false;
 }

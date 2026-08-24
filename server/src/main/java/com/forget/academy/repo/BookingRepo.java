@@ -17,6 +17,8 @@ public interface BookingRepo extends JpaRepository<Booking, Long> {
 
     long countByScheduleIdAndClassDateAndStatus(Long scheduleId, String classDate, String status);
 
+    long countByScheduleIdAndStatus(Long scheduleId, String status);
+
     long countByClassDateAndStatus(String classDate, String status);
 
     Page<Booking> findByStatus(String status, Pageable pageable);
@@ -35,6 +37,14 @@ public interface BookingRepo extends JpaRepository<Booking, Long> {
     Page<Booking> search(@Param("keyword") String keyword,
                          @Param("status") String status,
                          Pageable pageable);
+
+    @Query("""
+            select b from Booking b
+            where b.status = '待上课'
+              and b.tab = 'group'
+              and (b.remindSent is null or b.remindSent = false)
+            """)
+    List<Booking> findGroupPendingReminders();
 
     void deleteByUserId(Long userId);
 }

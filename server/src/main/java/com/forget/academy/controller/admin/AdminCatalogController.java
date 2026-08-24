@@ -6,6 +6,7 @@ import com.forget.academy.common.PageResult;
 import com.forget.academy.entity.Course;
 import com.forget.academy.entity.Schedule;
 import com.forget.academy.entity.Teacher;
+import com.forget.academy.repo.BookingRepo;
 import com.forget.academy.repo.CourseRepo;
 import com.forget.academy.repo.ScheduleRepo;
 import com.forget.academy.repo.TeacherRepo;
@@ -31,6 +32,7 @@ public class AdminCatalogController {
     private final CourseRepo courseRepo;
     private final ScheduleRepo scheduleRepo;
     private final CheckinService checkinService;
+    private final BookingRepo bookingRepo;
 
     @GetMapping("/teachers")
     public ApiResponse<?> teachers(@RequestParam(required = false) Integer page,
@@ -180,6 +182,12 @@ public class AdminCatalogController {
     public ApiResponse<Void> deleteSchedule(@PathVariable Long id) {
         scheduleRepo.deleteById(id);
         return ApiResponse.ok();
+    }
+
+    @GetMapping("/schedules/{id}/pending-count")
+    public ApiResponse<?> pendingCount(@PathVariable Long id) {
+        return ApiResponse.ok(java.util.Map.of(
+                "count", bookingRepo.countByScheduleIdAndStatus(id, "待上课")));
     }
 
     @GetMapping("/schedules/{id}/checkin-payload")
