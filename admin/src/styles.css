@@ -157,3 +157,9 @@ body,
   min-height: 240px;
   object-fit: contain;
 }
+
+textarea,
+.el-textarea__inner,
+.el-input__inner {
+  resize: none !important;
+}

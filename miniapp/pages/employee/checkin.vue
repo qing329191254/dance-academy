@@ -221,7 +221,7 @@ function startRefreshLoop() {
 }
 
 function stopTimers() {
-  if refreshTimer) {
+  if (refreshTimer) {
     clearInterval(refreshTimer)
     refreshTimer = null
   }
