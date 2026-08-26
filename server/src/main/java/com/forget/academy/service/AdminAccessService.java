@@ -55,7 +55,7 @@ public class AdminAccessService {
         }
         List<String> campuses = parseCampusIds(admin);
         if (campuses.isEmpty()) {
-            throw new BizException("校长账号未分配校区，请联系超级管理员");
+            throw new BizException("管理员账号未分配校区，请联系超级管理员");
         }
         return campuses.stream().filter(CampusIds.ALL::contains).toList();
     }

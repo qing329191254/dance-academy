@@ -17,5 +17,5 @@ export function defaultCampusId(profile) {
 }
 
 export function roleLabel(role) {
-  return role === 'SUPER_ADMIN' ? '超级管理员' : '校长'
+  return role === 'SUPER_ADMIN' ? '超级管理员' : '管理员'
 }

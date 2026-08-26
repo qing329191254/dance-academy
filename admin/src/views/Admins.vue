@@ -1,7 +1,7 @@
 <template>
   <div class="page-card">
     <div class="toolbar">
-      <div class="hint">超级管理员可创建校长账号，并为校长分配可管理的校区。</div>
+      <div class="hint">超级管理员可创建管理员账号，并为管理员分配可管理的校区。</div>
       <el-button type="primary" @click="edit()">新增管理员</el-button>
     </div>
     <el-table :data="list">
@@ -36,13 +36,13 @@
         <el-input v-model="form.password" type="password" show-password :placeholder="form.id ? '留空则不修改' : '请输入密码'" />
       </el-form-item>
       <el-form-item label="姓名"><el-input v-model="form.name" /></el-form-item>
-      <el-form-item label="角色">
-        <el-select v-model="form.role" @change="onRoleChange">
-          <el-option label="超级管理员" value="SUPER_ADMIN" />
-          <el-option label="校长" value="PRINCIPAL" />
-        </el-select>
+      <el-form-item v-if="form.id && form.superAdmin" label="角色">
+        <el-input model-value="超级管理员" disabled />
       </el-form-item>
-      <el-form-item v-if="form.role === 'PRINCIPAL'" label="校区">
+      <el-form-item v-else-if="form.id" label="角色">
+        <el-input model-value="管理员" disabled />
+      </el-form-item>
+      <el-form-item v-if="!form.superAdmin" label="校区">
         <el-select v-model="form.campusIds" multiple placeholder="选择可管理校区" style="width: 100%">
           <el-option v-for="item in CAMPUSES" :key="item.id" :label="item.name" :value="item.id" />
         </el-select>
@@ -71,7 +71,7 @@ const form = reactive({
   username: '',
   password: '',
   name: '',
-  role: 'PRINCIPAL',
+  superAdmin: false,
   campusIds: [],
 })
 
@@ -86,32 +86,29 @@ function edit(row) {
     username: '',
     password: '',
     name: '',
-    role: 'PRINCIPAL',
+    superAdmin: false,
     campusIds: [],
   }, row ? {
     id: row.id,
     username: row.username,
     password: '',
     name: row.name,
-    role: row.role || 'PRINCIPAL',
+    superAdmin: !!row.superAdmin,
     campusIds: [...(row.campusIds || [])],
   } : {})
   visible.value = true
 }
 
-function onRoleChange(role) {
-  if (role === 'SUPER_ADMIN') {
-    form.campusIds = []
-  }
-}
-
 async function save() {
+  if (!form.superAdmin && !form.campusIds.length) {
+    ElMessage.warning('请为管理员选择至少一个校区')
+    return
+  }
   const payload = {
     username: form.username,
     password: form.password,
     name: form.name,
-    role: form.role,
-    campusIds: form.role === 'PRINCIPAL' ? form.campusIds : [],
+    campusIds: form.superAdmin ? [] : form.campusIds,
   }
   if (form.id) {
     if (!payload.password) delete payload.password
