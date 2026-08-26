@@ -5,7 +5,7 @@ export default defineConfig({
   plugins: [vue()],
   build: {
     outDir: '../server/src/main/resources/static',
-    emptyOutDir: false,
+    emptyOutDir: true,
   },
   server: {
     port: 5173,
