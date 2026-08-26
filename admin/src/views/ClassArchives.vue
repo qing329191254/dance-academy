@@ -24,9 +24,11 @@
       <el-table-column prop="bookedCount" label="预约" width="80" align="left" header-align="left" />
       <el-table-column prop="checkedInCount" label="到课" width="80" align="left" header-align="left" />
       <el-table-column prop="renewalRate" label="续报率" width="100" />
-      <el-table-column label="操作" width="100" fixed="right">
+      <el-table-column label="操作" width="90" class-name="col-actions" label-class-name="col-actions" align="left" header-align="left" fixed="right">
         <template #default="{ row }">
-          <el-button link type="primary" @click="edit(row)">编辑</el-button>
+          <div class="table-actions">
+            <el-button link type="primary" @click="edit(row)">编辑</el-button>
+          </div>
         </template>
       </el-table-column>
     </el-table>

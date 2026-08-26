@@ -31,10 +31,12 @@
       <el-table-column label="启用" width="80">
         <template #default="{ row }">{{ row.enabled ? '是' : '否' }}</template>
       </el-table-column>
-      <el-table-column label="操作" width="160">
+      <el-table-column label="操作" width="120" class-name="col-actions" label-class-name="col-actions" align="left" header-align="left">
         <template #default="{ row }">
-          <el-button text type="primary" @click="edit(row)">编辑</el-button>
-          <el-button text type="danger" @click="remove(row)">删除</el-button>
+          <div class="table-actions">
+            <el-button link type="primary" @click="edit(row)">编辑</el-button>
+            <el-button link type="danger" @click="remove(row)">删除</el-button>
+          </div>
         </template>
       </el-table-column>
     </el-table>

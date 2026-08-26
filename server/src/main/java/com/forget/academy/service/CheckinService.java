@@ -24,6 +24,7 @@ import java.util.Map;
 public class CheckinService {
     public static final String SOURCE_SCAN = "scan";
     public static final String SOURCE_MANUAL = "manual";
+    public static final String SOURCE_CONFIRMED = "confirmed";
 
     private final PracticeRecordRepo practiceRecordRepo;
     private final ScheduleRepo scheduleRepo;
@@ -43,6 +44,11 @@ public class CheckinService {
 
     @Transactional
     public Map<String, Object> manualCheckin(Long userId, Long scheduleId, String classDate, String operatorName) {
+        return manualCheckin(userId, scheduleId, classDate, operatorName, SOURCE_MANUAL);
+    }
+
+    @Transactional
+    public Map<String, Object> manualCheckin(Long userId, Long scheduleId, String classDate, String operatorName, String source) {
         Schedule schedule = scheduleRepo.findById(scheduleId).orElseThrow(() -> new BizException("课表不存在"));
         String date = normalizeDate(classDate);
         String sessionId = String.valueOf(scheduleId);
@@ -57,7 +63,7 @@ public class CheckinService {
                 schedule.getTeacherName(),
                 schedule.getRoom(),
                 "75分钟");
-        PracticeRecord record = buildRecord(userId, schedule, session, SOURCE_MANUAL, operatorName);
+        PracticeRecord record = buildRecord(userId, schedule, session, source, operatorName);
         saveRecord(record, "该学员本节课已签到");
         return Map.of("ok", true, "message", schedule.getName() + " 签到成功", "record", toMap(record));
     }

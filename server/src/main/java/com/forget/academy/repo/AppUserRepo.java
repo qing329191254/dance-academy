@@ -11,4 +11,6 @@ public interface AppUserRepo extends JpaRepository<AppUser, Long> {
     Optional<AppUser> findByOpenid(String openid);
 
     Page<AppUser> findByNicknameContainingOrOpenidContaining(String nickname, String openid, Pageable pageable);
+
+    long countBySchool(String school);
 }

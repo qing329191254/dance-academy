@@ -26,4 +26,8 @@ public class Schedule extends BaseEntity {
     private Integer capacity = 20;
     private Integer sortOrder = 0;
     private Boolean enabled = true;
+    /** 是否闭门团课 */
+    private Boolean closedDoor = false;
+    /** 闭门课面向分组，与 AppUser.closedClassGroup 对应 */
+    private String audienceGroup;
 }

@@ -3,6 +3,7 @@ package com.forget.academy.controller.admin;
 import com.forget.academy.common.ApiResponse;
 import com.forget.academy.common.BizException;
 import com.forget.academy.common.CampusIds;
+import com.forget.academy.common.ClosedClassGroup;
 import com.forget.academy.common.PageResult;
 import com.forget.academy.entity.Course;
 import com.forget.academy.entity.Schedule;
@@ -12,7 +13,6 @@ import com.forget.academy.repo.CourseRepo;
 import com.forget.academy.repo.ScheduleRepo;
 import com.forget.academy.repo.TeacherRepo;
 import com.forget.academy.service.AdminAccessService;
-import com.forget.academy.service.CheckinService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -33,7 +33,6 @@ public class AdminCatalogController {
     private final TeacherRepo teacherRepo;
     private final CourseRepo courseRepo;
     private final ScheduleRepo scheduleRepo;
-    private final CheckinService checkinService;
     private final BookingRepo bookingRepo;
     private final AdminAccessService adminAccessService;
 
@@ -168,6 +167,7 @@ public class AdminCatalogController {
         if (body.getCapacity() == null) {
             body.setCapacity(20);
         }
+        normalizeClosedDoor(body);
         return ApiResponse.ok(scheduleRepo.save(body));
     }
 
@@ -190,6 +190,9 @@ public class AdminCatalogController {
         schedule.setCapacity(body.getCapacity());
         schedule.setSortOrder(body.getSortOrder());
         schedule.setEnabled(body.getEnabled());
+        schedule.setClosedDoor(body.getClosedDoor());
+        schedule.setAudienceGroup(body.getAudienceGroup());
+        normalizeClosedDoor(schedule);
         fillTeacherName(schedule);
         return ApiResponse.ok(scheduleRepo.save(schedule));
     }
@@ -210,13 +213,6 @@ public class AdminCatalogController {
                 "count", bookingRepo.countByScheduleIdAndStatus(id, "待上课")));
     }
 
-    @GetMapping("/schedules/{id}/checkin-payload")
-    public ApiResponse<?> checkinPayload(@PathVariable Long id, @RequestParam(required = false) String date) {
-        Schedule schedule = scheduleRepo.findById(id).orElseThrow(() -> new BizException("课表不存在"));
-        adminAccessService.assertCanAccessCampus(schedule.getCampusId());
-        return ApiResponse.ok(checkinService.payloadForSchedule(id, date));
-    }
-
     private void defaults(Teacher body) {
         if (body.getEnabled() == null) {
             body.setEnabled(true);
@@ -230,5 +226,23 @@ public class AdminCatalogController {
         if ((body.getTeacherName() == null || body.getTeacherName().isBlank()) && body.getTeacherId() != null) {
             teacherRepo.findById(body.getTeacherId()).ifPresent(t -> body.setTeacherName(t.getName()));
         }
+    }
+
+    private void normalizeClosedDoor(Schedule schedule) {
+        if (!"group".equals(schedule.getType())) {
+            schedule.setClosedDoor(false);
+            schedule.setAudienceGroup(null);
+            return;
+        }
+        if (!Boolean.TRUE.equals(schedule.getClosedDoor())) {
+            schedule.setClosedDoor(false);
+            schedule.setAudienceGroup(null);
+            return;
+        }
+        String audience = schedule.getAudienceGroup() == null ? "" : schedule.getAudienceGroup().trim();
+        if (!ClosedClassGroup.isValid(audience)) {
+            throw new BizException("闭门课需选择面向分组：高潜闭门或基础闭门");
+        }
+        schedule.setAudienceGroup(audience);
     }
 }

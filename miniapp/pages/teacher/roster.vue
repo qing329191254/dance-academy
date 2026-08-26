@@ -13,17 +13,19 @@
     <view class="section">
       <view class="card block">
         <text class="block-title">学员到课确认</text>
-        <text class="hint muted">学员可扫教室二维码自助签到；未扫码的由老师在下方手动确认。</text>
+        <text class="hint muted">学员扫码后需工作人员确认到场；未扫码的可在下方手动确认。</text>
         <view v-if="!detail.bookings?.length" class="empty muted">暂无预约学员</view>
         <view v-for="item in detail.bookings" :key="item.id" class="row">
           <view class="left">
             <text>{{ item.nickname || '学员' }}</text>
             <text v-if="item.checkedIn" class="sub muted">
-              {{ item.checkinSource === 'manual' ? '手动确认' : '扫码签到' }}
+              {{ item.checkinSource === 'manual' ? '手动确认' : item.checkinSource === 'confirmed' ? '工作人员确认' : '扫码签到' }}
               <text v-if="item.operatorName"> · {{ item.operatorName }}</text>
             </text>
+            <text v-else-if="item.checkinPending" class="sub pending">待工作人员确认</text>
           </view>
           <text v-if="item.checkedIn" class="done">已到课</text>
+          <text v-else-if="item.checkinPending" class="pending-tag">待确认</text>
           <view v-else class="btn-mini" @tap="confirm(item)">手动确认</view>
         </view>
       </view>
@@ -125,6 +127,15 @@ onShow(() => {
   display: block;
   margin-top: 6rpx;
   font-size: 22rpx;
+}
+
+.pending-tag {
+  color: #e8c36a;
+  font-size: 24rpx;
+}
+
+.sub.pending {
+  color: #e8c36a;
 }
 
 .done {

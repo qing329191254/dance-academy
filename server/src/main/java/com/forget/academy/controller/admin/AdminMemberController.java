@@ -4,11 +4,14 @@ import com.forget.academy.common.ApiResponse;
 import com.forget.academy.common.BizException;
 import com.forget.academy.common.PageResult;
 import com.forget.academy.entity.AppUser;
+import com.forget.academy.entity.OpportunityApply;
 import com.forget.academy.entity.UserCard;
 import com.forget.academy.entity.UserCourse;
 import com.forget.academy.repo.AppUserRepo;
+import com.forget.academy.repo.OpportunityApplyRepo;
 import com.forget.academy.repo.UserCardRepo;
 import com.forget.academy.repo.UserCourseRepo;
+import com.forget.academy.service.AppAuthService;
 import com.forget.academy.service.EmployeeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -23,10 +26,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @RestController
@@ -36,18 +42,19 @@ public class AdminMemberController {
     private final AppUserRepo appUserRepo;
     private final UserCardRepo userCardRepo;
     private final UserCourseRepo userCourseRepo;
+    private final OpportunityApplyRepo opportunityApplyRepo;
     private final EmployeeService employeeService;
 
     @GetMapping("/users")
-    public ApiResponse<?> users(@RequestParam(defaultValue = "") String keyword,
+    public ApiResponse<PageResult<Map<String, Object>>> users(@RequestParam(defaultValue = "") String keyword,
                                @RequestParam(defaultValue = "1") int page,
                                @RequestParam(defaultValue = "20") int size) {
         var pageable = PageRequest.of(Math.max(page - 1, 0), size, Sort.by(Sort.Direction.DESC, "id"));
-        if (keyword == null || keyword.isBlank()) {
-            return ApiResponse.ok(PageResult.of(appUserRepo.findAll(pageable)));
-        }
-        return ApiResponse.ok(PageResult.of(
-                appUserRepo.findByNicknameContainingOrOpenidContaining(keyword, keyword, pageable)));
+        var pageResult = keyword == null || keyword.isBlank()
+                ? appUserRepo.findAll(pageable)
+                : appUserRepo.findByNicknameContainingOrOpenidContaining(keyword, keyword, pageable);
+        List<Map<String, Object>> list = enrichUsers(pageResult.getContent());
+        return ApiResponse.ok(new PageResult<>(list, pageResult.getTotalElements(), pageResult.getNumber() + 1, pageResult.getSize()));
     }
 
     @GetMapping("/users/{id}")
@@ -109,6 +116,18 @@ public class AdminMemberController {
         }
         if (body.get("danceStage") != null) {
             user.setDanceStage(String.valueOf(body.get("danceStage")));
+        }
+        if (body.containsKey("closedClassGroup")) {
+            String group = body.get("closedClassGroup") == null
+                    ? null
+                    : String.valueOf(body.get("closedClassGroup")).trim();
+            if (group == null || group.isBlank()) {
+                user.setClosedClassGroup(null);
+            } else if (com.forget.academy.common.ClosedClassGroup.isValid(group)) {
+                user.setClosedClassGroup(group);
+            } else {
+                throw new BizException("闭门课分组无效");
+            }
         }
         if (body.get("profileComplete") != null) {
             user.setProfileComplete(Boolean.valueOf(String.valueOf(body.get("profileComplete"))));
@@ -217,6 +236,54 @@ public class AdminMemberController {
                     .orElseThrow(() -> new BizException("找不到该 OpenID 对应的学员，请到学员管理核对"));
         }
         throw new BizException("请选择学员");
+    }
+
+    private List<Map<String, Object>> enrichUsers(List<AppUser> users) {
+        if (users == null || users.isEmpty()) {
+            return List.of();
+        }
+        var userIds = users.stream().map(AppUser::getId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Map<Long, String> cardTypesByUser = new HashMap<>();
+        for (UserCard card : userCardRepo.findByUserIdIn(userIds)) {
+            if (card.getUserId() == null || card.getType() == null || card.getType().isBlank()) {
+                continue;
+            }
+            cardTypesByUser.compute(card.getUserId(), (id, existing) -> {
+                Set<String> types = new LinkedHashSet<>();
+                if (existing != null && !existing.isBlank()) {
+                    for (String part : existing.split("、")) {
+                        if (!part.isBlank()) {
+                            types.add(part.trim());
+                        }
+                    }
+                }
+                types.add(card.getType().trim());
+                return String.join("、", types);
+            });
+        }
+        Map<Long, OpportunityApply> resumeByUser = new HashMap<>();
+        for (OpportunityApply apply : opportunityApplyRepo.findByUserIdInOrderByIdDesc(userIds)) {
+            if (apply.getUserId() == null || resumeByUser.containsKey(apply.getUserId())) {
+                continue;
+            }
+            if (apply.getResumeUrl() == null || apply.getResumeUrl().isBlank()) {
+                continue;
+            }
+            resumeByUser.put(apply.getUserId(), apply);
+        }
+        List<Map<String, Object>> rows = new ArrayList<>(users.size());
+        for (AppUser user : users) {
+            Map<String, Object> row = AppAuthService.toUserMap(user);
+            row.put("openid", user.getOpenid());
+            row.put("cardTypes", cardTypesByUser.getOrDefault(user.getId(), ""));
+            OpportunityApply apply = resumeByUser.get(user.getId());
+            row.put("resumeUrl", apply == null ? null : apply.getResumeUrl());
+            row.put("resumeName", apply == null ? null : apply.getResumeName());
+            row.put("closedClassGroup", user.getClosedClassGroup());
+            row.put("closedClassGroupLabel", com.forget.academy.common.ClosedClassGroup.label(user.getClosedClassGroup()));
+            rows.add(row);
+        }
+        return rows;
     }
 
     private void fillCardUsers(List<UserCard> cards) {

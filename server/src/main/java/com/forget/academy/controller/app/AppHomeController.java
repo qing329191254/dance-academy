@@ -9,6 +9,7 @@ import com.forget.academy.entity.Teacher;
 import com.forget.academy.repo.BannerRepo;
 import com.forget.academy.repo.BrandPhotoRepo;
 import com.forget.academy.repo.CourseRepo;
+import com.forget.academy.repo.SchoolRepo;
 import com.forget.academy.repo.StudioRepo;
 import com.forget.academy.repo.TeacherRepo;
 import com.forget.academy.security.AuthContext;
@@ -35,6 +36,7 @@ public class AppHomeController {
     private final CourseRepo courseRepo;
     private final BookingService bookingService;
     private final LeaderboardService leaderboardService;
+    private final SchoolRepo schoolRepo;
 
     @GetMapping("/home")
     public ApiResponse<Map<String, Object>> home() {
@@ -92,6 +94,11 @@ public class AppHomeController {
                                      @RequestParam(required = false) String campusId) {
         Long userId = AuthContext.get() == null ? null : AuthContext.get().id();
         return ApiResponse.ok(leaderboardService.list(period, campusId, userId));
+    }
+
+    @GetMapping("/schools")
+    public ApiResponse<?> schools() {
+        return ApiResponse.ok(schoolRepo.findByEnabledTrueOrderBySortOrderAscIdAsc());
     }
 
     private Studio studio() {

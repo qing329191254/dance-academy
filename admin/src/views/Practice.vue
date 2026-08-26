@@ -16,7 +16,7 @@
       <el-table-column prop="timeText" label="时间" width="140" align="left" header-align="left" />
       <el-table-column prop="teacherName" label="老师" width="100" align="left" header-align="left" />
       <el-table-column label="方式" width="120" align="left" header-align="left">
-        <template #default="{ row }">{{ row.checkinSource === 'manual' ? '手动确认' : '扫码' }}</template>
+        <template #default="{ row }">{{ checkinSourceLabel(row.checkinSource) }}</template>
       </el-table-column>
       <el-table-column prop="operatorName" label="确认人" width="120" align="left" header-align="left" />
       <el-table-column prop="room" label="教室" width="130" align="left" header-align="left" />
@@ -48,6 +48,12 @@ const page = ref(1)
 const size = 15
 const keyword = ref('')
 const campusId = ref('')
+
+function checkinSourceLabel(source) {
+  if (source === 'manual') return '手动确认'
+  if (source === 'confirmed') return '工作人员确认'
+  return '扫码'
+}
 
 function search() {
   page.value = 1

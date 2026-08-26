@@ -13,7 +13,8 @@
         <el-menu-item index="/studio">门店信息</el-menu-item>
         <el-menu-item index="/media">轮播与相册</el-menu-item>
         <el-menu-item index="/teachers">老师管理</el-menu-item>
-        <el-menu-item index="/courses">课程管理</el-menu-item>
+        <el-menu-item index="/teacher-reviews">学员评价</el-menu-item>
+        <el-menu-item index="/courses">课程产品</el-menu-item>
         <el-menu-item index="/schedules">课表管理</el-menu-item>
         <el-menu-item index="/bookings">预约管理</el-menu-item>
         <el-menu-item index="/users">学员管理</el-menu-item>
@@ -21,10 +22,12 @@
         <el-menu-item index="/opportunities">成长机会</el-menu-item>
         <el-menu-item index="/applies">报名审核</el-menu-item>
         <el-menu-item index="/practice">签到记录</el-menu-item>
+        <el-menu-item index="/checkin-pending">待确认签到</el-menu-item>
         <el-menu-item index="/teacher-attendance">教师考勤</el-menu-item>
         <el-menu-item index="/employee-duty">员工值班</el-menu-item>
         <el-menu-item index="/class-archives">课堂档案</el-menu-item>
         <el-menu-item index="/feedback">意见反馈</el-menu-item>
+        <el-menu-item v-if="auth.isSuperAdmin" index="/schools">学校管理</el-menu-item>
         <el-menu-item v-if="auth.isSuperAdmin" index="/admins">管理员</el-menu-item>
       </el-menu>
     </el-aside>

@@ -9,8 +9,8 @@ import com.forget.academy.repo.UserCardRepo;
 import com.forget.academy.repo.UserCourseRepo;
 import com.forget.academy.security.AuthContext;
 import com.forget.academy.service.AppAuthService;
-import com.forget.academy.service.AttendanceService;
 import com.forget.academy.service.BookingService;
+import com.forget.academy.service.CheckinPendingService;
 import com.forget.academy.service.CheckinService;
 import com.forget.academy.service.GrowthService;
 import com.forget.academy.service.StorageService;
@@ -32,7 +32,7 @@ public class AppUserController {
     private final AppAuthService appAuthService;
     private final BookingService bookingService;
     private final CheckinService checkinService;
-    private final AttendanceService attendanceService;
+    private final CheckinPendingService checkinPendingService;
     private final GrowthService growthService;
     private final AppUserRepo appUserRepo;
     private final UserCardRepo userCardRepo;
@@ -187,7 +187,7 @@ public class AppUserController {
 
     @PostMapping("/checkin")
     public ApiResponse<?> checkin(@RequestBody Map<String, String> body) {
-        return ApiResponse.ok(attendanceService.checkinByRole(AuthContext.requireApp().id(), body.get("payload")));
+        return ApiResponse.ok(checkinPendingService.submitScan(AuthContext.requireApp().id(), body.get("payload")));
     }
 
     @GetMapping("/growth")

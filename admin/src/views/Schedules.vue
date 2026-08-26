@@ -41,8 +41,14 @@
         <template #default="{ row }">{{ weekdayLabel[row.weekday] || '-' }}</template>
       </el-table-column>
       <el-table-column prop="capacity" label="名额" width="80" />
+      <el-table-column label="闭门" width="100">
+        <template #default="{ row }">
+          <span v-if="row.closedDoor">{{ closedClassGroupLabel(row.audienceGroup) }}</span>
+          <span v-else class="muted">-</span>
+        </template>
+      </el-table-column>
       <el-table-column prop="status" label="状态" width="100" />
-      <el-table-column label="操作" width="240" min-width="240" fixed="right">
+      <el-table-column label="操作" width="200" class-name="col-actions" label-class-name="col-actions" align="left" header-align="left" fixed="right">
         <template #default="{ row }">
           <div class="table-actions">
             <el-button link type="primary" @click="edit(row)">编辑</el-button>
@@ -92,6 +98,15 @@
           <el-option v-for="(label, value) in weekdayLabel" :key="value" :label="label" :value="Number(value)" />
         </el-select>
       </el-form-item>
+      <el-form-item v-if="form.type === 'group'" label="闭门课">
+        <el-switch v-model="form.closedDoor" />
+      </el-form-item>
+      <el-form-item v-if="form.type === 'group' && form.closedDoor" label="面向分组">
+        <el-select v-model="form.audienceGroup" placeholder="选择分组">
+          <el-option label="高潜闭门（跳得好）" value="advanced" />
+          <el-option label="基础闭门（需补基础）" value="foundation" />
+        </el-select>
+      </el-form-item>
       <el-form-item label="星级"><el-input-number v-model="form.stars" :min="1" :max="5" /></el-form-item>
       <el-form-item label="名额"><el-input-number v-model="form.capacity" :min="1" /></el-form-item>
       <el-form-item label="状态"><el-input v-model="form.status" /></el-form-item>
@@ -104,7 +119,7 @@
     </template>
   </el-dialog>
 
-  <el-dialog v-model="qrVisible" title="课堂签到码" width="420px">
+  <el-dialog v-model="qrVisible" title="现场签到码" width="420px" @closed="onQrClosed">
     <div v-loading="qrLoading" class="qr-panel">
       <img v-if="qrDataUrl" :src="qrDataUrl" alt="签到二维码" class="qr-image" />
       <div class="qr-meta">
@@ -112,21 +127,22 @@
         <p>{{ qrMeta.date }} {{ qrMeta.time }}</p>
         <p>{{ [qrMeta.teacher, qrMeta.room].filter(Boolean).join(' · ') }}</p>
       </div>
-      <p class="qr-hint">保存或打印后贴在教室，学员扫码自助签到；未到课学员由老师或管理员在名单上手动确认。</p>
+      <p class="qr-hint">请工作人员当场展示此码供学员/老师/员工扫描。扫码后需在「待确认签到」或员工小程序确认到场；二维码约 60 秒自动刷新，请勿截图转发。</p>
     </div>
     <template #footer>
       <el-button @click="qrVisible = false">关闭</el-button>
-      <el-button type="primary" :disabled="!qrDataUrl" @click="downloadQr">下载二维码</el-button>
+      <el-button type="primary" :disabled="!qrDataUrl" @click="downloadQr">下载当前二维码</el-button>
     </template>
   </el-dialog>
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import QRCode from 'qrcode'
 import http from '../api/http'
 import { campusName } from '../common/campuses'
+import { closedClassGroupLabel } from '../common/closedClass'
 import { allowedCampuses, defaultCampusId } from '../common/adminAccess'
 import { useAuthStore } from '../stores/auth'
 
@@ -149,6 +165,8 @@ const visible = ref(false)
 const qrVisible = ref(false)
 const qrLoading = ref(false)
 const qrDataUrl = ref('')
+const qrSessionId = ref(null)
+let qrRefreshTimer = null
 const qrMeta = reactive({ className: '', date: '', time: '', teacher: '', room: '' })
 const form = reactive({})
 const original = reactive({ timeText: '', weekday: null, type: '' })
@@ -180,7 +198,12 @@ function edit(row) {
   Object.assign(form, {
     id: null, type: 'group', campusId: fallbackCampus, name: '', timeText: '', teacherId: null, teacherName: '',
     room: '', weekday: 1, stars: 3, capacity: 20, status: '可预约', sortOrder: 0, enabled: true,
+    closedDoor: false, audienceGroup: '',
   }, row || {})
+  if (!form.closedDoor) {
+    form.closedDoor = false
+    form.audienceGroup = ''
+  }
   Object.assign(original, {
     timeText: form.timeText || '',
     weekday: form.weekday,
@@ -193,6 +216,10 @@ function onTeacher(id) {
   form.teacherName = t ? t.name : ''
 }
 async function save() {
+  if (form.type === 'group' && form.closedDoor && !form.audienceGroup) {
+    ElMessage.warning('请选择闭门课面向分组')
+    return
+  }
   if (form.id && form.type === 'group') {
     const timeChanged = String(form.timeText || '') !== String(original.timeText || '')
     const weekdayChanged = Number(form.weekday) !== Number(original.weekday)
@@ -225,21 +252,65 @@ async function remove(row) {
   if (list.value.length === 1 && page.value > 1) page.value -= 1
   await load()
 }
-async function showQr(row) {
-  qrDataUrl.value = ''
-  Object.assign(qrMeta, { className: row.name || '', date: '', time: row.timeText || '', teacher: row.teacherName || '', room: row.room || '' })
-  qrVisible.value = true
-  qrLoading.value = true
+function formatToday() {
+  const d = new Date()
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+function stopQrRefresh() {
+  if (qrRefreshTimer) {
+    clearInterval(qrRefreshTimer)
+    qrRefreshTimer = null
+  }
+  qrSessionId.value = null
+}
+
+async function refreshQrPayload() {
+  if (!qrSessionId.value) return
   try {
-    const res = await http.get(`/admin/schedules/${row.id}/checkin-payload`)
+    const res = await http.get(`/admin/checkin-sessions/${qrSessionId.value}/payload`)
     const payload = res.data.payload
     Object.assign(qrMeta, res.data.text || {})
-    qrDataUrl.value = await QRCode.toDataURL(payload, {
+    qrDataUrl.value = res.data.qrDataUrl || await QRCode.toDataURL(payload, {
       width: 320,
       margin: 2,
       errorCorrectionLevel: 'M',
       color: { dark: '#16161c', light: '#ffffff' },
     })
+  } catch {
+    qrDataUrl.value = ''
+  }
+}
+
+function onQrClosed() {
+  stopQrRefresh()
+  if (qrSessionId.value) {
+    http.post(`/admin/checkin-sessions/${qrSessionId.value}/close`).catch(() => {})
+  }
+}
+
+async function showQr(row) {
+  stopQrRefresh()
+  qrDataUrl.value = ''
+  Object.assign(qrMeta, {
+    className: row.name || '',
+    date: formatToday(),
+    time: row.timeText || '',
+    teacher: row.teacherName || '',
+    room: row.room || '',
+  })
+  qrVisible.value = true
+  qrLoading.value = true
+  try {
+    const res = await http.post('/admin/checkin-sessions', {
+      scheduleId: row.id,
+      classDate: qrMeta.date,
+    })
+    qrSessionId.value = res.data.id
+    Object.assign(qrMeta, res.data)
+    await refreshQrPayload()
+    qrRefreshTimer = setInterval(refreshQrPayload, 45000)
   } catch {
     qrVisible.value = false
   } finally {
@@ -259,6 +330,7 @@ onMounted(() => {
   loadTeachers()
   load()
 })
+onUnmounted(stopQrRefresh)
 </script>
 
 <style scoped>
@@ -294,5 +366,8 @@ onMounted(() => {
   color: #8a8a96;
   font-size: 13px;
   line-height: 1.5;
+}
+.muted {
+  color: #8a8a96;
 }
 </style>

@@ -96,12 +96,52 @@ public class AdminOpsController {
         String query = keyword == null ? "" : keyword.trim();
         String st = status == null ? "" : status.trim();
         var campuses = adminAccessService.resolveCampusScope(campusId);
-        return ApiResponse.ok(PageResult.of(bookingRepo.searchInCampuses(query, st, campuses, pageable)));
+        var result = bookingRepo.searchInCampuses(query, st, campuses, pageable);
+        var list = result.getContent().stream().map(this::toBookingRow).toList();
+        return ApiResponse.ok(new PageResult<>(list, result.getTotalElements(), page, size));
+    }
+
+    @PostMapping("/bookings")
+    public ApiResponse<?> createBooking(@RequestBody Map<String, Object> body) {
+        Long userId = parseLong(body.get("userId"));
+        Long scheduleId = parseLong(body.get("scheduleId"));
+        String classDate = body.get("classDate") == null ? "" : String.valueOf(body.get("classDate")).trim();
+        if (userId == null || scheduleId == null) {
+            throw new BizException("请选择学员和课程");
+        }
+        return ApiResponse.ok(bookingService.adminCreate(userId, scheduleId, classDate));
     }
 
     @PutMapping("/bookings/{id}")
     public ApiResponse<Booking> updateBooking(@PathVariable Long id, @RequestBody Booking body) {
         return ApiResponse.ok(bookingService.adminUpdateStatus(id, body.getStatus()));
+    }
+
+    @PostMapping("/bookings/{id}/cancel")
+    public ApiResponse<Booking> cancelBooking(@PathVariable Long id) {
+        return ApiResponse.ok(bookingService.adminCancel(id));
+    }
+
+    private Map<String, Object> toBookingRow(Booking booking) {
+        Map<String, Object> row = new LinkedHashMap<>();
+        row.put("id", booking.getId());
+        row.put("userId", booking.getUserId());
+        row.put("nickname", booking.getNickname());
+        row.put("scheduleId", booking.getScheduleId());
+        row.put("name", booking.getName());
+        row.put("classDate", booking.getClassDate());
+        row.put("timeText", booking.getTimeText());
+        row.put("teacherName", booking.getTeacherName());
+        row.put("room", booking.getRoom());
+        row.put("status", booking.getStatus());
+        row.put("tab", booking.getTab());
+        row.put("createdAt", booking.getCreatedAt());
+        String sessionId = String.valueOf(booking.getScheduleId());
+        String date = booking.getClassDate() == null ? "" : booking.getClassDate();
+        row.put("checkedIn", practiceRecordRepo.existsByUserIdAndSessionIdAndClassDate(
+                booking.getUserId(), sessionId, date));
+        scheduleRepo.findById(booking.getScheduleId()).ifPresent(schedule -> row.put("campusId", schedule.getCampusId()));
+        return row;
     }
 
     @DeleteMapping("/bookings/{id}")
@@ -220,7 +260,7 @@ public class AdminOpsController {
                                   @RequestParam(required = false) String campusId,
                                   @RequestParam(defaultValue = "1") int page,
                                   @RequestParam(defaultValue = "20") int size) {
-        var pageable = PageRequest.of(Math.max(page - 1, 0), size, Sort.by(Sort.Direction.DESC, "id"));
+        var pageable = PageRequest.of(Math.max(page - 1, 0), size);
         String query = keyword == null ? "" : keyword.trim();
         var campuses = adminAccessService.resolveCampusScope(campusId);
         return ApiResponse.ok(PageResult.of(practiceRecordRepo.searchInCampuses(query, campuses, pageable)));
@@ -231,7 +271,7 @@ public class AdminOpsController {
                                    @RequestParam(required = false) String campusId,
                                    @RequestParam(defaultValue = "1") int page,
                                    @RequestParam(defaultValue = "20") int size) {
-        var pageable = PageRequest.of(Math.max(page - 1, 0), size, Sort.by(Sort.Direction.DESC, "id"));
+        var pageable = PageRequest.of(Math.max(page - 1, 0), size);
         String query = keyword == null ? "" : keyword.trim();
         var campuses = adminAccessService.resolveCampusScope(campusId);
         return ApiResponse.ok(PageResult.of(feedbackRepo.searchInCampuses(query, campuses, pageable)));

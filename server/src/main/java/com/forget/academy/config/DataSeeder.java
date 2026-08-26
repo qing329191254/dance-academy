@@ -6,6 +6,7 @@ import com.forget.academy.entity.AppUser;
 import com.forget.academy.entity.Course;
 import com.forget.academy.entity.Opportunity;
 import com.forget.academy.entity.Schedule;
+import com.forget.academy.entity.School;
 import com.forget.academy.entity.Studio;
 import com.forget.academy.entity.Teacher;
 import com.forget.academy.entity.UserCard;
@@ -19,6 +20,7 @@ import com.forget.academy.repo.OpportunityApplyRepo;
 import com.forget.academy.repo.OpportunityRepo;
 import com.forget.academy.repo.PracticeRecordRepo;
 import com.forget.academy.repo.ScheduleRepo;
+import com.forget.academy.repo.SchoolRepo;
 import com.forget.academy.repo.StudioRepo;
 import com.forget.academy.repo.TeacherRepo;
 import com.forget.academy.repo.UserCardRepo;
@@ -50,6 +52,7 @@ public class DataSeeder implements ApplicationRunner {
     private final BookingRepo bookingRepo;
     private final PracticeRecordRepo practiceRecordRepo;
     private final OpportunityApplyRepo opportunityApplyRepo;
+    private final SchoolRepo schoolRepo;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
     @Value("${app.admin-username}")
@@ -61,6 +64,7 @@ public class DataSeeder implements ApplicationRunner {
     @Transactional
     public void run(ApplicationArguments args) {
         seedAdmin();
+        seedSchools();
         removeDemoUsers();
         clearPackagedMedia();
         studioRepo.findAll().stream().findFirst().ifPresent(studio -> {
@@ -167,6 +171,30 @@ public class DataSeeder implements ApplicationRunner {
             admin.setRole(com.forget.academy.common.AdminRoles.SUPER_ADMIN);
             adminUserRepo.save(admin);
         });
+    }
+
+    private void seedSchools() {
+        if (schoolRepo.count() > 0) {
+            return;
+        }
+        String[] names = {
+                "四川师范大学",
+                "北京师范大学（珠海）",
+                "北师香港浸会大学",
+                "成都大学",
+                "西南石油大学",
+                "四川大学",
+                "电子科技大学",
+                "西南交通大学",
+                "其他"
+        };
+        for (int i = 0; i < names.length; i++) {
+            School school = new School();
+            school.setName(names[i]);
+            school.setSortOrder(i + 1);
+            school.setEnabled(true);
+            schoolRepo.save(school);
+        }
     }
 
     private void seedStudio() {

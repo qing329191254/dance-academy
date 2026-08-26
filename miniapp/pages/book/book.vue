@@ -92,6 +92,7 @@
         <view v-else class="avatar" />
         <view class="info">
           <text class="name">{{ item.name }}</text>
+          <text v-if="item.closedDoor" class="closed-tag">{{ item.audienceGroupLabel || '闭门课' }}</text>
           <view class="meta">
             <text v-if="active === 'group'" class="date-text">{{ selectedDateText }}</text>
             <text class="accent">{{ item.time }}</text>
@@ -451,6 +452,18 @@ async function toggleBook(item) {
   font-size: 32rpx;
   font-weight: 600;
   margin-bottom: 10rpx;
+}
+
+.closed-tag {
+  display: inline-block;
+  margin-left: 12rpx;
+  padding: 2rpx 12rpx;
+  border-radius: 999rpx;
+  background: rgba(138, 116, 229, 0.18);
+  color: #8a74e5;
+  font-size: 22rpx;
+  font-weight: 500;
+  vertical-align: middle;
 }
 
 .side {

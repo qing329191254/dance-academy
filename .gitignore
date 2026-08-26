@@ -1,4 +1,5 @@
 .env
+**/.env.development.local
 **/uploads/
 admin/node_modules/
 admin/dist/

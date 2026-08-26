@@ -43,6 +43,122 @@ public class AttendanceService {
     private final TeacherService teacherService;
 
     @Transactional
+    public Map<String, Object> finalizeAfterConfirm(Long userId, String role, Long scheduleId,
+                                                    String classDate, String operatorName) {
+        String normalizedRole = role == null ? AppRoles.STUDENT : role.trim().toLowerCase();
+        return switch (normalizedRole) {
+            case AppRoles.TEACHER -> finalizeTeacherCheckin(userId, scheduleId, classDate);
+            case AppRoles.EMPLOYEE -> finalizeEmployeeCheckin(userId, scheduleId, classDate);
+            default -> finalizeStudentCheckin(userId, scheduleId, classDate, operatorName);
+        };
+    }
+
+    @Transactional
+    public Map<String, Object> finalizeStudentCheckin(Long userId, Long scheduleId, String classDate, String operatorName) {
+        Map<String, Object> result = checkinService.manualCheckin(
+                userId, scheduleId, classDate, operatorName, CheckinService.SOURCE_CONFIRMED);
+        teacherService.syncArchiveCounts(scheduleId, classDate);
+        result.put("message", "已确认到场");
+        return result;
+    }
+
+    @Transactional
+    public Map<String, Object> finalizeTeacherCheckin(Long userId, Long scheduleId, String classDate) {
+        AppUser user = appUserRepo.findById(userId).orElseThrow(() -> new BizException("用户不存在"));
+        if (!AppRoles.TEACHER.equalsIgnoreCase(user.getRole())) {
+            throw new BizException("当前账号不是老师");
+        }
+        if (user.getTeacherId() == null) {
+            throw new BizException("老师账号未绑定课表档案");
+        }
+        Schedule schedule = scheduleRepo.findById(scheduleId).orElseThrow(() -> new BizException("课表不存在"));
+        if (!user.getTeacherId().equals(schedule.getTeacherId())) {
+            throw new BizException("这不是你的课程，无法考勤签到");
+        }
+        if (teacherAttendanceRepo.existsByUserIdAndScheduleIdAndClassDate(userId, scheduleId, classDate)) {
+            throw new BizException("本节课已考勤签到");
+        }
+
+        LocalDateTime now = LocalDateTime.now(ZONE);
+        LocalDateTime classStart = ClassScheduleTimeUtil.classStartAt(classDate, schedule.getTimeText());
+        int lateMinutes = ClassScheduleTimeUtil.minutesLate(classStart, now);
+        String status = lateMinutes > 0 ? STATUS_LATE : STATUS_ON_TIME;
+
+        TeacherAttendance record = new TeacherAttendance();
+        record.setUserId(userId);
+        record.setTeacherId(user.getTeacherId());
+        record.setScheduleId(scheduleId);
+        record.setClassDate(classDate);
+        record.setClassName(schedule.getName());
+        record.setTimeText(schedule.getTimeText());
+        record.setCampusId(resolveCampus(schedule));
+        record.setStatus(status);
+        record.setLateMinutes(lateMinutes);
+        record.setCheckedAt(Instant.now());
+        try {
+            teacherAttendanceRepo.save(record);
+        } catch (DataIntegrityViolationException e) {
+            throw new BizException("本节课已考勤签到");
+        }
+
+        touchClassArchive(user.getTeacherId(), schedule, classDate, "75分钟");
+        teacherService.syncArchiveCounts(scheduleId, classDate);
+
+        String message = STATUS_LATE.equals(status)
+                ? schedule.getName() + " 考勤已确认（迟到 " + lateMinutes + " 分钟）"
+                : schedule.getName() + " 考勤已确认";
+        return Map.of("ok", true, "message", message, "record", toTeacherMap(record));
+    }
+
+    @Transactional
+    public Map<String, Object> finalizeEmployeeCheckin(Long userId, Long scheduleId, String classDate) {
+        AppUser user = appUserRepo.findById(userId).orElseThrow(() -> new BizException("用户不存在"));
+        if (!AppRoles.EMPLOYEE.equalsIgnoreCase(user.getRole())) {
+            throw new BizException("当前账号不是员工");
+        }
+        if (user.getCampusId() == null || user.getCampusId().isBlank()) {
+            throw new BizException("员工账号未绑定校区");
+        }
+        Schedule schedule = scheduleRepo.findById(scheduleId).orElseThrow(() -> new BizException("课表不存在"));
+        String campusId = resolveCampus(schedule);
+        if (!user.getCampusId().equals(campusId)) {
+            throw new BizException("该课程不属于你的值班校区");
+        }
+        if (employeeDutyRecordRepo.existsByUserIdAndScheduleIdAndClassDate(userId, scheduleId, classDate)) {
+            throw new BizException("本节课已值班签到");
+        }
+
+        LocalDateTime now = LocalDateTime.now(ZONE);
+        LocalDateTime classStart = ClassScheduleTimeUtil.classStartAt(classDate, schedule.getTimeText());
+        LocalDateTime deadline = classStart.minusMinutes(EMPLOYEE_EARLY_MINUTES);
+        int lateMinutes = ClassScheduleTimeUtil.minutesLate(deadline, now);
+        String status = lateMinutes > 0 ? STATUS_LATE : STATUS_ON_TIME;
+
+        EmployeeDutyRecord record = new EmployeeDutyRecord();
+        record.setUserId(userId);
+        record.setScheduleId(scheduleId);
+        record.setClassDate(classDate);
+        record.setClassName(schedule.getName());
+        record.setTimeText(schedule.getTimeText());
+        record.setCampusId(campusId);
+        record.setStatus(status);
+        record.setLateMinutes(lateMinutes);
+        record.setCheckedAt(Instant.now());
+        try {
+            employeeDutyRecordRepo.save(record);
+        } catch (DataIntegrityViolationException e) {
+            throw new BizException("本节课已值班签到");
+        }
+
+        String message = STATUS_LATE.equals(status)
+                ? "值班已确认（迟到 " + lateMinutes + " 分钟）"
+                : "值班已确认";
+        return Map.of("ok", true, "message", message, "record", toEmployeeMap(record));
+    }
+
+    /** @deprecated 扫码改为待确认流程，请使用 CheckinPendingService.submitScan */
+    @Deprecated
+    @Transactional
     public Map<String, Object> checkinByRole(Long userId, String raw) {
         AppUser user = appUserRepo.findById(userId).orElseThrow(() -> new BizException("用户不存在"));
         String role = user.getRole() == null ? AppRoles.STUDENT : user.getRole().trim().toLowerCase();

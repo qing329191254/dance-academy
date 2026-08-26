@@ -27,10 +27,12 @@
         <template #default="{ row }">{{ row.remain }}/{{ row.total }}</template>
       </el-table-column>
       <el-table-column prop="expireDate" label="有效期" width="130" />
-      <el-table-column label="操作" width="160">
+      <el-table-column label="操作" width="120" class-name="col-actions" label-class-name="col-actions" align="left" header-align="left">
         <template #default="{ row }">
-          <el-button text type="primary" @click="edit(row)">编辑</el-button>
-          <el-button text type="danger" @click="remove(row)">删除</el-button>
+          <div class="table-actions">
+            <el-button link type="primary" @click="edit(row)">编辑</el-button>
+            <el-button link type="danger" @click="remove(row)">删除</el-button>
+          </div>
         </template>
       </el-table-column>
     </el-table>

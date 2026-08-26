@@ -26,7 +26,7 @@ public class PracticeRecord extends BaseEntity {
     private String room;
     /** 签到校区 */
     private String campusId;
-    /** scan=学员扫码 manual=员工/管理手动确认 */
+    /** scan=学员扫码 manual=老师/管理手动确认 confirmed=工作人员确认扫码 */
     private String checkinSource = "scan";
     /** 手动确认人（老师姓名或管理员姓名） */
     private String operatorName;

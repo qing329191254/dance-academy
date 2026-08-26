@@ -3,8 +3,10 @@ package com.forget.academy.controller.app;
 import com.forget.academy.common.ApiResponse;
 import com.forget.academy.security.AuthContext;
 import com.forget.academy.service.AttendanceService;
+import com.forget.academy.service.TeacherReviewService;
 import com.forget.academy.service.TeacherService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,6 +22,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AppTeacherController {
     private final TeacherService teacherService;
+    private final TeacherReviewService teacherReviewService;
     private final AttendanceService attendanceService;
 
     @GetMapping("/schedules")
@@ -41,6 +44,18 @@ public class AppTeacherController {
     @GetMapping("/archives/{id}")
     public ApiResponse<?> archiveDetail(@PathVariable Long id) {
         return ApiResponse.ok(teacherService.archiveDetail(AuthContext.requireApp().id(), id));
+    }
+
+    @GetMapping("/reviews")
+    public ApiResponse<?> reviews(@RequestParam(defaultValue = "1") int page,
+                                  @RequestParam(defaultValue = "20") int size) {
+        return ApiResponse.ok(teacherReviewService.listForTeacher(AuthContext.requireApp().id(), page, size));
+    }
+
+    @DeleteMapping("/reviews/{id}")
+    public ApiResponse<Void> deleteReview(@PathVariable Long id) {
+        teacherReviewService.deleteByTeacher(AuthContext.requireApp().id(), id);
+        return ApiResponse.ok();
     }
 
     @GetMapping("/attendance")

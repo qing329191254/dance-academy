@@ -311,6 +311,16 @@
       }
     },
     {
+      "path": "pages/employee/checkin",
+      "style": {
+        "navigationBarTitleText": "现场签到",
+        "navigationBarBackgroundColor": "#111111",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#111111",
+        "backgroundColorContent": "#111111"
+      }
+    },
+    {
       "path": "pages/teacher/schedule",
       "style": {
         "navigationBarTitleText": "我的课表",
@@ -354,6 +364,26 @@
       "path": "pages/teacher/archive-detail",
       "style": {
         "navigationBarTitleText": "档案详情",
+        "navigationBarBackgroundColor": "#111111",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#111111",
+        "backgroundColorContent": "#111111"
+      }
+    },
+    {
+      "path": "pages/teacher/reviews",
+      "style": {
+        "navigationBarTitleText": "学员评价",
+        "navigationBarBackgroundColor": "#111111",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#111111",
+        "backgroundColorContent": "#111111"
+      }
+    },
+    {
+      "path": "pages/mine/teacher-review",
+      "style": {
+        "navigationBarTitleText": "反馈老师",
         "navigationBarBackgroundColor": "#111111",
         "navigationBarTextStyle": "white",
         "backgroundColor": "#111111",

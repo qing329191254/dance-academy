@@ -7,10 +7,13 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 
 public interface UserCardRepo extends JpaRepository<UserCard, Long> {
     List<UserCard> findByUserIdOrderByIdDesc(Long userId);
+
+    List<UserCard> findByUserIdIn(Collection<Long> userIds);
 
     void deleteByUserId(Long userId);
 

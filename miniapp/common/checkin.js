@@ -138,7 +138,8 @@ async function handleCheckInScanRemote(result) {
     const data = await checkin(result)
     return {
       ok: true,
-      message: data.message || '签到成功',
+      pending: !!data.pending,
+      message: data.message || (data.pending ? '已提交，请等待工作人员确认' : '签到成功'),
       record: data.record,
     }
   } catch (e) {

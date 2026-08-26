@@ -9,6 +9,7 @@ import com.forget.academy.entity.PracticeRecord;
 import com.forget.academy.entity.Schedule;
 import com.forget.academy.repo.AppUserRepo;
 import com.forget.academy.repo.BookingRepo;
+import com.forget.academy.repo.CheckinPendingRepo;
 import com.forget.academy.repo.ClassArchiveRepo;
 import com.forget.academy.repo.EmployeePerformanceRepo;
 import com.forget.academy.repo.EmployeeProfileRepo;
@@ -45,6 +46,7 @@ public class TeacherService {
     private final ClassArchiveRepo classArchiveRepo;
     private final TeacherAttendanceRepo teacherAttendanceRepo;
     private final CheckinService checkinService;
+    private final CheckinPendingRepo checkinPendingRepo;
 
     public AppUser requireTeacherUser(Long userId) {
         AppUser user = appUserRepo.findById(userId).orElseThrow(() -> new BizException("用户不存在"));
@@ -259,6 +261,11 @@ public class TeacherService {
                 .findByUserIdAndSessionIdAndClassDate(booking.getUserId(), sessionId, classDate)
                 .orElse(null);
         map.put("checkedIn", record != null);
+        checkinPendingRepo.findByUserIdAndScheduleIdAndClassDate(booking.getUserId(), booking.getScheduleId(), classDate)
+                .ifPresent(pending -> {
+                    map.put("checkinPending", CheckinPendingService.STATUS_PENDING.equals(pending.getStatus()));
+                    map.put("checkinRejected", CheckinPendingService.STATUS_REJECTED.equals(pending.getStatus()));
+                });
         if (record != null) {
             map.put("checkinSource", record.getCheckinSource());
             map.put("operatorName", record.getOperatorName());

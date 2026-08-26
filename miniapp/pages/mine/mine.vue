@@ -273,6 +273,13 @@ const studentServices = [
     url: '/pages/mine/feedback',
     needLogin: true,
   },
+  {
+    name: '反馈老师',
+    icon: '/static/mine/notice.svg',
+    key: 'teacher-review',
+    url: '/pages/mine/teacher-review',
+    needLogin: true,
+  },
 ]
 
 const teacherServices = [
@@ -303,12 +310,26 @@ const teacherServices = [
     url: '/pages/teacher/archive',
     needLogin: true,
   },
+  {
+    name: '学员评价',
+    icon: '/static/mine/notice.svg',
+    key: 'teacher-reviews',
+    url: '/pages/teacher/reviews',
+    needLogin: true,
+  },
 ]
 
 const employeeServices = [
   {
-    name: '值班签到',
+    name: '现场签到',
     icon: '/static/mine/scan.png',
+    key: 'employee-checkin',
+    url: '/pages/employee/checkin',
+    needLogin: true,
+  },
+  {
+    name: '值班签到',
+    icon: '/static/mine/notice.svg',
     key: 'scan',
     needLogin: true,
   },
@@ -425,7 +446,7 @@ function startScan() {
   startCheckInScan({
     onResult(outcome) {
       if (outcome.ok) {
-        showSuccess(outcome.message || '签到成功')
+        showSuccess(outcome.message || (outcome.pending ? '已提交，请等待工作人员确认' : '签到成功'))
         loadMine()
         return
       }

@@ -12,10 +12,12 @@
       <el-table-column label="启用" width="90">
         <template #default="{ row }">{{ row.enabled ? '是' : '否' }}</template>
       </el-table-column>
-      <el-table-column label="操作" width="160">
+      <el-table-column label="操作" width="120" class-name="col-actions" label-class-name="col-actions" align="left" header-align="left">
         <template #default="{ row }">
-          <el-button text type="primary" @click="editBanner(row)">编辑</el-button>
-          <el-button text type="danger" @click="remove('/admin/banners', row.id, loadBanners)">删除</el-button>
+          <div class="table-actions">
+            <el-button link type="primary" @click="editBanner(row)">编辑</el-button>
+            <el-button link type="danger" @click="remove('/admin/banners', row.id, loadBanners)">删除</el-button>
+          </div>
         </template>
       </el-table-column>
     </el-table>
@@ -31,10 +33,12 @@
         <template #default="{ row }"><img class="thumb" :src="mediaSrc(row.imageUrl)" /></template>
       </el-table-column>
       <el-table-column prop="sortOrder" label="排序" width="80" />
-      <el-table-column label="操作" width="160">
+      <el-table-column label="操作" width="120" class-name="col-actions" label-class-name="col-actions" align="left" header-align="left">
         <template #default="{ row }">
-          <el-button text type="primary" @click="editPhoto(row)">编辑</el-button>
-          <el-button text type="danger" @click="remove('/admin/brand-photos', row.id, loadPhotos)">删除</el-button>
+          <div class="table-actions">
+            <el-button link type="primary" @click="editPhoto(row)">编辑</el-button>
+            <el-button link type="danger" @click="remove('/admin/brand-photos', row.id, loadPhotos)">删除</el-button>
+          </div>
         </template>
       </el-table-column>
     </el-table>

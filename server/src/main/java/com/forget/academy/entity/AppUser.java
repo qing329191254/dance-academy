@@ -34,4 +34,6 @@ public class AppUser extends BaseEntity {
     private String workStage = "兼职";
     private String danceLevel = "T1";
     private String danceStage = "演出";
+    /** 闭门课分组：advanced=高潜闭门 / foundation=基础闭门，空=普通学员 */
+    private String closedClassGroup;
 }

@@ -87,6 +87,10 @@ export function getLeaderboard(period, campusId) {
   }))
 }
 
+export function getSchools() {
+  return request({ url: '/schools' })
+}
+
 export function loginByCode(code) {
   return request({ url: '/auth/login', method: 'POST', data: { code } })
 }
@@ -232,6 +236,10 @@ export function submitFeedback(payload) {
   return request({ url: '/feedback', method: 'POST', data: payload })
 }
 
+export function submitTeacherReview(payload) {
+  return request({ url: '/teacher-reviews', method: 'POST', data: payload })
+}
+
 export function getTeacherSchedules(date) {
   const params = date ? `?date=${date}` : ''
   return request({ url: `/teacher/schedules${params}` })
@@ -247,6 +255,14 @@ export function getTeacherArchives(page = 1, size = 20) {
 
 export function getTeacherArchiveDetail(id) {
   return request({ url: `/teacher/archives/${id}` })
+}
+
+export function getTeacherReviews(page = 1, size = 20) {
+  return request({ url: `/teacher/reviews?page=${page}&size=${size}` })
+}
+
+export function deleteTeacherReview(id) {
+  return request({ url: `/teacher/reviews/${id}`, method: 'DELETE' })
 }
 
 export function getEmployeeProfile() {
@@ -275,4 +291,35 @@ export function manualTeacherCheckin(payload) {
 
 export function teacherCheckin(payload) {
   return request({ url: '/teacher/checkin', method: 'POST', data: { payload } })
+}
+
+export function getEmployeeCheckinSchedules(date) {
+  const q = date ? `?date=${encodeURIComponent(date)}` : ''
+  return request({ url: `/employee/checkin/schedules${q}` })
+}
+
+export function openEmployeeCheckinSession(payload) {
+  return request({ url: '/employee/checkin/sessions', method: 'POST', data: payload })
+}
+
+export function closeEmployeeCheckinSession(sessionId) {
+  return request({ url: `/employee/checkin/sessions/${sessionId}/close`, method: 'POST' })
+}
+
+export function getEmployeeCheckinSessionPayload(sessionId) {
+  return request({ url: `/employee/checkin/sessions/${sessionId}/payload` })
+}
+
+export function getEmployeeCheckinPending(scheduleId, date) {
+  return request({
+    url: `/employee/checkin/pending?scheduleId=${scheduleId}&date=${encodeURIComponent(date)}&status=pending`,
+  })
+}
+
+export function confirmEmployeeCheckinPending(id) {
+  return request({ url: `/employee/checkin/pending/${id}/confirm`, method: 'POST' })
+}
+
+export function rejectEmployeeCheckinPending(id) {
+  return request({ url: `/employee/checkin/pending/${id}/reject`, method: 'POST' })
 }

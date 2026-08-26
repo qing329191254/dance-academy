@@ -25,7 +25,7 @@
           <span v-else class="muted">—</span>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="180" align="left" header-align="left">
+      <el-table-column label="操作" width="140" class-name="col-actions" label-class-name="col-actions" align="left" header-align="left">
         <template #default="{ row }">
           <div class="table-actions">
             <el-button v-if="row.status === 'pending'" link type="primary" @click="setStatus(row, 'approved')">通过</el-button>

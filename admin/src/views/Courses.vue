@@ -24,10 +24,12 @@
       <el-table-column prop="level" label="级别" width="100" />
       <el-table-column prop="description" label="介绍" />
       <el-table-column prop="sortOrder" label="排序" width="80" />
-      <el-table-column label="操作" width="160">
+      <el-table-column label="操作" width="120" class-name="col-actions" label-class-name="col-actions" align="left" header-align="left">
         <template #default="{ row }">
-          <el-button text type="primary" @click="edit(row)">编辑</el-button>
-          <el-button text type="danger" @click="remove(row)">删除</el-button>
+          <div class="table-actions">
+            <el-button link type="primary" @click="edit(row)">编辑</el-button>
+            <el-button link type="danger" @click="remove(row)">删除</el-button>
+          </div>
         </template>
       </el-table-column>
     </el-table>

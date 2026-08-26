@@ -134,6 +134,7 @@ public class AppAuthService {
         map.put("workStage", user.getWorkStage());
         map.put("danceLevel", user.getDanceLevel());
         map.put("danceStage", user.getDanceStage());
+        map.put("closedClassGroup", user.getClosedClassGroup());
         return map;
     }
 

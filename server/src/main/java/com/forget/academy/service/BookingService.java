@@ -2,9 +2,11 @@ package com.forget.academy.service;
 
 import com.forget.academy.common.BizException;
 import com.forget.academy.common.CampusIds;
+import com.forget.academy.common.ClosedClassGroup;
 import com.forget.academy.entity.AppUser;
 import com.forget.academy.entity.Booking;
 import com.forget.academy.entity.Schedule;
+import com.forget.academy.entity.UserCard;
 import com.forget.academy.repo.AppUserRepo;
 import com.forget.academy.repo.BookingRepo;
 import com.forget.academy.repo.ScheduleRepo;
@@ -33,10 +35,12 @@ public class BookingService {
     private final BookingRepo bookingRepo;
     private final AppUserRepo appUserRepo;
     private final BookingRemindService bookingRemindService;
+    private final UserCardService userCardService;
 
     public List<Map<String, Object>> listSchedules(String type, String date, String campusId, Long userId) {
         String tab = type == null || type.isBlank() ? "group" : type;
         String campus = campusId == null || campusId.isBlank() ? CampusIds.DEFAULT : campusId.trim();
+        AppUser user = userId == null ? null : appUserRepo.findById(userId).orElse(null);
         List<Schedule> schedules;
         if ("group".equals(tab) && date != null && !date.isBlank()) {
             int weekday = toWeekday(LocalDate.parse(date));
@@ -47,6 +51,9 @@ public class BookingService {
         }
         List<Map<String, Object>> result = new ArrayList<>();
         for (Schedule item : schedules) {
+            if (ClosedClassGroup.isClosedDoor(item) && !ClosedClassGroup.canAccess(item, user)) {
+                continue;
+            }
             Map<String, Object> row = toScheduleMap(item, date);
             long booked = 0;
             if ("group".equals(tab) && date != null) {
@@ -77,6 +84,7 @@ public class BookingService {
     @Transactional
     public Map<String, Object> toggle(Long userId, Long scheduleId, String date) {
         Schedule schedule = scheduleRepo.findById(scheduleId).orElseThrow(() -> new BizException("课表不存在"));
+        AppUser user = appUserRepo.findById(userId).orElseThrow(() -> new BizException("用户不存在"));
         String tab = schedule.getType();
         String classDate = "group".equals(tab) ? date : "default";
         if ("group".equals(tab) && (date == null || date.isBlank())) {
@@ -96,9 +104,13 @@ public class BookingService {
         if (existing.isPresent()) {
             Booking booking = existing.get();
             boolean full = isGroupFull(schedule, classDate);
+            assertCanBookGroup(schedule, user);
             booking.setStatus(full ? STATUS_WAITLIST : STATUS_PENDING);
             booking.setRemindSent(false);
-            booking.setNickname(appUserRepo.findById(userId).map(AppUser::getNickname).orElse(booking.getNickname()));
+            booking.setNickname(user.getNickname());
+            if (STATUS_PENDING.equals(booking.getStatus())) {
+                reserveGroupCard(booking, user);
+            }
             bookingRepo.save(booking);
             if (full) {
                 return queuedResult(booking);
@@ -107,7 +119,7 @@ public class BookingService {
             return result(true, false, "预约成功", booking);
         }
 
-        AppUser user = appUserRepo.findById(userId).orElseThrow(() -> new BizException("用户不存在"));
+        assertCanBookGroup(schedule, user);
         boolean waitlist = isGroupFull(schedule, classDate);
         Booking booking = new Booking();
         booking.setUserId(userId);
@@ -122,6 +134,9 @@ public class BookingService {
         booking.setRoom(schedule.getRoom());
         booking.setStatus(waitlist ? STATUS_WAITLIST : STATUS_PENDING);
         booking.setRemindSent(false);
+        if (STATUS_PENDING.equals(booking.getStatus())) {
+            reserveGroupCard(booking, user);
+        }
         try {
             bookingRepo.save(booking);
         } catch (DataIntegrityViolationException e) {
@@ -132,6 +147,76 @@ public class BookingService {
         }
         bookingRemindService.scheduleGroupRemind(booking);
         return result(true, false, "预约成功", booking);
+    }
+
+    @Transactional
+    public Booking adminCreate(Long userId, Long scheduleId, String date) {
+        Schedule schedule = scheduleRepo.findById(scheduleId).orElseThrow(() -> new BizException("课表不存在"));
+        adminAccessService.assertCanAccessCampus(schedule.getCampusId());
+        if (!Boolean.TRUE.equals(schedule.getEnabled())) {
+            throw new BizException("该课程已停用");
+        }
+        AppUser user = appUserRepo.findById(userId).orElseThrow(() -> new BizException("学员不存在"));
+
+        String tab = schedule.getType();
+        String classDate = "group".equals(tab) ? date : "default";
+        if ("group".equals(tab) && (date == null || date.isBlank())) {
+            throw new BizException("请选择上课日期");
+        }
+        String key = buildKey(tab, scheduleId, classDate);
+        var existing = bookingRepo.findByUserIdAndBookingKey(userId, key);
+        if (existing.isPresent()) {
+            Booking booking = existing.get();
+            if (STATUS_PENDING.equals(booking.getStatus()) || STATUS_WAITLIST.equals(booking.getStatus())) {
+                throw new BizException("该学员已有有效预约");
+            }
+            boolean full = isGroupFull(schedule, classDate);
+            assertCanBookGroup(schedule, user);
+            booking.setStatus(full ? STATUS_WAITLIST : STATUS_PENDING);
+            booking.setRemindSent(false);
+            booking.setNickname(user.getNickname());
+            if (STATUS_PENDING.equals(booking.getStatus())) {
+                reserveGroupCard(booking, user);
+            }
+            bookingRepo.save(booking);
+            if (!full) {
+                bookingRemindService.scheduleGroupRemind(booking);
+            }
+            return booking;
+        }
+
+        assertCanBookGroup(schedule, user);
+        boolean waitlist = isGroupFull(schedule, classDate);
+        Booking booking = new Booking();
+        booking.setUserId(userId);
+        booking.setNickname(user.getNickname());
+        booking.setScheduleId(scheduleId);
+        booking.setBookingKey(key);
+        booking.setTab(tab);
+        booking.setClassDate("group".equals(tab) ? classDate : null);
+        booking.setName(schedule.getName());
+        booking.setTimeText(schedule.getTimeText());
+        booking.setTeacherName(schedule.getTeacherName());
+        booking.setRoom(schedule.getRoom());
+        booking.setStatus(waitlist ? STATUS_WAITLIST : STATUS_PENDING);
+        booking.setRemindSent(false);
+        if (STATUS_PENDING.equals(booking.getStatus())) {
+            reserveGroupCard(booking, user);
+        }
+        try {
+            bookingRepo.save(booking);
+        } catch (DataIntegrityViolationException e) {
+            throw new BizException(waitlist ? "请勿重复排队" : "请勿重复预约");
+        }
+        if (!waitlist) {
+            bookingRemindService.scheduleGroupRemind(booking);
+        }
+        return booking;
+    }
+
+    @Transactional
+    public Booking adminCancel(Long id) {
+        return adminUpdateStatus(id, STATUS_CANCELLED);
     }
 
     @Transactional
@@ -162,6 +247,9 @@ public class BookingService {
         }
         assertBookingCampusAccess(booking);
         boolean wasPending = STATUS_PENDING.equals(booking.getStatus());
+        if (wasPending) {
+            releaseGroupCard(booking);
+        }
         Long scheduleId = booking.getScheduleId();
         String classDate = booking.getClassDate();
         bookingRepo.delete(booking);
@@ -189,6 +277,9 @@ public class BookingService {
     }
 
     private void markCancelled(Booking booking) {
+        if (STATUS_PENDING.equals(booking.getStatus())) {
+            releaseGroupCard(booking);
+        }
         String key = booking.getBookingKey();
         if (key != null && !key.contains(":x:")) {
             booking.setBookingKey(key + ":x:" + booking.getId());
@@ -213,6 +304,10 @@ public class BookingService {
                 return;
             }
             Booking booking = next.get();
+            AppUser user = appUserRepo.findById(booking.getUserId())
+                    .orElseThrow(() -> new BizException("学员不存在"));
+            assertCanBookGroup(schedule, user);
+            reserveGroupCard(booking, user);
             booking.setStatus(STATUS_PENDING);
             booking.setRemindSent(false);
             bookingRepo.save(booking);
@@ -269,7 +364,37 @@ public class BookingService {
         map.put("weekday", item.getWeekday());
         map.put("capacity", item.getCapacity());
         map.put("date", date);
+        map.put("closedDoor", Boolean.TRUE.equals(item.getClosedDoor()));
+        map.put("audienceGroup", item.getAudienceGroup());
+        map.put("audienceGroupLabel", ClosedClassGroup.label(item.getAudienceGroup()));
         return map;
+    }
+
+    private void assertCanBookGroup(Schedule schedule, AppUser user) {
+        if (!"group".equals(schedule.getType())) {
+            return;
+        }
+        if (!ClosedClassGroup.canAccess(schedule, user)) {
+            throw new BizException(ClosedClassGroup.accessDeniedMessage(schedule));
+        }
+        userCardService.requireUsableGroupCard(user.getId());
+    }
+
+    private void reserveGroupCard(Booking booking, AppUser user) {
+        if (!"group".equals(booking.getTab())) {
+            return;
+        }
+        UserCard card = userCardService.requireUsableGroupCard(user.getId());
+        userCardService.deduct(card);
+        booking.setCardId(card.getId());
+    }
+
+    private void releaseGroupCard(Booking booking) {
+        if (booking.getCardId() == null) {
+            return;
+        }
+        userCardService.refund(booking.getCardId());
+        booking.setCardId(null);
     }
 
     public Map<String, Object> toBookingMap(Booking booking) {
