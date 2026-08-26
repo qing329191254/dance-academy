@@ -3,7 +3,8 @@
   <view class="page">
     <view class="brand-header" :style="{ paddingTop: statusBarHeight + 'px' }">
       <view class="brand-inner">
-        <text class="brand-title">高校FOR一GET街舞俱乐部</text>
+        <app-campus-switch />
+        <text class="brand-title">高校FOR-GET舞室</text>
       </view>
     </view>
 
@@ -11,7 +12,22 @@
       <view class="intro card">
         <text class="title">成长中心</text>
         <text class="muted body">{{ growthIntro }}</text>
-        <text class="tip">新学员默认享有 T1 权益，可通过消费、年限、考核等途径升级至 T2 / T3。</text>
+        <text class="tip">新学员默认享有 T1 权益，可通过年限、考核等途径升级至 T2 / T3。</text>
+      </view>
+    </view>
+
+    <view class="section">
+      <view class="card level-card">
+        <text class="level-title">我的等级</text>
+        <view class="level-row">
+          <view v-for="track in growthTracks" :key="track.key" class="level-item">
+            <text class="level-line">{{ track.line }}</text>
+            <view class="level-meta">
+              <text class="level-stage">{{ track.current }}</text>
+              <text class="level-pill">{{ track.level }}</text>
+            </view>
+          </view>
+        </view>
       </view>
     </view>
 
@@ -52,11 +68,32 @@
 </template>
 
 <script setup>
-import { growthIntro } from '@/common/mock.js'
+import { ref } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
+import { growthIntro, userGrowthProfile } from '@/common/mock.js'
+import { getMine } from '@/common/api.js'
+import { isLoggedIn, isProfileComplete } from '@/common/auth.js'
 import { openPage } from '@/common/navigate.js'
 import { getStatusBarHeight } from '@/common/statusBar.js'
 
 const statusBarHeight = getStatusBarHeight()
+const growthTracks = ref([
+  { key: 'work', ...userGrowthProfile.work },
+  { key: 'dance', ...userGrowthProfile.dance },
+])
+
+onShow(async () => {
+  if (!isLoggedIn() || !isProfileComplete()) return
+  try {
+    const data = await getMine()
+    if (data.growth) {
+      growthTracks.value = [
+        { key: 'work', ...data.growth.work },
+        { key: 'dance', ...data.growth.dance },
+      ]
+    }
+  } catch (e) {}
+})
 
 function go(url) {
   openPage(url)
@@ -67,25 +104,32 @@ function go(url) {
 .brand-header {
   background: #111111;
   box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.35);
+  overflow: visible;
 }
 
 .brand-inner {
   height: 44px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 0 100rpx;
+  justify-content: flex-start;
+  padding: 0 96px 0 16rpx;
+  position: relative;
 }
 
 .brand-title {
+  position: absolute;
+  left: 0;
+  right: 0;
   font-size: 32rpx;
   font-weight: 700;
   color: #ffffff;
   text-align: center;
   line-height: 44px;
+  padding: 0 200rpx;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  pointer-events: none;
 }
 
 .intro {
@@ -108,6 +152,59 @@ function go(url) {
   font-size: 24rpx;
   color: #8a74e5;
   line-height: 1.6;
+}
+
+.level-card {
+  padding: 24rpx 28rpx;
+}
+
+.level-title {
+  font-size: 26rpx;
+  font-weight: 700;
+  margin-bottom: 16rpx;
+}
+
+.level-row {
+  display: flex;
+  gap: 16rpx;
+}
+
+.level-item {
+  flex: 1;
+  min-width: 0;
+  background: #242424;
+  border-radius: 16rpx;
+  padding: 16rpx 18rpx;
+}
+
+.level-line {
+  display: block;
+  font-size: 24rpx;
+  color: #9a9a9a;
+  margin-bottom: 8rpx;
+}
+
+.level-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8rpx;
+}
+
+.level-stage {
+  font-size: 28rpx;
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.level-pill {
+  color: #8a74e5;
+  font-size: 26rpx;
+  font-weight: 700;
+  flex-shrink: 0;
 }
 
 .module {

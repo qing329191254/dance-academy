@@ -21,4 +21,7 @@ public class OpportunityApply extends BaseEntity {
     private String nickname;
     /** pending / approved / rejected / cancelled */
     private String status;
+    @jakarta.persistence.Column(length = 2048)
+    private String resumeUrl;
+    private String resumeName;
 }

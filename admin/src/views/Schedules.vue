@@ -15,6 +15,9 @@
           <el-option label="固定班" value="fixed" />
           <el-option label="私教" value="private" />
         </el-select>
+        <el-select v-model="campusId" placeholder="校区" clearable style="width: 200px" @change="search">
+          <el-option v-for="item in campusOptions" :key="item.id" :label="item.name" :value="item.id" />
+        </el-select>
         <el-select v-model="enabled" placeholder="启用状态" clearable style="width: 140px" @change="search">
           <el-option label="启用" :value="true" />
           <el-option label="停用" :value="false" />
@@ -26,6 +29,9 @@
     <el-table :data="list">
       <el-table-column prop="type" label="类型" width="90" align="left" header-align="left">
         <template #default="{ row }">{{ typeLabel[row.type] || row.type }}</template>
+      </el-table-column>
+      <el-table-column label="校区" width="180">
+        <template #default="{ row }">{{ campusName(row.campusId) }}</template>
       </el-table-column>
       <el-table-column prop="name" label="名称" />
       <el-table-column prop="timeText" label="时间" width="150" />
@@ -68,6 +74,11 @@
           <el-option label="私教" value="private" />
         </el-select>
       </el-form-item>
+      <el-form-item label="校区">
+        <el-select v-model="form.campusId">
+          <el-option v-for="item in campusOptions" :key="item.id" :label="item.name" :value="item.id" />
+        </el-select>
+      </el-form-item>
       <el-form-item label="名称"><el-input v-model="form.name" /></el-form-item>
       <el-form-item label="时间"><el-input v-model="form.timeText" placeholder="16:00-17:15" /></el-form-item>
       <el-form-item label="老师">
@@ -101,7 +112,7 @@
         <p>{{ qrMeta.date }} {{ qrMeta.time }}</p>
         <p>{{ [qrMeta.teacher, qrMeta.room].filter(Boolean).join(' · ') }}</p>
       </div>
-      <p class="qr-hint">保存或打印后贴在教室，学员用小程序扫码即可签到</p>
+      <p class="qr-hint">保存或打印后贴在教室，学员扫码自助签到；未到课学员由老师或管理员在名单上手动确认。</p>
     </div>
     <template #footer>
       <el-button @click="qrVisible = false">关闭</el-button>
@@ -111,10 +122,16 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import QRCode from 'qrcode'
 import http from '../api/http'
+import { campusName } from '../common/campuses'
+import { allowedCampuses, defaultCampusId } from '../common/adminAccess'
+import { useAuthStore } from '../stores/auth'
+
+const auth = useAuthStore()
+const campusOptions = computed(() => allowedCampuses(auth.profile))
 
 const typeLabel = { group: '团课', fixed: '固定班', private: '私教' }
 const weekdayLabel = { 0: '周日', 1: '周一', 2: '周二', 3: '周三', 4: '周四', 5: '周五', 6: '周六' }
@@ -125,6 +142,7 @@ const page = ref(1)
 const size = ref(15)
 const keyword = ref('')
 const type = ref('')
+const campusId = ref('')
 const enabled = ref()
 const teachers = ref([])
 const visible = ref(false)
@@ -138,6 +156,7 @@ const original = reactive({ timeText: '', weekday: null, type: '' })
 function queryParams() {
   const params = { keyword: keyword.value, page: page.value, size: size.value }
   if (type.value) params.type = type.value
+  if (campusId.value) params.campusId = campusId.value
   if (enabled.value === true || enabled.value === false) params.enabled = enabled.value
   return params
 }
@@ -157,8 +176,9 @@ function search() {
   return load()
 }
 function edit(row) {
+  const fallbackCampus = defaultCampusId(auth.profile) || campusOptions.value[0]?.id || 'shizishan'
   Object.assign(form, {
-    id: null, type: 'group', name: '', timeText: '', teacherId: null, teacherName: '',
+    id: null, type: 'group', campusId: fallbackCampus, name: '', timeText: '', teacherId: null, teacherName: '',
     room: '', weekday: 1, stars: 3, capacity: 20, status: '可预约', sortOrder: 0, enabled: true,
   }, row || {})
   Object.assign(original, {
@@ -235,6 +255,7 @@ function downloadQr() {
   link.click()
 }
 onMounted(() => {
+  campusId.value = defaultCampusId(auth.profile)
   loadTeachers()
   load()
 })

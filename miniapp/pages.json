@@ -10,7 +10,7 @@
       "path": "pages/home/home",
       "style": {
         "navigationStyle": "custom",
-        "navigationBarTitleText": "高校FOR一GET街舞俱乐部",
+        "navigationBarTitleText": "高校FOR-GET舞室",
         "navigationBarBackgroundColor": "#000000",
         "navigationBarTextStyle": "white",
         "backgroundColor": "#000000",
@@ -21,7 +21,7 @@
       "path": "pages/book/book",
       "style": {
         "navigationStyle": "custom",
-        "navigationBarTitleText": "高校FOR一GET街舞俱乐部",
+        "navigationBarTitleText": "高校FOR-GET舞室",
         "navigationBarBackgroundColor": "#111111",
         "navigationBarTextStyle": "white",
         "backgroundColor": "#111111",
@@ -32,7 +32,7 @@
       "path": "pages/growth/index",
       "style": {
         "navigationStyle": "custom",
-        "navigationBarTitleText": "高校FOR一GET街舞俱乐部",
+        "navigationBarTitleText": "高校FOR-GET舞室",
         "navigationBarBackgroundColor": "#111111",
         "navigationBarTextStyle": "white",
         "backgroundColor": "#111111",
@@ -141,6 +141,36 @@
       }
     },
     {
+      "path": "pages/course/trial",
+      "style": {
+        "navigationBarTitleText": "体验课",
+        "navigationBarBackgroundColor": "#111111",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#111111",
+        "backgroundColorContent": "#111111"
+      }
+    },
+    {
+      "path": "pages/course/system",
+      "style": {
+        "navigationBarTitleText": "课程体系介绍",
+        "navigationBarBackgroundColor": "#111111",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#111111",
+        "backgroundColorContent": "#111111"
+      }
+    },
+    {
+      "path": "pages/course/system-detail",
+      "style": {
+        "navigationBarTitleText": "课程体系",
+        "navigationBarBackgroundColor": "#111111",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#111111",
+        "backgroundColorContent": "#111111"
+      }
+    },
+    {
       "path": "pages/growth/work",
       "style": {
         "navigationBarTitleText": "勤工俭学",
@@ -211,9 +241,119 @@
       }
     },
     {
+      "path": "pages/mine/queue",
+      "style": {
+        "navigationBarTitleText": "排队课程",
+        "navigationBarBackgroundColor": "#111111",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#111111",
+        "backgroundColorContent": "#111111"
+      }
+    },
+    {
       "path": "pages/mine/practice",
       "style": {
         "navigationBarTitleText": "习练记录",
+        "navigationBarBackgroundColor": "#111111",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#111111",
+        "backgroundColorContent": "#111111"
+      }
+    },
+    {
+      "path": "pages/mine/notice",
+      "style": {
+        "navigationBarTitleText": "学员须知",
+        "navigationBarBackgroundColor": "#111111",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#111111",
+        "backgroundColorContent": "#111111"
+      }
+    },
+    {
+      "path": "pages/mine/feedback",
+      "style": {
+        "navigationBarTitleText": "意见反馈",
+        "navigationBarBackgroundColor": "#111111",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#111111",
+        "backgroundColorContent": "#111111"
+      }
+    },
+    {
+      "path": "pages/employee/profile",
+      "style": {
+        "navigationBarTitleText": "岗位信息",
+        "navigationBarBackgroundColor": "#111111",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#111111",
+        "backgroundColorContent": "#111111"
+      }
+    },
+    {
+      "path": "pages/employee/weekly",
+      "style": {
+        "navigationBarTitleText": "周报",
+        "navigationBarBackgroundColor": "#111111",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#111111",
+        "backgroundColorContent": "#111111"
+      }
+    },
+    {
+      "path": "pages/employee/performance",
+      "style": {
+        "navigationBarTitleText": "工作成绩",
+        "navigationBarBackgroundColor": "#111111",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#111111",
+        "backgroundColorContent": "#111111"
+      }
+    },
+    {
+      "path": "pages/teacher/schedule",
+      "style": {
+        "navigationBarTitleText": "我的课表",
+        "navigationBarBackgroundColor": "#111111",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#111111",
+        "backgroundColorContent": "#111111"
+      }
+    },
+    {
+      "path": "pages/teacher/roster",
+      "style": {
+        "navigationBarTitleText": "到课确认",
+        "navigationBarBackgroundColor": "#111111",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#111111",
+        "backgroundColorContent": "#111111"
+      }
+    },
+    {
+      "path": "pages/teacher/stats",
+      "style": {
+        "navigationBarTitleText": "课时统计",
+        "navigationBarBackgroundColor": "#111111",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#111111",
+        "backgroundColorContent": "#111111"
+      }
+    },
+    {
+      "path": "pages/teacher/archive",
+      "style": {
+        "navigationBarTitleText": "课堂档案",
+        "navigationBarBackgroundColor": "#111111",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#111111",
+        "backgroundColorContent": "#111111"
+      }
+    },
+    {
+      "path": "pages/teacher/archive-detail",
+      "style": {
+        "navigationBarTitleText": "档案详情",
         "navigationBarBackgroundColor": "#111111",
         "navigationBarTextStyle": "white",
         "backgroundColor": "#111111",
@@ -223,7 +363,7 @@
   ],
   "globalStyle": {
     "navigationBarTextStyle": "white",
-    "navigationBarTitleText": "高校FOR一GET街舞俱乐部",
+    "navigationBarTitleText": "高校FOR-GET舞室",
     "navigationBarBackgroundColor": "#111111",
     "backgroundColor": "#111111",
     "backgroundColorTop": "#111111",

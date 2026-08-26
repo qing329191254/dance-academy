@@ -19,7 +19,7 @@ const fixes = [
     [/报名[^<]*<\/text>/g, '报名。</text>'],
   ]],
   ['pages/growth/dance.vue', [
-    [/<text class="lead muted">[\s\S]*?<\/text>/, '<text class="lead muted">舞蹈发展成长线：演出练胆 → 商演实践 → 教师考核与任教。无支付环节，专注赋能与报名。</text>'],
+    [/<text class="lead muted">[\s\S]*?<\/text>/, '<text class="lead muted">舞蹈发展成长线：演出练胆 → 商演实践 → 教师考证与任教。</text>'],
   ]],
 ]
 

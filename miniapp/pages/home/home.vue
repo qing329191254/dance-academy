@@ -14,7 +14,8 @@
       :style="{ paddingTop: statusBarHeight + 'px' }"
     >
       <view class="navbar-inner">
-        <text class="navbar-title" :class="{ show: showNavTitle }">高校FOR一GET街舞俱乐部</text>
+        <app-campus-switch v-show="!showSplash" />
+        <text class="navbar-title" :class="{ show: showNavTitle }">高校FOR-GET舞室</text>
       </view>
     </view>
 
@@ -41,12 +42,6 @@
       <view v-else class="hero hero-empty" />
 
       <view class="nav-row">
-        <view class="nav-item" @click="go('/pages/book/book', true)">
-          <view class="nav-icon">
-            <image class="nav-icon-img" src="/static/nav/book.png" mode="aspectFit" />
-          </view>
-          <text>约课</text>
-        </view>
         <view class="nav-item" @click="go('/pages/brand/brand')">
           <view class="nav-icon">
             <image class="nav-icon-img" src="/static/nav/brand.png" mode="aspectFit" />
@@ -58,6 +53,12 @@
             <image class="nav-icon-img" src="/static/nav/course.png" mode="aspectFit" />
           </view>
           <text>课程介绍</text>
+        </view>
+        <view class="nav-item" @click="go('/pages/book/book', true)">
+          <view class="nav-icon">
+            <image class="nav-icon-img" src="/static/nav/book.png" mode="aspectFit" />
+          </view>
+          <text>约课</text>
         </view>
       </view>
 
@@ -87,14 +88,24 @@
             <view class="link-arrow" />
           </view>
         </view>
-        <view v-for="c in homeCourses" :key="c.id" class="course-card card" @click="go(`/pages/course/detail?id=${c.id}`)">
+        <view class="course-card card" @click="go('/pages/course/trial')">
           <view class="course-main">
-            <text class="course-name">{{ c.name }}</text>
-            <text class="muted">{{ c.desc }}</text>
+            <text class="course-name">体验课</text>
+            <text class="muted">{{ trialCourse.summary }}</text>
           </view>
           <view class="course-side">
-            <text class="price">¥{{ c.price }}</text>
-            <text class="tag">{{ c.level }}</text>
+            <text class="price">¥{{ trialCourse.price }}</text>
+            <text class="tag">{{ trialCourse.tag }}</text>
+          </view>
+        </view>
+        <view class="course-card card" @click="go('/pages/course/system')">
+          <view class="course-main">
+            <text class="course-name">课程体系介绍</text>
+            <text class="muted">精品固定班 · 次通卡 · 私教 · 定制赛事商演</text>
+          </view>
+          <view class="course-side more-side">
+            <text class="more-text">进入</text>
+            <view class="link-arrow" />
           </view>
         </view>
       </view>
@@ -106,7 +117,7 @@
             <view v-else class="studio-logo avatar-ph" />
             <view>
               <text class="studio-name">{{ studio.name }}</text>
-              <text class="muted">{{ studio.location }}</text>
+              <text class="muted">{{ currentCampus.name }}</text>
             </view>
           </view>
           <view class="phone" @click.stop="callStudio">
@@ -124,7 +135,8 @@
 import { computed, ref, reactive } from 'vue'
 import { onLoad, onShow, onUnload, onPageScroll } from '@dcloudio/uni-app'
 import { getHome } from '@/common/api.js'
-import { teachers as mockTeachers, courses as mockCourses, studio as mockStudio } from '@/common/mock.js'
+import { teachers as mockTeachers, studio as mockStudio, trialCourse } from '@/common/mock.js'
+import { currentCampus } from '@/common/campus.js'
 import { preloadTabPagesAsync } from '@/common/preloadTabs.js'
 import { openPage, switchTabPage } from '@/common/navigate.js'
 import { applyPageBackground, PAGE_BG, SPLASH_BG } from '@/common/pageTheme.js'
@@ -220,9 +232,7 @@ onUnload(() => {
 
 const banners = ref([])
 const teachers = ref(mockTeachers)
-const courses = ref(mockCourses)
 const homeTeachers = computed(() => (teachers.value || []).slice(0, 4))
-const homeCourses = computed(() => (courses.value || []).slice(0, 3))
 const studio = reactive({
   ...mockStudio,
   splashImage: readSplashCache(),
@@ -248,7 +258,6 @@ async function loadHome() {
     const data = await getHome()
     banners.value = (data.banners || []).filter(Boolean)
     if (data.teachers?.length) teachers.value = data.teachers
-    if (data.courses?.length) courses.value = data.courses
     if (data.studio) Object.assign(studio, data.studio)
     if (studio.splashImage) uni.setStorageSync('splashImage', studio.splashImage)
     else uni.removeStorageSync('splashImage')
@@ -353,10 +362,11 @@ function callStudio() {
   top: 0;
   left: 0;
   right: 0;
-  z-index: 1000;
+  z-index: 5000;
   pointer-events: none;
   background: transparent;
   transition: background 0.25s ease;
+  overflow: visible;
 }
 
 .custom-navbar.navbar-visible {
@@ -368,19 +378,28 @@ function callStudio() {
   height: 44px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 0 100rpx;
+  justify-content: flex-start;
+  padding: 0 96px 0 16rpx;
+  position: relative;
 }
 
 .navbar-title {
+  position: absolute;
+  left: 0;
+  right: 0;
   display: block;
   font-size: 32rpx;
   font-weight: 700;
   color: #ffffff;
   text-align: center;
   line-height: 44px;
+  padding: 0 200rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   opacity: 0;
   transition: opacity 0.25s ease;
+  pointer-events: none;
 }
 
 .navbar-title.show {
@@ -519,6 +538,17 @@ function callStudio() {
   flex-direction: column;
   align-items: flex-end;
   flex-shrink: 0;
+}
+
+.more-side {
+  flex-direction: row;
+  align-items: center;
+  color: #8a74e5;
+  padding-top: 8rpx;
+}
+
+.more-text {
+  font-size: 24rpx;
 }
 
 .course-side .tag {

@@ -12,6 +12,8 @@ import lombok.Setter;
 public class Schedule extends BaseEntity {
     /** group / fixed / private */
     private String type;
+    /** 校区，如 shizishan */
+    private String campusId;
     private String name;
     private String timeText;
     private Long teacherId;

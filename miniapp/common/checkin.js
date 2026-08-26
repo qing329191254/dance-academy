@@ -1,4 +1,4 @@
-import { checkin } from './api.js'
+import { checkin, teacherCheckin } from './api.js'
 
 const CHECKIN_TYPE = 'checkin'
 const STORAGE_KEY = 'forget_practice_records'
@@ -152,6 +152,41 @@ export function startCheckInScan(callbacks = {}) {
     scanType: ['qrCode'],
     success(res) {
       handleCheckInScanRemote(res.result).then((outcome) => {
+        callbacks.onResult?.(outcome)
+      })
+    },
+    fail(err) {
+      if (err.errMsg && err.errMsg.includes('cancel')) {
+        callbacks.onCancel?.()
+        return
+      }
+      callbacks.onResult?.({
+        ok: false,
+        message: '请检查相机权限，或在真机上重试',
+      })
+    },
+  })
+}
+
+async function handleTeacherCheckInScanRemote(result) {
+  try {
+    const data = await teacherCheckin(result)
+    return {
+      ok: true,
+      message: data.message || '课堂签到成功',
+      record: data,
+    }
+  } catch (e) {
+    return { ok: false, message: e.message || '签到失败' }
+  }
+}
+
+export function startTeacherCheckInScan(callbacks = {}) {
+  uni.scanCode({
+    onlyFromCamera: true,
+    scanType: ['qrCode'],
+    success(res) {
+      handleTeacherCheckInScanRemote(res.result).then((outcome) => {
         callbacks.onResult?.(outcome)
       })
     },

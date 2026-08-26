@@ -2,11 +2,14 @@ package com.forget.academy.controller.app;
 
 import com.forget.academy.common.ApiResponse;
 import com.forget.academy.entity.AppUser;
+import com.forget.academy.entity.Feedback;
 import com.forget.academy.repo.AppUserRepo;
+import com.forget.academy.repo.FeedbackRepo;
 import com.forget.academy.repo.UserCardRepo;
 import com.forget.academy.repo.UserCourseRepo;
 import com.forget.academy.security.AuthContext;
 import com.forget.academy.service.AppAuthService;
+import com.forget.academy.service.AttendanceService;
 import com.forget.academy.service.BookingService;
 import com.forget.academy.service.CheckinService;
 import com.forget.academy.service.GrowthService;
@@ -29,10 +32,12 @@ public class AppUserController {
     private final AppAuthService appAuthService;
     private final BookingService bookingService;
     private final CheckinService checkinService;
+    private final AttendanceService attendanceService;
     private final GrowthService growthService;
     private final AppUserRepo appUserRepo;
     private final UserCardRepo userCardRepo;
     private final UserCourseRepo userCourseRepo;
+    private final FeedbackRepo feedbackRepo;
     private final StorageService storageService;
 
     @PostMapping("/auth/login")
@@ -88,9 +93,12 @@ public class AppUserController {
     @PostMapping("/upload")
     public ApiResponse<?> upload(@RequestBody Map<String, String> body) {
         AuthContext.requireApp();
-        String raw = body == null ? null : body.get("imageBase64");
+        String raw = body == null ? null : body.get("fileBase64");
         if (raw == null || raw.isBlank()) {
-            throw new com.forget.academy.common.BizException("请选择图片");
+            raw = body == null ? null : body.get("imageBase64");
+        }
+        if (raw == null || raw.isBlank()) {
+            throw new com.forget.academy.common.BizException("请选择文件");
         }
         int comma = raw.indexOf(',');
         if (comma >= 0) {
@@ -100,10 +108,10 @@ public class AppUserController {
         try {
             bytes = java.util.Base64.getDecoder().decode(raw);
         } catch (IllegalArgumentException e) {
-            throw new com.forget.academy.common.BizException("图片格式不正确");
+            throw new com.forget.academy.common.BizException("文件格式不正确");
         }
         String filename = body.get("filename");
-        return ApiResponse.ok(storageService.saveImageBytes(bytes, filename));
+        return ApiResponse.ok(storageService.saveFileBytes(bytes, filename));
     }
 
     @GetMapping("/mine")
@@ -116,6 +124,7 @@ public class AppUserController {
         data.put("cards", userCardRepo.findByUserIdOrderByIdDesc(userId));
         data.put("courses", userCourseRepo.findByUserIdOrderByIdDesc(userId));
         data.put("bookings", bookingService.myBookings(userId));
+        data.put("waitlist", bookingService.myWaitlist(userId));
         data.put("practice", checkinService.myPractice(userId));
         return ApiResponse.ok(data);
     }
@@ -159,6 +168,11 @@ public class AppUserController {
         return ApiResponse.ok(bookingService.myBookings(AuthContext.requireApp().id()));
     }
 
+    @GetMapping("/waitlist")
+    public ApiResponse<?> waitlist() {
+        return ApiResponse.ok(bookingService.myWaitlist(AuthContext.requireApp().id()));
+    }
+
     @PostMapping("/bookings")
     public ApiResponse<?> toggleBooking(@RequestBody Map<String, Object> body) {
         Long scheduleId = Long.valueOf(String.valueOf(body.get("scheduleId")));
@@ -173,7 +187,7 @@ public class AppUserController {
 
     @PostMapping("/checkin")
     public ApiResponse<?> checkin(@RequestBody Map<String, String> body) {
-        return ApiResponse.ok(checkinService.checkin(AuthContext.requireApp().id(), body.get("payload")));
+        return ApiResponse.ok(attendanceService.checkinByRole(AuthContext.requireApp().id(), body.get("payload")));
     }
 
     @GetMapping("/growth")
@@ -190,7 +204,39 @@ public class AppUserController {
     }
 
     @PostMapping("/opportunities/{id}/apply")
-    public ApiResponse<?> apply(@org.springframework.web.bind.annotation.PathVariable Long id) {
-        return ApiResponse.ok(growthService.toggleApply(AuthContext.requireApp().id(), id));
+    public ApiResponse<?> apply(@org.springframework.web.bind.annotation.PathVariable Long id,
+                               @RequestBody(required = false) Map<String, String> body) {
+        String resumeUrl = body == null ? null : body.get("resumeUrl");
+        String resumeName = body == null ? null : body.get("resumeName");
+        return ApiResponse.ok(growthService.toggleApply(AuthContext.requireApp().id(), id, resumeUrl, resumeName));
+    }
+
+    @PostMapping("/feedback")
+    public ApiResponse<?> feedback(@RequestBody(required = false) Map<String, String> body) {
+        Long userId = AuthContext.requireApp().id();
+        String raw = body == null ? null : body.get("content");
+        String content = raw == null ? "" : raw.trim();
+        if (content.length() < 5) {
+            throw new com.forget.academy.common.BizException("请至少填写 5 个字");
+        }
+        if (content.length() > 500) {
+            throw new com.forget.academy.common.BizException("反馈内容过长");
+        }
+        String contact = body == null || body.get("contact") == null ? "" : body.get("contact").trim();
+        if (contact.isBlank()) {
+            throw new com.forget.academy.common.BizException("请填写联系方式");
+        }
+        if (contact.length() > 40) {
+            throw new com.forget.academy.common.BizException("联系方式过长");
+        }
+        AppUser user = appUserRepo.findById(userId).orElseThrow();
+        Feedback item = new Feedback();
+        item.setUserId(userId);
+        item.setNickname(user.getNickname());
+        item.setCampusId(body == null ? null : body.get("campusId"));
+        item.setContact(contact);
+        item.setContent(content);
+        feedbackRepo.save(item);
+        return ApiResponse.ok(Map.of("ok", true, "message", "已提交"));
     }
 }

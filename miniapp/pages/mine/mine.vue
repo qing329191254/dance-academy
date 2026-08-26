@@ -11,7 +11,7 @@
       </view>
     </view>
 
-    <view v-if="profileReady" class="stats section">
+    <view v-if="profileReady && !isStaffUser" class="stats section">
       <view class="stat" @click="goAuth('/pages/mine/cards')">
         <text class="num">{{ myCards.length }}</text>
         <text>卡包</text>
@@ -30,7 +30,7 @@
       </view>
     </view>
 
-    <view v-if="profileReady" class="section">
+    <view v-if="profileReady && !isStaffUser" class="section">
       <view class="card growth-card">
         <view class="growth-head" @click="goGrowth">
           <text class="growth-title">成长等级</text>
@@ -59,7 +59,7 @@
           </view>
         </view>
 
-        <text class="muted growth-tip">新学员默认 T1，可通过消费、年限与考核升级</text>
+        <text class="muted growth-tip">新学员默认 T1，可通过年限与考核升级</text>
       </view>
     </view>
 
@@ -82,7 +82,7 @@
         <text class="section-title block">我的服务</text>
         <view class="services">
           <view
-            v-for="item in services"
+            v-for="item in displayServices"
             :key="item.name"
             class="service"
             @click="onServiceClick(item)"
@@ -101,7 +101,7 @@
     </view>
 
     <view class="footer">
-      <text class="muted brand-name">高校FOR一GET街舞俱乐部</text>
+      <text class="muted brand-name">高校FOR-GET舞室</text>
       <view class="legal-links">
         <text class="link" @click="goLegal('user')">用户协议</text>
         <text class="muted dot">·</text>
@@ -124,12 +124,12 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
 import { userGrowthProfile } from '@/common/mock.js'
 import { getMine } from '@/common/api.js'
 import { startCheckInScan } from '@/common/checkin.js'
-import { getUser, isLoggedIn, logout, isProfileComplete } from '@/common/auth.js'
+import { getUser, isLoggedIn, logout, isProfileComplete, isTeacher, isEmployee, saveUser } from '@/common/auth.js'
 import { openPage, switchTabPage } from '@/common/navigate.js'
 import { showSuccess, showError } from '@/common/toast.js'
 import { mediaUrl } from '@/common/config.js'
@@ -147,6 +147,9 @@ const growthTracks = ref([
 const showLogoutConfirm = ref(false)
 const loggedIn = ref(false)
 const profileReady = ref(false)
+const isTeacherUser = ref(false)
+const isEmployeeUser = ref(false)
+const isStaffUser = computed(() => isTeacherUser.value || isEmployeeUser.value)
 const userAvatar = ref('/static/avatars/guest.png')
 const userNickname = ref('点击登录')
 const userSubtitle = ref('微信一键登录')
@@ -158,11 +161,21 @@ function displayAvatar(url) {
 function refreshUser() {
   loggedIn.value = isLoggedIn()
   profileReady.value = loggedIn.value && isProfileComplete()
+  isTeacherUser.value = profileReady.value && isTeacher()
+  isEmployeeUser.value = profileReady.value && isEmployee()
   const user = getUser()
   if (profileReady.value && user) {
     userAvatar.value = displayAvatar(user.avatar)
-    userNickname.value = user.nickname || '学员'
-    userSubtitle.value = '已登录 · 高校街舞学员'
+    if (isTeacherUser.value) {
+      userNickname.value = user.nickname || '老师'
+      userSubtitle.value = '已登录 · 教师端'
+    } else if (isEmployeeUser.value) {
+      userNickname.value = user.nickname || '员工'
+      userSubtitle.value = '已登录 · 员工端'
+    } else {
+      userNickname.value = user.nickname || '学员'
+      userSubtitle.value = '已登录 · 高校街舞学员'
+    }
     return
   }
   if (loggedIn.value) {
@@ -199,6 +212,12 @@ async function loadMine() {
     if (data.user) {
       userAvatar.value = displayAvatar(data.user.avatar) || userAvatar.value
       userNickname.value = data.user.nickname || userNickname.value
+      isTeacherUser.value = data.user.role === 'teacher'
+      isEmployeeUser.value = data.user.role === 'employee'
+      const cached = getUser()
+      if (cached) {
+        saveUser({ ...cached, ...data.user })
+      }
     }
   } catch (e) {
     myCards.value = []
@@ -206,7 +225,7 @@ async function loadMine() {
   }
 }
 
-const services = [
+const studentServices = [
   {
     name: '扫码签到',
     icon: '/static/mine/scan.png',
@@ -228,12 +247,99 @@ const services = [
     needLogin: true,
   },
   {
+    name: '排队课程',
+    icon: '/static/mine/queue.svg',
+    key: 'queue',
+    url: '/pages/mine/queue',
+    needLogin: true,
+  },
+  {
     name: '成长中心',
     icon: '/static/mine/growth.png',
     key: 'growth',
     needLogin: false,
   },
+  {
+    name: '学员须知',
+    icon: '/static/mine/notice.svg',
+    key: 'notice',
+    url: '/pages/mine/notice',
+    needLogin: false,
+  },
+  {
+    name: '意见反馈',
+    icon: '/static/mine/feedback.svg',
+    key: 'feedback',
+    url: '/pages/mine/feedback',
+    needLogin: true,
+  },
 ]
+
+const teacherServices = [
+  {
+    name: '考勤签到',
+    icon: '/static/mine/scan.png',
+    key: 'scan',
+    needLogin: true,
+  },
+  {
+    name: '我的课表',
+    icon: '/static/mine/booking.png',
+    key: 'teacher-schedule',
+    url: '/pages/teacher/schedule',
+    needLogin: true,
+  },
+  {
+    name: '课时统计',
+    icon: '/static/mine/growth.png',
+    key: 'teacher-stats',
+    url: '/pages/teacher/stats',
+    needLogin: true,
+  },
+  {
+    name: '课程档案',
+    icon: '/static/mine/card.png',
+    key: 'teacher-archive',
+    url: '/pages/teacher/archive',
+    needLogin: true,
+  },
+]
+
+const employeeServices = [
+  {
+    name: '值班签到',
+    icon: '/static/mine/scan.png',
+    key: 'scan',
+    needLogin: true,
+  },
+  {
+    name: '岗位信息',
+    icon: '/static/mine/notice.svg',
+    key: 'employee-profile',
+    url: '/pages/employee/profile',
+    needLogin: true,
+  },
+  {
+    name: '周报',
+    icon: '/static/mine/feedback.svg',
+    key: 'employee-weekly',
+    url: '/pages/employee/weekly',
+    needLogin: true,
+  },
+  {
+    name: '工作成绩',
+    icon: '/static/mine/growth.png',
+    key: 'employee-performance',
+    url: '/pages/employee/performance',
+    needLogin: true,
+  },
+]
+
+const displayServices = computed(() => {
+  if (isTeacherUser.value) return teacherServices
+  if (isEmployeeUser.value) return employeeServices
+  return studentServices
+})
 
 onLoad(() => {
   try {
@@ -524,11 +630,12 @@ function goLegal(type) {
 
 .services {
   display: flex;
-  justify-content: space-between;
+  flex-wrap: wrap;
 }
 
 .service {
   width: 25%;
+  margin-bottom: 28rpx;
   display: flex;
   flex-direction: column;
   align-items: center;

@@ -7,6 +7,8 @@ const TAB_PAGES = [
 const COMMON_SUB_PAGES = [
   '/pages/brand/brand',
   '/pages/course/list',
+  '/pages/course/trial',
+  '/pages/course/system',
   '/pages/teachers/teachers',
   '/pages/teachers/detail',
 ]

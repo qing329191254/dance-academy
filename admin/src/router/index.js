@@ -19,6 +19,11 @@ const routes = [
       { path: '/opportunities', component: () => import('../views/Opportunities.vue'), meta: { title: '成长机会' } },
       { path: '/applies', component: () => import('../views/Applies.vue'), meta: { title: '报名审核' } },
       { path: '/practice', component: () => import('../views/Practice.vue'), meta: { title: '签到记录' } },
+      { path: '/teacher-attendance', component: () => import('../views/TeacherAttendance.vue'), meta: { title: '教师考勤' } },
+      { path: '/employee-duty', component: () => import('../views/EmployeeDuty.vue'), meta: { title: '员工值班' } },
+      { path: '/class-archives', component: () => import('../views/ClassArchives.vue'), meta: { title: '课堂档案' } },
+      { path: '/feedback', component: () => import('../views/Feedback.vue'), meta: { title: '意见反馈' } },
+      { path: '/admins', component: () => import('../views/Admins.vue'), meta: { title: '管理员', superOnly: true } },
     ],
   },
 ]
@@ -35,6 +40,12 @@ router.beforeEach((to) => {
   }
   if (to.path === '/login' && token) {
     return '/'
+  }
+  if (to.path.startsWith('/admins')) {
+    const profile = JSON.parse(localStorage.getItem('admin_profile') || 'null')
+    if (profile && !profile.superAdmin) {
+      return '/dashboard'
+    }
   }
   return true
 })

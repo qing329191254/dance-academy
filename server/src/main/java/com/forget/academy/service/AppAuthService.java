@@ -59,27 +59,53 @@ public class AppAuthService {
     @Transactional
     public Map<String, Object> completeProfile(Long userId, Map<String, ?> body) {
         AppUser user = appUserRepo.findById(userId).orElseThrow(() -> new BizException("用户不存在"));
+
         String nickname = str(body == null ? null : body.get("nickname"));
         if (nickname.isBlank()) {
-            nickname = "学员";
+            throw new BizException("请输入真实姓名");
         }
         user.setNickname(nickname);
+
         String avatar = str(body == null ? null : body.get("avatar"));
         if (isUsableAvatar(avatar)) {
             user.setAvatar(avatar.length() > 2048 ? avatar.substring(0, 2048) : avatar);
         } else if (user.getAvatar() == null || user.getAvatar().isBlank()) {
-            user.setAvatar("/static/avatars/guest.png");
+            throw new BizException("请上传真实头像");
         }
+
         String gender = str(body == null ? null : body.get("gender"));
-        if (!gender.isBlank()) {
-            user.setGender(gender);
-        } else if (user.getGender() == null || user.getGender().isBlank()) {
-            user.setGender("女");
+        if (gender.isBlank()) {
+            throw new BizException("请选择性别");
         }
-        if (body != null && body.containsKey("birthday")) {
-            String birthday = str(body.get("birthday"));
-            user.setBirthday(birthday.isBlank() ? null : birthday);
+        user.setGender(gender);
+
+        String birthday = str(body == null ? null : body.get("birthday"));
+        if (birthday.isBlank()) {
+            throw new BizException("请选择生日");
         }
+        user.setBirthday(birthday);
+
+        String phone = str(body == null ? null : body.get("phone"));
+        if (phone.isBlank()) {
+            throw new BizException("请输入电话");
+        }
+        if (!phone.matches("^1\\d{10}$")) {
+            throw new BizException("请输入正确的手机号");
+        }
+        user.setPhone(phone);
+
+        String school = str(body == null ? null : body.get("school"));
+        if (school.isBlank()) {
+            throw new BizException("请输入学校");
+        }
+        user.setSchool(school);
+
+        String collegeGrade = str(body == null ? null : body.get("collegeGrade"));
+        if (collegeGrade.isBlank()) {
+            throw new BizException("请输入学院年级");
+        }
+        user.setCollegeGrade(collegeGrade);
+
         user.setProfileComplete(true);
         appUserRepo.save(user);
         return toUserMap(user);
@@ -97,6 +123,12 @@ public class AppAuthService {
         map.put("avatar", user.getAvatar());
         map.put("gender", user.getGender());
         map.put("birthday", user.getBirthday());
+        map.put("phone", user.getPhone());
+        map.put("school", user.getSchool());
+        map.put("collegeGrade", user.getCollegeGrade());
+        map.put("role", user.getRole() == null ? "student" : user.getRole());
+        map.put("teacherId", user.getTeacherId());
+        map.put("campusId", user.getCampusId());
         map.put("profileComplete", Boolean.TRUE.equals(user.getProfileComplete()));
         map.put("workLevel", user.getWorkLevel());
         map.put("workStage", user.getWorkStage());

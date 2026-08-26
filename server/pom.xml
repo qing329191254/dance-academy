@@ -15,7 +15,7 @@
     <artifactId>academy-server</artifactId>
     <version>1.0.0</version>
     <name>forget-academy-server</name>
-    <description>高校FOR一GET街舞俱乐部 · 微信云托管后端</description>
+    <description>高校FOR-GET舞室 · 微信云托管后端</description>
 
     <properties>
         <java.version>17</java.version>

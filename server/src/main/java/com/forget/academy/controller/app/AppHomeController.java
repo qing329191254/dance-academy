@@ -13,6 +13,7 @@ import com.forget.academy.repo.StudioRepo;
 import com.forget.academy.repo.TeacherRepo;
 import com.forget.academy.security.AuthContext;
 import com.forget.academy.service.BookingService;
+import com.forget.academy.service.LeaderboardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -33,6 +34,7 @@ public class AppHomeController {
     private final TeacherRepo teacherRepo;
     private final CourseRepo courseRepo;
     private final BookingService bookingService;
+    private final LeaderboardService leaderboardService;
 
     @GetMapping("/home")
     public ApiResponse<Map<String, Object>> home() {
@@ -79,9 +81,17 @@ public class AppHomeController {
 
     @GetMapping("/schedules")
     public ApiResponse<?> schedules(@RequestParam(defaultValue = "group") String type,
-                                   @RequestParam(required = false) String date) {
+                                   @RequestParam(required = false) String date,
+                                   @RequestParam(required = false) String campusId) {
         Long userId = AuthContext.get() == null ? null : AuthContext.get().id();
-        return ApiResponse.ok(bookingService.listSchedules(type, date, userId));
+        return ApiResponse.ok(bookingService.listSchedules(type, date, campusId, userId));
+    }
+
+    @GetMapping("/leaderboard")
+    public ApiResponse<?> leaderboard(@RequestParam(defaultValue = "month") String period,
+                                     @RequestParam(required = false) String campusId) {
+        Long userId = AuthContext.get() == null ? null : AuthContext.get().id();
+        return ApiResponse.ok(leaderboardService.list(period, campusId, userId));
     }
 
     private Studio studio() {

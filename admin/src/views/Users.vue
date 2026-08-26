@@ -2,13 +2,24 @@
   <div class="page-card">
     <div class="toolbar">
       <div class="filters">
-        <el-input v-model="keyword" placeholder="搜索昵称" style="width: 260px" clearable @keyup.enter="load" />
+        <el-input v-model="keyword" placeholder="搜索姓名/微信ID" style="width: 260px" clearable @keyup.enter="load" />
         <el-button @click="load">查询</el-button>
       </div>
     </div>
     <el-table :data="list">
       <el-table-column prop="id" label="ID" width="70" align="left" header-align="left" />
-      <el-table-column prop="nickname" label="昵称" width="120" align="left" header-align="left" />
+      <el-table-column prop="nickname" label="真实姓名" width="120" align="left" header-align="left" />
+      <el-table-column label="角色" width="100" align="left" header-align="left">
+        <template #default="{ row }">
+          {{ roleLabel(row.role) }}
+        </template>
+      </el-table-column>
+      <el-table-column label="校区" width="160">
+        <template #default="{ row }">{{ row.campusId ? campusName(row.campusId) : '-' }}</template>
+      </el-table-column>
+      <el-table-column prop="phone" label="电话" width="130" align="left" header-align="left" />
+      <el-table-column prop="school" label="学校" width="140" align="left" header-align="left" />
+      <el-table-column prop="collegeGrade" label="学院年级" width="140" align="left" header-align="left" />
       <el-table-column prop="gender" label="性别" width="80" align="left" header-align="left" />
       <el-table-column prop="birthday" label="生日" width="120" align="left" header-align="left" />
       <el-table-column prop="workLevel" label="勤工等级" width="100" align="left" header-align="left" />
@@ -37,7 +48,29 @@
 
   <el-dialog v-model="visible" title="编辑学员" width="520px">
     <el-form :model="form" label-width="100px">
-      <el-form-item label="昵称"><el-input v-model="form.nickname" /></el-form-item>
+      <el-form-item label="真实姓名"><el-input v-model="form.nickname" /></el-form-item>
+      <el-form-item label="角色">
+        <el-select v-model="form.role">
+          <el-option label="学员" value="student" />
+          <el-option label="老师" value="teacher" />
+          <el-option label="员工" value="employee" />
+        </el-select>
+      </el-form-item>
+      <el-form-item v-if="form.role === 'teacher'" label="绑定老师">
+        <el-select v-model="form.teacherId" placeholder="选择老师档案" clearable>
+          <el-option v-for="item in teachers" :key="item.id" :label="item.name" :value="item.id" />
+        </el-select>
+      </el-form-item>
+      <el-form-item v-if="form.role === 'employee'" label="所属校区">
+        <el-select v-model="form.campusId" placeholder="选择校区">
+          <el-option v-for="item in CAMPUSES" :key="item.id" :label="item.name" :value="item.id" />
+        </el-select>
+      </el-form-item>
+      <el-form-item v-if="form.role === 'employee'" label="岗位名称"><el-input v-model="form.jobTitle" /></el-form-item>
+      <el-form-item v-if="form.role === 'employee'" label="岗位职责"><el-input v-model="form.jobDescription" type="textarea" :rows="4" /></el-form-item>
+      <el-form-item label="电话"><el-input v-model="form.phone" maxlength="11" /></el-form-item>
+      <el-form-item label="学校"><el-input v-model="form.school" /></el-form-item>
+      <el-form-item label="学院年级"><el-input v-model="form.collegeGrade" /></el-form-item>
       <el-form-item label="性别">
         <el-select v-model="form.gender" placeholder="请选择" clearable>
           <el-option label="男" value="男" />
@@ -71,6 +104,7 @@
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import http from '../api/http'
+import { CAMPUSES, campusName } from '../common/campuses'
 
 const list = ref([])
 const total = ref(0)
@@ -78,7 +112,19 @@ const page = ref(1)
 const size = 15
 const keyword = ref('')
 const visible = ref(false)
+const teachers = ref([])
 const form = reactive({})
+
+function roleLabel(role) {
+  if (role === 'teacher') return '老师'
+  if (role === 'employee') return '员工'
+  return '学员'
+}
+
+async function loadTeachers() {
+  const res = await http.get('/admin/teachers')
+  teachers.value = res.data || []
+}
 
 async function load() {
   const res = await http.get('/admin/users', { params: { keyword: keyword.value, page: page.value, size } })
@@ -87,13 +133,33 @@ async function load() {
 }
 function edit(row) {
   Object.assign(form, row)
+  if (!form.role) form.role = 'student'
   visible.value = true
 }
 async function save() {
+  if (form.role === 'teacher' && !form.teacherId) {
+    ElMessage.warning('请为老师账号绑定老师档案')
+    return
+  }
+  if (form.role === 'employee' && !form.campusId) {
+    ElMessage.warning('请为员工选择所属校区')
+    return
+  }
+  if (form.role !== 'teacher') {
+    form.teacherId = null
+  }
+  if (form.role !== 'employee') {
+    form.campusId = null
+    form.jobTitle = ''
+    form.jobDescription = ''
+  }
   await http.put(`/admin/users/${form.id}`, form)
   visible.value = false
   ElMessage.success('已保存')
   await load()
 }
-onMounted(load)
+onMounted(async () => {
+  await loadTeachers()
+  await load()
+})
 </script>

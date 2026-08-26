@@ -9,6 +9,7 @@ import com.forget.academy.entity.UserCourse;
 import com.forget.academy.repo.AppUserRepo;
 import com.forget.academy.repo.UserCardRepo;
 import com.forget.academy.repo.UserCourseRepo;
+import com.forget.academy.service.EmployeeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -35,6 +36,7 @@ public class AdminMemberController {
     private final AppUserRepo appUserRepo;
     private final UserCardRepo userCardRepo;
     private final UserCourseRepo userCourseRepo;
+    private final EmployeeService employeeService;
 
     @GetMapping("/users")
     public ApiResponse<?> users(@RequestParam(defaultValue = "") String keyword,
@@ -54,36 +56,72 @@ public class AdminMemberController {
     }
 
     @PutMapping("/users/{id}")
-    public ApiResponse<AppUser> updateUser(@PathVariable Long id, @RequestBody AppUser body) {
+    public ApiResponse<AppUser> updateUser(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         AppUser user = appUserRepo.findById(id).orElseThrow(() -> new BizException("学员不存在"));
-        if (body.getNickname() != null) {
-            user.setNickname(body.getNickname());
+        if (body.get("nickname") != null) {
+            user.setNickname(String.valueOf(body.get("nickname")));
         }
-        if (body.getAvatar() != null) {
-            user.setAvatar(body.getAvatar());
+        if (body.get("avatar") != null) {
+            user.setAvatar(String.valueOf(body.get("avatar")));
         }
-        if (body.getGender() != null) {
-            user.setGender(body.getGender());
+        if (body.get("gender") != null) {
+            user.setGender(String.valueOf(body.get("gender")));
         }
-        if (body.getBirthday() != null) {
-            user.setBirthday(body.getBirthday());
+        if (body.get("birthday") != null) {
+            user.setBirthday(String.valueOf(body.get("birthday")));
         }
-        if (body.getWorkLevel() != null) {
-            user.setWorkLevel(body.getWorkLevel());
+        if (body.get("phone") != null) {
+            user.setPhone(String.valueOf(body.get("phone")));
         }
-        if (body.getWorkStage() != null) {
-            user.setWorkStage(body.getWorkStage());
+        if (body.get("school") != null) {
+            user.setSchool(String.valueOf(body.get("school")));
         }
-        if (body.getDanceLevel() != null) {
-            user.setDanceLevel(body.getDanceLevel());
+        if (body.get("collegeGrade") != null) {
+            user.setCollegeGrade(String.valueOf(body.get("collegeGrade")));
         }
-        if (body.getDanceStage() != null) {
-            user.setDanceStage(body.getDanceStage());
+        if (body.get("role") != null) {
+            user.setRole(String.valueOf(body.get("role")));
         }
-        if (body.getProfileComplete() != null) {
-            user.setProfileComplete(body.getProfileComplete());
+        if (body.get("teacherId") != null && !"".equals(String.valueOf(body.get("teacherId")))) {
+            user.setTeacherId(Long.valueOf(String.valueOf(body.get("teacherId"))));
+        } else if ("student".equals(user.getRole()) || "employee".equals(user.getRole())) {
+            user.setTeacherId(null);
         }
-        return ApiResponse.ok(appUserRepo.save(user));
+        if (body.get("campusId") != null) {
+            user.setCampusId(String.valueOf(body.get("campusId")).trim());
+        }
+        if ("teacher".equals(user.getRole())) {
+            user.setCampusId(null);
+        } else if ("student".equals(user.getRole())) {
+            user.setTeacherId(null);
+            user.setCampusId(null);
+        } else if ("employee".equals(user.getRole())) {
+            user.setTeacherId(null);
+        }
+        if (body.get("workLevel") != null) {
+            user.setWorkLevel(String.valueOf(body.get("workLevel")));
+        }
+        if (body.get("workStage") != null) {
+            user.setWorkStage(String.valueOf(body.get("workStage")));
+        }
+        if (body.get("danceLevel") != null) {
+            user.setDanceLevel(String.valueOf(body.get("danceLevel")));
+        }
+        if (body.get("danceStage") != null) {
+            user.setDanceStage(String.valueOf(body.get("danceStage")));
+        }
+        if (body.get("profileComplete") != null) {
+            user.setProfileComplete(Boolean.valueOf(String.valueOf(body.get("profileComplete"))));
+        }
+        AppUser saved = appUserRepo.save(user);
+        if ("employee".equals(saved.getRole())) {
+            employeeService.saveProfile(
+                    saved.getId(),
+                    saved.getCampusId(),
+                    body.get("jobTitle") == null ? null : String.valueOf(body.get("jobTitle")),
+                    body.get("jobDescription") == null ? null : String.valueOf(body.get("jobDescription")));
+        }
+        return ApiResponse.ok(saved);
     }
 
     @GetMapping("/cards")

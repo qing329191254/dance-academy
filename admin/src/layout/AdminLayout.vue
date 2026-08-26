@@ -2,10 +2,10 @@
   <el-container class="layout">
     <el-aside width="220px" class="aside">
       <div class="brand">
-        <img class="logo" src="/logo.png" alt="FOR一GET" />
+        <img class="logo" src="/logo.png" alt="高校FOR-GET舞室" />
         <div>
-          <div class="title">FOR一GET</div>
-          <div class="sub">街舞俱乐部后台</div>
+          <div class="title">高校FOR-GET舞室</div>
+          <div class="sub">管理后台</div>
         </div>
       </div>
       <el-menu :default-active="route.path" router background-color="#16161c" text-color="#c9c7d4" active-text-color="#ffffff">
@@ -21,12 +21,18 @@
         <el-menu-item index="/opportunities">成长机会</el-menu-item>
         <el-menu-item index="/applies">报名审核</el-menu-item>
         <el-menu-item index="/practice">签到记录</el-menu-item>
+        <el-menu-item index="/teacher-attendance">教师考勤</el-menu-item>
+        <el-menu-item index="/employee-duty">员工值班</el-menu-item>
+        <el-menu-item index="/class-archives">课堂档案</el-menu-item>
+        <el-menu-item index="/feedback">意见反馈</el-menu-item>
+        <el-menu-item v-if="auth.isSuperAdmin" index="/admins">管理员</el-menu-item>
       </el-menu>
     </el-aside>
     <el-container>
       <el-header class="header">
         <div class="crumb">{{ route.meta.title || '管理后台' }}</div>
         <div class="right">
+          <span class="role-tag">{{ roleLabel(auth.profile?.role) }}</span>
           <span>{{ auth.profile?.name || auth.profile?.username || '管理员' }}</span>
           <el-button text type="primary" @click="logout">退出</el-button>
         </div>
@@ -39,12 +45,25 @@
 </template>
 
 <script setup>
+import { onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { roleLabel } from '../common/adminAccess'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+
+onMounted(async () => {
+  if (auth.token) {
+    try {
+      await auth.fetchMe()
+    } catch {
+      auth.logout()
+      router.push('/login')
+    }
+  }
+})
 
 function logout() {
   auth.logout()
@@ -76,6 +95,8 @@ function logout() {
 }
 .title {
   font-weight: 700;
+  font-size: 13px;
+  line-height: 1.3;
 }
 .sub {
   font-size: 12px;
@@ -97,6 +118,13 @@ function logout() {
   align-items: center;
   gap: 8px;
   color: #555;
+}
+.role-tag {
+  font-size: 12px;
+  color: #8a8a96;
+  padding: 2px 8px;
+  background: #f4f4f6;
+  border-radius: 999px;
 }
 .main {
   padding: 20px;

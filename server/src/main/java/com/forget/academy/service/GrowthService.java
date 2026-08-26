@@ -56,9 +56,14 @@ public class GrowthService {
         for (Opportunity item : opportunityRepo.findByTrackKeyAndEnabledTrueOrderByIdAsc(trackKey)) {
             Map<String, Object> row = toOppMap(item);
             if (userId != null) {
-                row.put("applied", applyRepo.findByUserIdAndOpportunityId(userId, item.getId())
-                        .filter(a -> !"cancelled".equals(a.getStatus()))
-                        .isPresent());
+                applyRepo.findByUserIdAndOpportunityId(userId, item.getId()).ifPresent(apply -> {
+                    boolean active = !"cancelled".equals(apply.getStatus());
+                    row.put("applied", active);
+                    if (active) {
+                        row.put("resumeUrl", apply.getResumeUrl());
+                        row.put("resumeName", apply.getResumeName());
+                    }
+                });
             }
             list.add(row);
         }
@@ -66,7 +71,7 @@ public class GrowthService {
     }
 
     @Transactional
-    public Map<String, Object> toggleApply(Long userId, Long opportunityId) {
+    public Map<String, Object> toggleApply(Long userId, Long opportunityId, String resumeUrl, String resumeName) {
         Opportunity opportunity = opportunityRepo.findById(opportunityId)
                 .orElseThrow(() -> new BizException("机会不存在"));
         AppUser user = appUserRepo.findById(userId).orElseThrow(() -> new BizException("用户不存在"));
@@ -82,6 +87,7 @@ public class GrowthService {
             apply.setStatus("pending");
             apply.setTitle(opportunity.getTitle());
             apply.setNickname(user.getNickname());
+            fillResume(apply, resumeUrl, resumeName);
             applyRepo.save(apply);
             return Map.of("applied", true, "message", "报名已提交");
         }
@@ -92,12 +98,21 @@ public class GrowthService {
         apply.setTitle(opportunity.getTitle());
         apply.setNickname(user.getNickname());
         apply.setStatus("pending");
+        fillResume(apply, resumeUrl, resumeName);
         try {
             applyRepo.save(apply);
         } catch (DataIntegrityViolationException e) {
             throw new BizException("请勿重复报名");
         }
         return Map.of("applied", true, "message", "报名已提交");
+    }
+
+    private static void fillResume(OpportunityApply apply, String resumeUrl, String resumeName) {
+        if (resumeUrl == null || resumeUrl.isBlank()) {
+            return;
+        }
+        apply.setResumeUrl(resumeUrl.trim());
+        apply.setResumeName(resumeName == null || resumeName.isBlank() ? "个人简历" : resumeName.trim());
     }
 
     public Map<String, Object> toOppMap(Opportunity item) {

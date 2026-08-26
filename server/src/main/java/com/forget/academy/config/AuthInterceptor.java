@@ -1,7 +1,9 @@
 package com.forget.academy.config;
 
 import com.forget.academy.common.BizException;
+import com.forget.academy.repo.AdminUserRepo;
 import com.forget.academy.repo.AppUserRepo;
+import com.forget.academy.security.AdminContext;
 import com.forget.academy.security.AuthContext;
 import com.forget.academy.security.JwtUtil;
 import io.jsonwebtoken.Claims;
@@ -17,6 +19,7 @@ import org.springframework.web.servlet.HandlerInterceptor;
 public class AuthInterceptor implements HandlerInterceptor {
     private final JwtUtil jwtUtil;
     private final AppUserRepo appUserRepo;
+    private final AdminUserRepo adminUserRepo;
 
     @Value("${app.wx-appid:}")
     private String wxAppid;
@@ -31,6 +34,7 @@ public class AuthInterceptor implements HandlerInterceptor {
 
         if (path.startsWith("/api/admin") && !path.equals("/api/admin/auth/login")) {
             AuthContext.requireAdmin();
+            adminUserRepo.findById(AuthContext.requireAdmin().id()).ifPresent(AdminContext::set);
         }
         if (requiresAppAuth(path, request.getMethod())) {
             AuthContext.requireApp();
@@ -41,6 +45,7 @@ public class AuthInterceptor implements HandlerInterceptor {
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) {
         AuthContext.clear();
+        AdminContext.clear();
     }
 
     private void parseToken(HttpServletRequest request) {
@@ -130,11 +135,15 @@ public class AuthInterceptor implements HandlerInterceptor {
                 || path.startsWith("/api/app/upload")
                 || path.startsWith("/api/app/mine")
                 || path.startsWith("/api/app/bookings")
+                || path.startsWith("/api/app/waitlist")
+                || path.startsWith("/api/app/teacher")
+                || path.startsWith("/api/app/employee")
                 || path.startsWith("/api/app/cards")
                 || path.startsWith("/api/app/my-courses")
                 || path.startsWith("/api/app/practice")
                 || path.startsWith("/api/app/checkin")
                 || path.startsWith("/api/app/applies")
+                || path.startsWith("/api/app/feedback")
                 || ("POST".equalsIgnoreCase(method) && path.startsWith("/api/app/opportunities"));
     }
 }

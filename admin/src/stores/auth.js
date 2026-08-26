@@ -6,11 +6,15 @@ export const useAuthStore = defineStore('auth', {
     token: localStorage.getItem('admin_token') || '',
     profile: JSON.parse(localStorage.getItem('admin_profile') || 'null'),
   }),
+  getters: {
+    isSuperAdmin: (state) => !!state.profile?.superAdmin,
+  },
   actions: {
     async login(username, password) {
       const res = await http.post('/admin/auth/login', { username, password })
       this.token = res.data.token
-      this.profile = { id: res.data.id, username: res.data.username, name: res.data.name }
+      const { token, ...profile } = res.data
+      this.profile = profile
       localStorage.setItem('admin_token', this.token)
       localStorage.setItem('admin_profile', JSON.stringify(this.profile))
     },

@@ -24,16 +24,52 @@
     <view class="section">
       <view class="card note">
         <text class="note-title">报名说明</text>
-        <text class="muted">提交后进入机构后台名单，线上/线下筛选后通过小程序通知结果。成长中心不涉及收费支付。</text>
+        <text class="muted">提交后进入机构后台名单，线上/线下筛选后通过小程序通知结果。</text>
+      </view>
+    </view>
+
+    <view class="section">
+      <view class="card resume-card">
+        <view class="resume-head">
+          <text class="note-title">个人简历</text>
+          <text class="optional">选填</text>
+        </view>
+        <text class="muted resume-tip">可上传图片或 PDF，便于机构了解你的经历。</text>
+        <view v-if="applied && item.resumeName" class="resume-file">
+          <text class="resume-name">已提交：{{ item.resumeName }}</text>
+        </view>
+        <view v-else-if="resumeName" class="resume-file">
+          <text class="resume-name">{{ resumeName }}</text>
+          <text class="resume-clear" @tap.stop="clearResume">清除</text>
+        </view>
+        <view v-if="!applied" class="resume-actions">
+          <view
+            class="btn-ghost resume-btn"
+            :class="{ disabled: uploading }"
+            hover-class="none"
+            @tap="pickImage"
+          >
+            {{ uploading ? '上传中...' : '相册/拍照' }}
+          </view>
+          <view
+            class="btn-ghost resume-btn"
+            :class="{ disabled: uploading }"
+            hover-class="none"
+            @tap="pickChatFile"
+          >
+            聊天文件
+          </view>
+        </view>
       </view>
     </view>
 
     <view class="actions">
-      <view class="btn-ghost action-btn" @click="share">复制报名链接</view>
+      <view class="btn-ghost action-btn" @tap="share">复制报名链接</view>
       <view
         class="action-btn apply-btn"
         :class="applied ? 'btn-cancel' : 'btn-primary'"
-        @click="toggleApply"
+        hover-class="none"
+        @tap="toggleApply"
       >
         {{ applied ? '取消报名' : '立即报名' }}
       </view>
@@ -45,7 +81,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
-import { getOpportunities, toggleOpportunityApply } from '@/common/api.js'
+import { getOpportunities, toggleOpportunityApply, uploadResume } from '@/common/api.js'
 import { trackMeta } from '@/common/mock.js'
 import { ensureLogin } from '@/common/auth.js'
 import { showSuccess, showToast, showError } from '@/common/toast.js'
@@ -55,12 +91,19 @@ const id = ref('')
 const applied = ref(false)
 const item = ref(null)
 const meta = computed(() => trackMeta[key.value] || { name: '成长' })
+const resumeUrl = ref('')
+const resumeName = ref('')
+const uploading = ref(false)
 
 async function loadItem() {
   try {
     const list = (await getOpportunities(key.value)) || []
     item.value = list.find((o) => String(o.id) === String(id.value)) || null
     applied.value = !!item.value?.applied
+    if (applied.value) {
+      resumeName.value = item.value.resumeName || resumeName.value
+      resumeUrl.value = item.value.resumeUrl || resumeUrl.value
+    }
   } catch (e) {
     item.value = null
   }
@@ -79,7 +122,10 @@ async function toggleApply() {
   if (!ensureLogin()) return
   if (!item.value) return
   try {
-    const result = await toggleOpportunityApply(item.value.id)
+    const payload = applied.value
+      ? {}
+      : { resumeUrl: resumeUrl.value, resumeName: resumeName.value }
+    const result = await toggleOpportunityApply(item.value.id, payload)
     applied.value = !!result.applied
     if (applied.value) {
       showSuccess(result.message || '报名成功')
@@ -88,6 +134,95 @@ async function toggleApply() {
     }
   } catch (e) {
     showError(e.message || '操作失败')
+  }
+}
+
+function clearResume() {
+  if (uploading.value) return
+  resumeUrl.value = ''
+  resumeName.value = ''
+}
+
+function pickImage() {
+  if (!ensureLogin()) return
+  if (uploading.value) return
+  uni.chooseImage({
+    count: 1,
+    sizeType: ['compressed'],
+    sourceType: ['album', 'camera'],
+    success(res) {
+      const path = res.tempFilePaths?.[0]
+      if (path) uploadPicked(path, '简历.jpg')
+    },
+    fail(err) {
+      if (err?.errMsg?.includes('cancel')) return
+      showToast('无法打开相册，请重试')
+    },
+  })
+}
+
+function pickChatFile() {
+  if (!ensureLogin()) return
+  if (uploading.value) return
+  if (typeof uni.chooseMessageFile === 'function') {
+    uni.chooseMessageFile({
+      count: 1,
+      type: 'file',
+      extension: ['pdf', 'png', 'jpg', 'jpeg', 'webp'],
+      success(res) {
+        const file = res.tempFiles?.[0]
+        if (!file?.path) return
+        const name = file.name || '简历.pdf'
+        if (!/\.(png|jpe?g|webp|pdf)$/i.test(name)) {
+          showToast('请上传图片或 PDF')
+          return
+        }
+        uploadPicked(file.path, name)
+      },
+      fail(err) {
+        if (err?.errMsg?.includes('cancel')) return
+        showToast('无法选择聊天文件，请改用相册/拍照')
+      },
+    })
+    return
+  }
+  const picker = typeof wx !== 'undefined' ? wx.chooseMessageFile : null
+  if (!picker) {
+    showToast('当前环境不支持，请使用相册/拍照')
+    return
+  }
+  picker({
+    count: 1,
+    type: 'file',
+    extension: ['pdf', 'png', 'jpg', 'jpeg', 'webp'],
+    success(res) {
+      const file = res.tempFiles?.[0]
+      if (!file?.path) return
+      const name = file.name || '简历.pdf'
+      if (!/\.(png|jpe?g|webp|pdf)$/i.test(name)) {
+        showToast('请上传图片或 PDF')
+        return
+      }
+      uploadPicked(file.path, name)
+    },
+    fail(err) {
+      if (err?.errMsg?.includes('cancel')) return
+      showToast('无法选择聊天文件，请改用相册/拍照')
+    },
+  })
+}
+
+async function uploadPicked(filePath, filename) {
+  uploading.value = true
+  try {
+    const data = await uploadResume(filePath, filename)
+    resumeUrl.value = data.url || ''
+    resumeName.value = filename
+    showToast('简历已上传')
+  } catch (e) {
+    showError(e.message || '上传失败')
+  } finally {
+    uploading.value = false
   }
 }
 
@@ -139,6 +274,67 @@ function share() {
 .note-title {
   font-size: 28rpx;
   font-weight: 600;
+}
+
+.resume-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.resume-head {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.optional {
+  font-size: 22rpx;
+  color: #8a74e5;
+}
+
+.resume-tip {
+  font-size: 24rpx;
+  line-height: 1.6;
+}
+
+.resume-file {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+  padding: 16rpx 0 4rpx;
+}
+
+.resume-name {
+  font-size: 26rpx;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resume-clear {
+  color: #8a74e5;
+  font-size: 24rpx;
+  flex-shrink: 0;
+}
+
+.resume-actions {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 8rpx;
+}
+
+.resume-btn {
+  flex: 1;
+  height: 72rpx;
+  width: 100%;
+}
+
+.resume-btn.disabled {
+  opacity: 0.6;
 }
 
 .actions {

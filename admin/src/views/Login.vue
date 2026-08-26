@@ -1,8 +1,8 @@
 <template>
   <div class="login-page">
     <div class="card">
-      <img class="brand-logo" src="/logo.png" alt="FOR一GET" />
-      <div class="name">高校FOR一GET街舞俱乐部</div>
+      <img class="brand-logo" src="/logo.png" alt="高校FOR-GET舞室" />
+      <div class="name">高校FOR-GET舞室</div>
       <div class="hint">机构管理后台</div>
       <el-form @submit.prevent="onSubmit">
         <el-form-item>

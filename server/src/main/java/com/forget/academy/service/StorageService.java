@@ -16,7 +16,8 @@ import java.util.UUID;
 
 @Service
 public class StorageService {
-    private static final Set<String> ALLOWED_EXT = Set.of(".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg");
+    private static final Set<String> IMAGE_EXT = Set.of(".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg");
+    private static final Set<String> FILE_EXT = Set.of(".png", ".jpg", ".jpeg", ".gif", ".webp", ".pdf");
 
     private final List<ObjectStorage> storages;
 
@@ -28,20 +29,30 @@ public class StorageService {
     }
 
     public Map<String, String> saveImageBytes(byte[] bytes, String filename) {
+        return saveBytes(bytes, filename, IMAGE_EXT, "仅支持图片文件");
+    }
+
+    public Map<String, String> saveFileBytes(byte[] bytes, String filename) {
+        return saveBytes(bytes, filename, FILE_EXT, "请上传图片或 PDF");
+    }
+
+    private Map<String, String> saveBytes(byte[] bytes, String filename, Set<String> allowed, String invalidMessage) {
         if (bytes == null || bytes.length == 0) {
             throw new BizException("请选择文件");
         }
         if (bytes.length > 8 * 1024 * 1024) {
-            throw new BizException("图片过大");
+            throw new BizException("文件过大");
         }
-        String name = (filename == null || filename.isBlank()) ? "avatar.jpg" : filename;
+        String name = (filename == null || filename.isBlank()) ? "file.jpg" : filename;
         String ext = extension(name);
         if (ext.isEmpty()) {
             ext = ".jpg";
             name = name + ext;
         }
-        String contentType = contentType(ext);
-        return saveImage(new ByteArrayMultipartFile("file", name, contentType, bytes));
+        if (!allowed.contains(ext)) {
+            throw new BizException(invalidMessage);
+        }
+        return put(new ByteArrayMultipartFile("file", name, contentType(ext), bytes), ext);
     }
 
     public Map<String, String> saveImage(MultipartFile file) {
@@ -52,9 +63,13 @@ public class StorageService {
         if (ext.isEmpty()) {
             ext = ".jpg";
         }
-        if (!ALLOWED_EXT.contains(ext)) {
+        if (!IMAGE_EXT.contains(ext)) {
             throw new BizException("仅支持图片文件");
         }
+        return put(file, ext);
+    }
+
+    private Map<String, String> put(MultipartFile file, String ext) {
         String objectKey = "academy/" + LocalDate.now() + "/" + UUID.randomUUID().toString().replace("-", "") + ext;
         String type = storageType == null ? "local" : storageType.trim();
         return storages.stream()
@@ -77,6 +92,7 @@ public class StorageService {
             case ".png" -> "image/png";
             case ".gif" -> "image/gif";
             case ".webp" -> "image/webp";
+            case ".pdf" -> "application/pdf";
             default -> "image/jpeg";
         };
     }

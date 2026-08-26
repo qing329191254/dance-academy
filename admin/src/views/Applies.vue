@@ -17,6 +17,14 @@
       <el-table-column prop="title" label="机会" align="left" header-align="left" />
       <el-table-column prop="trackKey" label="赛道" width="120" align="left" header-align="left" />
       <el-table-column prop="status" label="状态" width="120" align="left" header-align="left" />
+      <el-table-column label="简历" width="140" align="left" header-align="left">
+        <template #default="{ row }">
+          <a v-if="row.resumeUrl" class="resume-link" :href="mediaSrc(row.resumeUrl)" target="_blank" rel="noreferrer">
+            {{ row.resumeName || '查看简历' }}
+          </a>
+          <span v-else class="muted">—</span>
+        </template>
+      </el-table-column>
       <el-table-column label="操作" width="180" align="left" header-align="left">
         <template #default="{ row }">
           <div class="table-actions">
@@ -42,6 +50,7 @@
 import { onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import http from '../api/http'
+import { mediaSrc } from '../utils/media'
 
 const list = ref([])
 const total = ref(0)

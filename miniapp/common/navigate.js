@@ -29,3 +29,10 @@ export function switchTabPage(url) {
     },
   })
 }
+
+export function openBookTab(tab) {
+  try {
+    if (tab) uni.setStorageSync('pendingBookTab', tab)
+  } catch (e) {}
+  switchTabPage('/pages/book/book')
+}

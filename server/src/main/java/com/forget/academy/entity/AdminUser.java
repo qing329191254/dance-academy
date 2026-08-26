@@ -1,5 +1,6 @@
 package com.forget.academy.entity;
 
+import com.forget.academy.common.AdminRoles;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
@@ -15,5 +16,9 @@ public class AdminUser extends BaseEntity {
     private String username;
     private String passwordHash;
     private String name;
-    private String role = "ADMIN";
+    /** SUPER_ADMIN / PRINCIPAL，兼容旧值 ADMIN */
+    private String role = AdminRoles.SUPER_ADMIN;
+    /** 校长可管理的校区，逗号分隔；超级管理员为空表示全部 */
+    @Column(length = 512)
+    private String campusIds;
 }

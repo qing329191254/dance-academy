@@ -1,6 +1,6 @@
 export const studio = {
-  name: '高校FOR一GET街舞俱乐部',
-  location: '四川成都 · 高校街舞俱乐部',
+  name: '高校FOR-GET舞室',
+  location: '四川成都 · 高校FOR-GET舞室',
   city: '四川成都',
   address: '四川省成都市',
   latitude: 30.659462,
@@ -27,6 +27,55 @@ export const courses = [
   { id: 1, name: 'HipHop 入门', price: 199, level: '零基础', desc: '节奏、律动与基础脚步' },
   { id: 2, name: 'Jazz 二星课', price: 299, level: '进阶', desc: '组合编排与表现力训练' },
   { id: 3, name: 'Breaking 专项', price: 399, level: '进阶', desc: 'Footwork / Freeze / Power' },
+]
+
+export const trialCourse = {
+  name: '体验课',
+  price: '9.9',
+  unit: '节',
+  tag: '新人专享',
+  summary: '一次到店，感受课堂氛围与老师风格',
+  desc: '适合第一次来舞室的同学。用一节体验课了解教室、音乐和上课节奏，再决定适合自己的课程体系。',
+  highlights: ['一节团课体验', '到店即可上课', '可咨询老师选课建议'],
+}
+
+export const courseSystem = [
+  {
+    key: 'fixed',
+    name: '精品固定班',
+    summary: '固定时段、固定老师，按体系进阶',
+    desc: '每周固定上课时间，跟着同一位老师系统训练。适合想长期学、把基础打扎实的同学。',
+    highlights: ['固定班次与教室', '按阶段进阶', '适合持续出勤'],
+    actionLabel: '查看固定班课表',
+    actionTab: 'fixed',
+  },
+  {
+    key: 'pass',
+    name: '次通卡',
+    summary: '按次计费，团课灵活通刷',
+    desc: '买次卡后可预约团课，时间更灵活。适合课表不固定、想按自己节奏来上课的同学。',
+    highlights: ['按次扣课', '团课通刷', '约满即来、更自由'],
+    actionLabel: '咨询购卡',
+    actionTab: '',
+  },
+  {
+    key: 'private',
+    name: '私教',
+    summary: '1 对 1，针对个人问题专项突破',
+    desc: '根据你的基础、目标和赛程单独排课。适合想快速提升、准备比赛或需要纠错巩固的同学。',
+    highlights: ['1 对 1 授课', '内容可定制', '时间需与老师协商'],
+    actionLabel: '预约私教',
+    actionTab: 'private',
+  },
+  {
+    key: 'custom',
+    name: '定制课程 · 赛事商演',
+    summary: '编舞定制、比赛集训与商演排练',
+    desc: '为社团、比赛、商演或品牌活动定制编舞与排练计划。可按人数、风格和上场时间单独沟通。',
+    highlights: ['编舞定制', '赛事集训', '商演排练'],
+    actionLabel: '预约咨询',
+    actionTab: '',
+  },
 ]
 
 export const bookTabs = [
@@ -79,17 +128,17 @@ export const userGrowthProfile = {
 }
 
 export const growthIntro =
-  '高校街舞俱乐部不只是上课——我们把兼职、实习、演出、商演、教师考证等资源嫁接给学生，用两条成长线帮你从学员走向舞台与职场。'
+  'FOR-GET不仅是上课，我们把兼职、实习、就业演出、商演、考证等多样化资源嫁接给大家，用舞蹈发展、勤工俭学两条成长线，帮你从学员走向舞台与职场，愿你的大学，因为有FG而更好。'
 
 export const workTracks = [
   { key: 'parttime', name: '兼职', level: 'T1', desc: '活动执行、课程助理等校园兼职机会' },
-  { key: 'intern', name: '实习', level: 'T2', desc: '品牌运营、教务协同等正式实习岗位' },
-  { key: 'manage', name: '管理', level: 'T3', desc: '分馆/项目负责人方向的管理成长' },
+  { key: 'intern', name: '实习', level: 'T2', desc: '教务部、招新部、宣传部等正式实习岗位' },
+  { key: 'manage', name: '管理', level: 'T3', desc: '单项目/分校区/品牌负责人等深度方向' },
 ]
 
 export const danceTracks = [
-  { key: 'show', name: '演出', level: 'T1', desc: '校内晚会、社团联动等演出机会' },
-  { key: 'commercial', name: '商演', level: 'T2', desc: '品牌活动、商演邀约与舞台实践' },
+  { key: 'show', name: '演出', level: 'T1', desc: '校园表演、学期派对、MV拍摄等机会' },
+  { key: 'commercial', name: '商演', level: 'T2', desc: 'FG舞队:品牌活动、商演、邀约与大型赛事' },
   { key: 'teacher', name: '教师', level: 'T3', desc: '教师考证、带班助教与正式任教' },
 ]
 

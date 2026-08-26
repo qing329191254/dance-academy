@@ -2,7 +2,7 @@
   <page-meta root-background-color="#111111" background-color="#111111" page-style="background-color:#111111;" />
   <view class="page">
     <view class="section">
-      <button>
+      <button
         class="avatar-btn"
         open-type="chooseAvatar"
         hover-class="none"
@@ -19,7 +19,7 @@
         />
         <view v-else class="avatar-placeholder">
           <view class="camera-icon">+</view>
-          <text class="upload-text">选择头像</text>
+          <text class="upload-text">真实头像</text>
         </view>
         <view v-if="avatarLoading" class="avatar-loading">
           <view class="avatar-spinner" />
@@ -28,18 +28,15 @@
 
       <view class="form card">
         <view class="form-row">
-          <text class="label">昵称</text>
+          <text class="label">真实姓名</text>
           <input
             v-model="nickname"
             class="input"
-            type="nickname"
+            type="text"
             maxlength="20"
-            placeholder="点击填写微信昵称"
+            placeholder="请输入真实姓名"
             placeholder-class="placeholder"
             :adjust-position="false"
-            @input="onNickname"
-            @blur="onNickname"
-            @nicknamereview="onNickname"
           />
         </view>
 
@@ -68,7 +65,7 @@
           @change="onBirthdayChange"
         >
           <view class="form-row">
-            <text class="label">生日<text class="optional">选填</text></text>
+            <text class="label">生日</text>
             <view class="picker-value">
               <text :class="birthday ? '' : 'placeholder'">
                 {{ birthday || '请选择' }}
@@ -77,11 +74,50 @@
             </view>
           </view>
         </picker>
+
+        <view class="form-row">
+          <text class="label">电话</text>
+          <input
+            v-model="phone"
+            class="input"
+            type="number"
+            maxlength="11"
+            placeholder="请输入手机号"
+            placeholder-class="placeholder"
+            :adjust-position="false"
+          />
+        </view>
+
+        <view class="form-row">
+          <text class="label">学校</text>
+          <input
+            v-model="school"
+            class="input"
+            type="text"
+            maxlength="40"
+            placeholder="请输入学校"
+            placeholder-class="placeholder"
+            :adjust-position="false"
+          />
+        </view>
+
+        <view class="form-row">
+          <text class="label">学院年级</text>
+          <input
+            v-model="collegeGrade"
+            class="input"
+            type="text"
+            maxlength="40"
+            placeholder="如：计算机学院 大二"
+            placeholder-class="placeholder"
+            :adjust-position="false"
+          />
+        </view>
       </view>
 
       <view class="submit-btn" @click="submit">完成</view>
     </view>
-      <app-toast />
+    <app-toast />
   </view>
 </template>
 
@@ -95,6 +131,9 @@ const avatar = ref('')
 const nickname = ref('')
 const gender = ref('')
 const birthday = ref('')
+const phone = ref('')
+const school = ref('')
+const collegeGrade = ref('')
 const today = ref('')
 const defaultBirthday = '2000-01-01'
 const submitting = ref(false)
@@ -112,6 +151,9 @@ onLoad(() => {
   avatar.value = user?.avatar || ''
   gender.value = user?.gender || ''
   birthday.value = user?.birthday || ''
+  phone.value = user?.phone || ''
+  school.value = user?.school || ''
+  collegeGrade.value = user?.collegeGrade || ''
   const d = new Date()
   const pad = (n) => String(n).padStart(2, '0')
   today.value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
@@ -138,13 +180,6 @@ function onAvatarReady() {
   avatarLoading.value = false
 }
 
-function onNickname(e) {
-  const value = e?.detail?.value
-  if (typeof value === 'string') {
-    nickname.value = value
-  }
-}
-
 function onBirthdayChange(e) {
   birthday.value = e.detail.value
 }
@@ -161,16 +196,40 @@ async function submit() {
   await nextTick()
 
   const name = nickname.value.trim()
+  const phoneText = phone.value.trim()
+  const schoolText = school.value.trim()
+  const gradeText = collegeGrade.value.trim()
+
   if (!avatar.value) {
-    showToast('请选择头像')
+    showToast('请上传真实头像')
     return
   }
   if (!name) {
-    showToast('请输入昵称')
+    showToast('请输入真实姓名')
     return
   }
   if (!gender.value) {
     showToast('请选择性别')
+    return
+  }
+  if (!birthday.value) {
+    showToast('请选择生日')
+    return
+  }
+  if (!phoneText) {
+    showToast('请输入电话')
+    return
+  }
+  if (!/^1\d{10}$/.test(phoneText)) {
+    showToast('请输入正确的手机号')
+    return
+  }
+  if (!schoolText) {
+    showToast('请输入学校')
+    return
+  }
+  if (!gradeText) {
+    showToast('请输入学院年级')
     return
   }
 
@@ -182,6 +241,9 @@ async function submit() {
       avatar: avatar.value,
       gender: gender.value,
       birthday: birthday.value,
+      phone: phoneText,
+      school: schoolText,
+      collegeGrade: gradeText,
     })
     await showSuccessToast('保存成功')
     uni.switchTab({ url: '/pages/mine/mine' })
@@ -301,13 +363,7 @@ async function submit() {
   font-size: 30rpx;
   color: #9a9a9a;
   flex-shrink: 0;
-  width: 120rpx;
-}
-
-.optional {
-  margin-left: 8rpx;
-  font-size: 22rpx;
-  color: #666666;
+  width: 160rpx;
 }
 
 .input {

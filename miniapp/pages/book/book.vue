@@ -3,7 +3,8 @@
   <view class="page">
     <view class="brand-header" :style="{ paddingTop: statusBarHeight + 'px' }">
       <view class="brand-inner">
-        <text class="brand-title">高校FOR一GET街舞俱乐部</text>
+        <app-campus-switch />
+        <text class="brand-title">高校FOR-GET舞室</text>
       </view>
     </view>
 
@@ -43,9 +44,49 @@
 
     <view v-if="active === 'fixed'" class="hint muted">固定周期开班，报名后按固定时段上课</view>
     <view v-if="active === 'private'" class="hint muted">私教需与老师协商后预约具体日期时间</view>
+    <view v-if="active === 'rank'" class="hint muted">按到课签到次数统计 · {{ currentCampus.shortName }}</view>
 
-    <view class="section">
-      <view v-if="!currentList.length" class="empty muted">当日暂无团课安排</view>
+    <view v-if="active === 'rank'" class="rank-periods">
+      <view
+        v-for="item in rankPeriods"
+        :key="item.key"
+        class="period"
+        :class="{ active: rankPeriod === item.key }"
+        @click="rankPeriod = item.key"
+      >
+        {{ item.name }}
+      </view>
+    </view>
+
+    <view v-if="active === 'rank'" class="section">
+      <view v-if="!rankList.length" class="empty muted">该校区暂无签到记录，扫码上课后即可上榜</view>
+      <view
+        v-for="item in rankList"
+        :key="item.rank"
+        class="card rank-card"
+        :class="{ mine: item.mine }"
+      >
+        <text class="rank-no" :class="rankTone(item.rank)">{{ item.rank }}</text>
+        <image v-if="item.avatar" class="avatar" :src="item.avatar" mode="aspectFill" />
+        <view v-else class="avatar" />
+        <view class="rank-info">
+          <text class="name">{{ item.nickname }}</text>
+          <text v-if="item.mine" class="muted">我</text>
+        </view>
+        <text class="rank-count">{{ item.count }} 次</text>
+      </view>
+      <view v-if="rankMine && rankMine.rank && !rankMine.onBoard" class="card rank-card mine">
+        <text class="rank-no">{{ rankMine.rank }}</text>
+        <view class="rank-info">
+          <text class="name">我的排名</text>
+          <text class="muted">未进入前 20</text>
+        </view>
+        <text class="rank-count">{{ rankMine.count }} 次</text>
+      </view>
+    </view>
+
+    <view v-else class="section">
+      <view v-if="!currentList.length" class="empty muted">{{ emptyText }}</view>
       <view v-for="item in currentList" :key="item.id" class="card class-card">
         <image v-if="getTeacherAvatar(item.teacher)" class="avatar" :src="getTeacherAvatar(item.teacher)" mode="aspectFill" />
         <view v-else class="avatar" />
@@ -65,10 +106,10 @@
           <text class="tag">{{ item.status }}</text>
           <view
             class="action"
-            :class="isBooked(item) ? 'btn-cancel' : 'btn-ghost'"
+            :class="actionClass(item)"
             @click="toggleBook(item)"
           >
-            {{ isBooked(item) ? '取消预约' : '预约' }}
+            {{ actionLabel(item) }}
           </view>
         </view>
       </view>
@@ -80,11 +121,12 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
-import { getSchedules, getTeachers, toggleBooking } from '@/common/api.js'
+import { getSchedules, getTeachers, getLeaderboard, toggleBooking } from '@/common/api.js'
 import { ensureLogin } from '@/common/auth.js'
 import { showSuccess, showToast, showError } from '@/common/toast.js'
 import { getStatusBarHeight } from '@/common/statusBar.js'
 import { BOOKING_TMPL_ID } from '@/common/config.js'
+import { selectedCampusId, currentCampus } from '@/common/campus.js'
 
 const statusBarHeight = getStatusBarHeight()
 
@@ -94,6 +136,12 @@ const bookTabs = [
   { key: 'group', name: '团课' },
   { key: 'fixed', name: '固定班' },
   { key: 'private', name: '私教课' },
+  { key: 'rank', name: '排行榜' },
+]
+
+const rankPeriods = [
+  { key: 'month', name: '本月' },
+  { key: 'all', name: '累计' },
 ]
 
 const active = ref('group')
@@ -102,6 +150,9 @@ const selectedDateIndex = ref(0)
 const dateScrollId = ref('date-0')
 const currentList = ref([])
 const teacherAvatars = ref({})
+const rankPeriod = ref('month')
+const rankList = ref([])
+const rankMine = ref(null)
 
 const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
 
@@ -138,11 +189,24 @@ onLoad(async () => {
 })
 
 onShow(() => {
-  if (weekDates.value.length) loadSchedules()
+  let pending = ''
+  try {
+    pending = uni.getStorageSync('pendingBookTab') || ''
+  } catch (e) {}
+  if (pending === 'group' || pending === 'fixed' || pending === 'private') {
+    try {
+      uni.removeStorageSync('pendingBookTab')
+    } catch (e) {}
+    if (active.value !== pending) {
+      active.value = pending
+      return
+    }
+  }
+  if (weekDates.value.length) refreshBookPage()
 })
 
-watch([active, selectedDateIndex], () => {
-  loadSchedules()
+watch([active, selectedDateIndex, selectedCampusId, rankPeriod], () => {
+  refreshBookPage()
 })
 
 const selectedDateText = computed(() => {
@@ -150,18 +214,67 @@ const selectedDateText = computed(() => {
   return day ? day.date.replace(/-/g, '.') : ''
 })
 
+const emptyText = computed(() => {
+  if (active.value === 'fixed') return '该校区暂无固定班'
+  if (active.value === 'private') return '该校区暂无私教课'
+  return '当日该校区暂无团课安排'
+})
+
 async function loadSchedules() {
   const date =
     active.value === 'group' ? weekDates.value[selectedDateIndex.value]?.date : undefined
   try {
-    currentList.value = (await getSchedules(active.value, date)) || []
+    currentList.value = (await getSchedules(active.value, date, selectedCampusId.value)) || []
   } catch (e) {
     currentList.value = []
   }
 }
 
+function refreshBookPage() {
+  if (active.value === 'rank') {
+    loadLeaderboard()
+    return
+  }
+  loadSchedules()
+}
+
+async function loadLeaderboard() {
+  try {
+    const data = await getLeaderboard(rankPeriod.value, selectedCampusId.value)
+    rankList.value = data.list || []
+    rankMine.value = data.mine || null
+  } catch (e) {
+    rankList.value = []
+    rankMine.value = null
+  }
+}
+
+function rankTone(rank) {
+  if (rank === 1) return 'gold'
+  if (rank === 2) return 'silver'
+  if (rank === 3) return 'bronze'
+  return ''
+}
+
 function isBooked(item) {
   return !!item.booked
+}
+
+function isQueued(item) {
+  return !!item.queued
+}
+
+function actionLabel(item) {
+  if (isBooked(item)) return '取消预约'
+  if (isQueued(item)) return '退出排队'
+  if (active.value === 'group' && item.status === '已满') return '排队'
+  return '预约'
+}
+
+function actionClass(item) {
+  if (isBooked(item) || isQueued(item)) return 'btn-cancel'
+  if (active.value === 'group' && item.status === '已满') return 'btn-queue'
+  return 'btn-ghost'
 }
 
 function askBookingSubscribe() {
@@ -185,9 +298,10 @@ async function toggleBook(item) {
   const toastOptions = { offsetTop: TOAST_OFFSET }
   const date =
     active.value === 'group' ? weekDates.value[selectedDateIndex.value]?.date : undefined
-  const booking = isBooked(item)
+  const booked = isBooked(item)
+  const queued = isQueued(item)
   try {
-    if (!booking && active.value === 'group') {
+    if (!booked && !queued && active.value === 'group' && item.status !== '已满') {
       await askBookingSubscribe()
     }
     const result = await toggleBooking(item.id, date)
@@ -195,11 +309,14 @@ async function toggleBook(item) {
     if (result.booked) {
       const dateTip = active.value === 'group' ? `${selectedDateText.value} ` : ''
       showSuccess(`已预约 ${dateTip}${item.time} ${item.name}`, toastOptions)
+    } else if (result.queued) {
+      const queueTip = result.queueNo ? `，当前第 ${result.queueNo} 位` : ''
+      showSuccess((result.message || '已加入排队') + queueTip, toastOptions)
     } else {
-      showToast(result.message || '已取消预约', toastOptions)
+      showToast(result.message || (queued ? '已退出排队' : '已取消预约'), toastOptions)
     }
   } catch (e) {
-    showError(e.message || '预约失败', toastOptions)
+    showError(e.message || '操作失败', toastOptions)
   }
 }
 </script>
@@ -208,41 +325,48 @@ async function toggleBook(item) {
 .brand-header {
   background: #111111;
   box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.35);
+  overflow: visible;
 }
 
 .brand-inner {
   height: 44px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 0 100rpx;
+  justify-content: flex-start;
+  padding: 0 96px 0 16rpx;
+  position: relative;
 }
 
 .brand-title {
+  position: absolute;
+  left: 0;
+  right: 0;
   font-size: 32rpx;
   font-weight: 700;
   color: #ffffff;
   text-align: center;
   line-height: 44px;
+  padding: 0 200rpx;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  pointer-events: none;
 }
 
 .tabs {
   display: flex;
-  gap: 16rpx;
-  padding: 24rpx 32rpx 8rpx;
+  gap: 10rpx;
+  padding: 24rpx 24rpx 8rpx;
 }
 
 .tab {
   flex: 1;
   text-align: center;
-  padding: 18rpx 0;
+  padding: 16rpx 0;
   border-radius: 999rpx;
   background: #1c1c1c;
   color: #bdbdbd;
-  font-size: 28rpx;
+  font-size: 24rpx;
 }
 
 .tab.active {
@@ -388,5 +512,80 @@ async function toggleBook(item) {
   background: rgba(229, 115, 115, 0.15);
   color: #e57373;
   border: 1rpx solid rgba(229, 115, 115, 0.35);
+}
+
+.btn-queue {
+  background: rgba(232, 195, 106, 0.12);
+  color: #e8c36a;
+  border: 1rpx solid rgba(232, 195, 106, 0.35);
+}
+
+.rank-periods {
+  display: flex;
+  gap: 16rpx;
+  padding: 16rpx 32rpx 0;
+}
+
+.period {
+  padding: 10rpx 28rpx;
+  border-radius: 999rpx;
+  background: #1c1c1c;
+  color: #bdbdbd;
+  font-size: 24rpx;
+}
+
+.period.active {
+  background: rgba(138, 116, 229, 0.22);
+  color: #fff;
+  border: 1rpx solid #8a74e5;
+}
+
+.rank-card {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16rpx;
+}
+
+.rank-card.mine {
+  border: 1rpx solid rgba(138, 116, 229, 0.45);
+}
+
+.rank-no {
+  width: 56rpx;
+  text-align: center;
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #9a9a9a;
+  flex-shrink: 0;
+}
+
+.rank-no.gold {
+  color: #e8c36a;
+}
+
+.rank-no.silver {
+  color: #c5c5c5;
+}
+
+.rank-no.bronze {
+  color: #d08a5a;
+}
+
+.rank-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.rank-info .muted {
+  display: block;
+  margin-top: 4rpx;
+  font-size: 22rpx;
+}
+
+.rank-count {
+  color: #8a74e5;
+  font-size: 28rpx;
+  font-weight: 700;
+  flex-shrink: 0;
 }
 </style>

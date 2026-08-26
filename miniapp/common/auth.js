@@ -19,6 +19,14 @@ export function isProfileComplete() {
   return !!getUser()?.profileComplete
 }
 
+export function isTeacher() {
+  return getUser()?.role === 'teacher'
+}
+
+export function isEmployee() {
+  return getUser()?.role === 'employee'
+}
+
 export function ensureLoggedIn() {
   if (!isLoggedIn()) {
     uni.navigateTo({ url: '/pages/login/login' })
@@ -67,8 +75,12 @@ export function logout() {
 
 export async function completeProfile(data) {
   const payload = {
-    nickname: data.nickname?.trim() || '学员',
-    gender: data.gender || '女',
+    nickname: data.nickname?.trim() || '',
+    gender: data.gender || '',
+    birthday: String(data.birthday || '').trim(),
+    phone: String(data.phone || '').trim(),
+    school: String(data.school || '').trim(),
+    collegeGrade: String(data.collegeGrade || '').trim(),
   }
   let avatar = String(data.avatar || '').trim()
   if (avatar && isLocalFile(avatar)) {
@@ -78,16 +90,14 @@ export async function completeProfile(data) {
   if (avatar && !isLocalFile(avatar)) {
     payload.avatar = avatar
   }
-  const birthday = String(data.birthday || '').trim()
-  if (birthday) {
-    payload.birthday = birthday
-  }
   const profile = await saveProfile(payload)
   const user = getUser() || {}
   return saveUser({
     ...user,
     ...profile,
     avatar: profile?.avatar || avatar || user.avatar,
+    role: profile?.role || user.role || 'student',
+    teacherId: profile?.teacherId ?? user.teacherId,
     profileComplete: true,
   })
 }

@@ -5,7 +5,7 @@
       <view class="header card">
         <text class="line">{{ meta.line }}</text>
         <text class="title">{{ meta.name }} · {{ meta.level }}</text>
-        <text class="muted">以下为近期机会，感兴趣可报名；机构可把报名链接发给学员。</text>
+        <text class="muted">以下为近期机会，感兴趣可报名。</text>
       </view>
     </view>
 

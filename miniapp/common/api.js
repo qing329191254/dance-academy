@@ -68,9 +68,23 @@ export function getCourse(id) {
   return request({ url: `/courses/${id}` }).then(mapCourse)
 }
 
-export function getSchedules(type, date) {
-  const query = date ? `?type=${type}&date=${date}` : `?type=${type}`
-  return request({ url: `/schedules${query}` })
+export function getSchedules(type, date, campusId) {
+  const params = [`type=${type}`]
+  if (date) params.push(`date=${date}`)
+  if (campusId) params.push(`campusId=${encodeURIComponent(campusId)}`)
+  return request({ url: `/schedules?${params.join('&')}` })
+}
+
+export function getLeaderboard(period, campusId) {
+  const params = [`period=${period || 'month'}`]
+  if (campusId) params.push(`campusId=${encodeURIComponent(campusId)}`)
+  return request({ url: `/leaderboard?${params.join('&')}` }).then((data) => ({
+    ...data,
+    list: (data.list || []).map((item) => ({
+      ...item,
+      avatar: mediaUrl(item.avatar),
+    })),
+  }))
 }
 
 export function loginByCode(code) {
@@ -90,6 +104,22 @@ export function uploadAvatar(filePath) {
       data: {
         imageBase64,
         filename: 'avatar.jpg',
+      },
+    }))
+}
+
+export function uploadResume(filePath, filename) {
+  const name = filename || 'resume.jpg'
+  const isImage = /\.(png|jpe?g|webp|gif)$/i.test(name)
+  const prepare = isImage ? compressImage(filePath) : Promise.resolve(filePath)
+  return prepare
+    .then(readFileBase64)
+    .then((fileBase64) => request({
+      url: '/upload',
+      method: 'POST',
+      data: {
+        fileBase64,
+        filename: name,
       },
     }))
 }
@@ -119,7 +149,7 @@ function readFileBase64(filePath) {
         resolve(res.data)
       },
       fail() {
-        reject(new Error('读取头像失败'))
+        reject(new Error('读取文件失败'))
       },
     })
   })
@@ -145,6 +175,17 @@ export function getMyCourses() {
 
 export function getBookings() {
   return request({ url: '/bookings' }).then((list) =>
+    (list || []).map((item) => ({
+      ...item,
+      dateText: item.date ? String(item.date).replace(/-/g, '.') : '',
+      time: item.time,
+      teacher: item.teacher,
+    })),
+  )
+}
+
+export function getWaitlist() {
+  return request({ url: '/waitlist' }).then((list) =>
     (list || []).map((item) => ({
       ...item,
       dateText: item.date ? String(item.date).replace(/-/g, '.') : '',
@@ -183,6 +224,55 @@ export function getOpportunities(trackKey) {
   )
 }
 
-export function toggleOpportunityApply(id) {
-  return request({ url: `/opportunities/${id}/apply`, method: 'POST' })
+export function toggleOpportunityApply(id, payload = {}) {
+  return request({ url: `/opportunities/${id}/apply`, method: 'POST', data: payload })
+}
+
+export function submitFeedback(payload) {
+  return request({ url: '/feedback', method: 'POST', data: payload })
+}
+
+export function getTeacherSchedules(date) {
+  const params = date ? `?date=${date}` : ''
+  return request({ url: `/teacher/schedules${params}` })
+}
+
+export function getTeacherStats() {
+  return request({ url: '/teacher/stats' })
+}
+
+export function getTeacherArchives(page = 1, size = 20) {
+  return request({ url: `/teacher/archives?page=${page}&size=${size}` })
+}
+
+export function getTeacherArchiveDetail(id) {
+  return request({ url: `/teacher/archives/${id}` })
+}
+
+export function getEmployeeProfile() {
+  return request({ url: '/employee/profile' })
+}
+
+export function getEmployeeWeeklyReports() {
+  return request({ url: '/employee/weekly-reports' })
+}
+
+export function submitEmployeeWeeklyReport(payload) {
+  return request({ url: '/employee/weekly-reports', method: 'POST', data: payload })
+}
+
+export function getEmployeePerformance() {
+  return request({ url: '/employee/performance' })
+}
+
+export function getTeacherRoster(scheduleId, date) {
+  return request({ url: `/teacher/roster?scheduleId=${scheduleId}&date=${encodeURIComponent(date)}` })
+}
+
+export function manualTeacherCheckin(payload) {
+  return request({ url: '/teacher/roster/checkin', method: 'POST', data: payload })
+}
+
+export function teacherCheckin(payload) {
+  return request({ url: '/teacher/checkin', method: 'POST', data: { payload } })
 }

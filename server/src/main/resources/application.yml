@@ -27,7 +27,7 @@ spring:
       write-dates-as-timestamps: false
 
 app:
-  name: 高校FOR一GET街舞俱乐部
+  name: 高校FOR-GET舞室
   jwt-secret: ${JWT_SECRET:forget-academy-dev-secret-change-me-32bytes!!}
   jwt-expire-hours: ${JWT_EXPIRE_HOURS:168}
   upload-dir: ${UPLOAD_DIR:./uploads}

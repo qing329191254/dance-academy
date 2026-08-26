@@ -1,5 +1,13 @@
 <template>
   <div>
+    <div v-if="campusOptions.length > 1" class="page-card" style="margin-bottom: 16px">
+      <div class="filters">
+        <span class="filter-label">校区</span>
+        <el-select v-model="campusId" placeholder="全部校区" clearable style="width: 220px" @change="load">
+          <el-option v-for="item in campusOptions" :key="item.id" :label="item.name" :value="item.id" />
+        </el-select>
+      </div>
+    </div>
     <div class="stat-grid">
       <div class="stat-card">
         <div class="label">学员总数</div>
@@ -47,15 +55,39 @@
 </template>
 
 <script setup>
-import { onMounted, reactive } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import http from '../api/http'
+import { allowedCampuses, defaultCampusId } from '../common/adminAccess'
+import { useAuthStore } from '../stores/auth'
 
 const router = useRouter()
+const auth = useAuthStore()
 const data = reactive({})
+const campusId = ref('')
+const campusOptions = computed(() => allowedCampuses(auth.profile))
 
-onMounted(async () => {
-  const res = await http.get('/admin/dashboard')
+async function load() {
+  const params = {}
+  if (campusId.value) params.campusId = campusId.value
+  const res = await http.get('/admin/dashboard', { params })
   Object.assign(data, res.data || {})
+}
+
+onMounted(() => {
+  campusId.value = defaultCampusId(auth.profile)
+  load()
 })
 </script>
+
+<style scoped>
+.filters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.filter-label {
+  color: #6b6b76;
+  font-size: 13px;
+}
+</style>

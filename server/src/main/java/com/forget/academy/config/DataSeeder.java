@@ -1,5 +1,6 @@
 package com.forget.academy.config;
 
+import com.forget.academy.common.CampusIds;
 import com.forget.academy.entity.AdminUser;
 import com.forget.academy.entity.AppUser;
 import com.forget.academy.entity.Course;
@@ -63,11 +64,25 @@ public class DataSeeder implements ApplicationRunner {
         removeDemoUsers();
         clearPackagedMedia();
         studioRepo.findAll().stream().findFirst().ifPresent(studio -> {
+            boolean changed = false;
+            if ("高校FOR一GET街舞俱乐部".equals(studio.getName())) {
+                studio.setName("高校FOR-GET舞室");
+                changed = true;
+            }
+            if ("四川成都 · 高校街舞俱乐部".equals(studio.getLocation())) {
+                studio.setLocation("四川成都 · 高校FOR-GET舞室");
+                changed = true;
+            }
             if (studio.getLogo() == null || studio.getLogo().isBlank() || studio.getLogo().startsWith("/uploads/")) {
                 studio.setLogo("/logo.png");
+                changed = true;
+            }
+            if (changed) {
                 studioRepo.save(studio);
             }
         });
+        fillScheduleCampus();
+        fillPracticeCampus();
         if (studioRepo.count() > 0) {
             return;
         }
@@ -139,20 +154,25 @@ public class DataSeeder implements ApplicationRunner {
     }
 
     private void seedAdmin() {
-        adminUserRepo.findByUsername(adminUsername).orElseGet(() -> {
+        adminUserRepo.findByUsername(adminUsername).ifPresentOrElse(admin -> {
+            if ("ADMIN".equals(admin.getRole())) {
+                admin.setRole(com.forget.academy.common.AdminRoles.SUPER_ADMIN);
+                adminUserRepo.save(admin);
+            }
+        }, () -> {
             AdminUser admin = new AdminUser();
             admin.setUsername(adminUsername);
             admin.setPasswordHash(encoder.encode(adminPassword));
-            admin.setName("机构管理员");
-            admin.setRole("ADMIN");
-            return adminUserRepo.save(admin);
+            admin.setName("超级管理员");
+            admin.setRole(com.forget.academy.common.AdminRoles.SUPER_ADMIN);
+            adminUserRepo.save(admin);
         });
     }
 
     private void seedStudio() {
         Studio studio = new Studio();
-        studio.setName("高校FOR一GET街舞俱乐部");
-        studio.setLocation("四川成都 · 高校街舞俱乐部");
+        studio.setName("高校FOR-GET舞室");
+        studio.setLocation("四川成都 · 高校FOR-GET舞室");
         studio.setCity("四川成都");
         studio.setAddress("四川省成都市");
         studio.setLatitude(30.659462);
@@ -239,8 +259,38 @@ public class DataSeeder implements ApplicationRunner {
         item.setWeekday(weekday);
         item.setCapacity(capacity);
         item.setSortOrder(sort);
+        item.setCampusId(CampusIds.DEFAULT);
         item.setEnabled(true);
         scheduleRepo.save(item);
+    }
+
+    private void fillPracticeCampus() {
+        practiceRecordRepo.findAll().forEach(record -> {
+            if (record.getCampusId() != null && !record.getCampusId().isBlank()) {
+                return;
+            }
+            String campus = CampusIds.DEFAULT;
+            try {
+                Long scheduleId = Long.parseLong(record.getSessionId());
+                campus = scheduleRepo.findById(scheduleId)
+                        .map(Schedule::getCampusId)
+                        .filter(id -> id != null && !id.isBlank())
+                        .orElse(CampusIds.DEFAULT);
+            } catch (Exception ignored) {
+                // keep default
+            }
+            record.setCampusId(campus);
+            practiceRecordRepo.save(record);
+        });
+    }
+
+    private void fillScheduleCampus() {
+        scheduleRepo.findAll().forEach(schedule -> {
+            if (schedule.getCampusId() == null || schedule.getCampusId().isBlank()) {
+                schedule.setCampusId(CampusIds.DEFAULT);
+                scheduleRepo.save(schedule);
+            }
+        });
     }
 
     private void seedOpportunities() {

@@ -1,0 +1,1 @@
+const e=[{id:"shizishan",name:"川师大狮子山校区"},{id:"chenglong",name:"川师大成龙校区"},{id:"bnu-zhuhai",name:"北京师范大学珠海校区"},{id:"uic",name:"北师香港浸会大学校区"},{id:"cdu",name:"成都大学校区"},{id:"swpu",name:"西南石油大学成都校区"}];function m(n){var a;return((a=e.find(i=>i.id===n))==null?void 0:a.name)||n||"-"}export{e as C,m as c};

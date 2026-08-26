@@ -2,6 +2,7 @@ package com.forget.academy.controller.admin;
 
 import com.forget.academy.common.ApiResponse;
 import com.forget.academy.common.BizException;
+import com.forget.academy.common.CampusIds;
 import com.forget.academy.common.PageResult;
 import com.forget.academy.entity.Course;
 import com.forget.academy.entity.Schedule;
@@ -10,6 +11,7 @@ import com.forget.academy.repo.BookingRepo;
 import com.forget.academy.repo.CourseRepo;
 import com.forget.academy.repo.ScheduleRepo;
 import com.forget.academy.repo.TeacherRepo;
+import com.forget.academy.service.AdminAccessService;
 import com.forget.academy.service.CheckinService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -33,6 +35,7 @@ public class AdminCatalogController {
     private final ScheduleRepo scheduleRepo;
     private final CheckinService checkinService;
     private final BookingRepo bookingRepo;
+    private final AdminAccessService adminAccessService;
 
     @GetMapping("/teachers")
     public ApiResponse<?> teachers(@RequestParam(required = false) Integer page,
@@ -129,9 +132,13 @@ public class AdminCatalogController {
                                     @RequestParam(required = false) Integer size,
                                     @RequestParam(defaultValue = "") String keyword,
                                     @RequestParam(defaultValue = "") String type,
+                                    @RequestParam(defaultValue = "") String campusId,
                                     @RequestParam(required = false) Boolean enabled) {
         if (page == null) {
-            return ApiResponse.ok(scheduleRepo.findAllByOrderByTypeAscSortOrderAscIdAsc());
+            var campuses = adminAccessService.resolveCampusScope(campusId);
+            return ApiResponse.ok(scheduleRepo.findAllByOrderByTypeAscSortOrderAscIdAsc().stream()
+                    .filter(item -> campuses.contains(item.getCampusId()))
+                    .toList());
         }
         int pageSize = size == null ? 20 : Math.min(Math.max(size, 1), 100);
         var pageable = PageRequest.of(
@@ -140,13 +147,18 @@ public class AdminCatalogController {
                 Sort.by("type").ascending().and(Sort.by("sortOrder").ascending()).and(Sort.by("id").ascending()));
         String query = keyword == null ? "" : keyword.trim();
         String scheduleType = type == null ? "" : type.trim();
-        return ApiResponse.ok(PageResult.of(scheduleRepo.search(query, scheduleType, enabled, pageable)));
+        var campuses = adminAccessService.resolveCampusScope(campusId);
+        return ApiResponse.ok(PageResult.of(scheduleRepo.search(query, scheduleType, campuses, enabled, pageable)));
     }
 
     @PostMapping("/schedules")
     public ApiResponse<Schedule> createSchedule(@RequestBody Schedule body) {
         body.setId(null);
         fillTeacherName(body);
+        if (body.getCampusId() == null || body.getCampusId().isBlank()) {
+            body.setCampusId(CampusIds.DEFAULT);
+        }
+        adminAccessService.assertCanAccessCampus(body.getCampusId());
         if (body.getEnabled() == null) {
             body.setEnabled(true);
         }
@@ -162,7 +174,11 @@ public class AdminCatalogController {
     @PutMapping("/schedules/{id}")
     public ApiResponse<Schedule> updateSchedule(@PathVariable Long id, @RequestBody Schedule body) {
         Schedule schedule = scheduleRepo.findById(id).orElseThrow(() -> new BizException("课表不存在"));
+        adminAccessService.assertCanAccessCampus(schedule.getCampusId());
         schedule.setType(body.getType());
+        schedule.setCampusId(body.getCampusId() == null || body.getCampusId().isBlank()
+                ? CampusIds.DEFAULT : body.getCampusId().trim());
+        adminAccessService.assertCanAccessCampus(schedule.getCampusId());
         schedule.setName(body.getName());
         schedule.setTimeText(body.getTimeText());
         schedule.setTeacherId(body.getTeacherId());
@@ -180,18 +196,24 @@ public class AdminCatalogController {
 
     @DeleteMapping("/schedules/{id}")
     public ApiResponse<Void> deleteSchedule(@PathVariable Long id) {
+        Schedule schedule = scheduleRepo.findById(id).orElseThrow(() -> new BizException("课表不存在"));
+        adminAccessService.assertCanAccessCampus(schedule.getCampusId());
         scheduleRepo.deleteById(id);
         return ApiResponse.ok();
     }
 
     @GetMapping("/schedules/{id}/pending-count")
     public ApiResponse<?> pendingCount(@PathVariable Long id) {
+        Schedule schedule = scheduleRepo.findById(id).orElseThrow(() -> new BizException("课表不存在"));
+        adminAccessService.assertCanAccessCampus(schedule.getCampusId());
         return ApiResponse.ok(java.util.Map.of(
                 "count", bookingRepo.countByScheduleIdAndStatus(id, "待上课")));
     }
 
     @GetMapping("/schedules/{id}/checkin-payload")
     public ApiResponse<?> checkinPayload(@PathVariable Long id, @RequestParam(required = false) String date) {
+        Schedule schedule = scheduleRepo.findById(id).orElseThrow(() -> new BizException("课表不存在"));
+        adminAccessService.assertCanAccessCampus(schedule.getCampusId());
         return ApiResponse.ok(checkinService.payloadForSchedule(id, date));
     }
 

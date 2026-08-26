@@ -2,19 +2,32 @@
   <page-meta root-background-color="#111111" background-color="#111111" page-style="background-color:#111111;" />
   <view class="page">
     <view class="section">
-      <view
-        v-for="c in courses"
-        :key="c.id"
-        class="card course"
-        @click="goDetail(c.id)"
-      >
-        <view class="main">
-          <text class="name">{{ c.name }}</text>
-          <text class="muted desc">{{ c.desc }}</text>
+      <view class="module card trial" @click="go('/pages/course/trial')">
+        <view class="module-top">
+          <view>
+            <text class="module-name">体验课</text>
+            <text class="muted summary">{{ trialCourse.summary }}</text>
+          </view>
+          <view class="price-box">
+            <text class="price-mark">¥</text>
+            <text class="price">{{ trialCourse.price }}</text>
+            <text class="price-unit">/ {{ trialCourse.unit }}</text>
+          </view>
         </view>
-        <view class="side">
-          <text class="price">¥{{ c.price }}</text>
-          <text class="tag">{{ c.level }}</text>
+        <text class="tag">{{ trialCourse.tag }}</text>
+      </view>
+
+      <view class="module card system" @click="go('/pages/course/system')">
+        <view class="module-top">
+          <text class="module-name">课程体系介绍</text>
+          <view class="module-arrow">
+            <text>进入</text>
+            <view class="link-arrow" />
+          </view>
+        </view>
+        <text class="muted summary">固定班、次通卡、私教与定制商演</text>
+        <view class="chips">
+          <text v-for="item in courseSystem" :key="item.key" class="chip">{{ item.name }}</text>
         </view>
       </view>
     </view>
@@ -22,63 +35,95 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { onShow } from '@dcloudio/uni-app'
-import { getCourses } from '@/common/api.js'
-import { courses as mockCourses } from '@/common/mock.js'
+import { trialCourse, courseSystem } from '@/common/mock.js'
 import { openPage } from '@/common/navigate.js'
 
-const courses = ref(mockCourses)
-
-onShow(async () => {
-  try {
-    const list = await getCourses()
-    if (list?.length) courses.value = list
-  } catch (e) {}
-})
-
-function goDetail(id) {
-  openPage(`/pages/course/detail?id=${id}`)
+function go(url) {
+  openPage(url)
 }
 </script>
 
 <style scoped>
-.course {
+.module {
+  margin-bottom: 24rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.trial {
+  background: linear-gradient(145deg, #1c1c1c, #2a2038);
+}
+
+.system {
+  background: linear-gradient(145deg, #1c1c1c, #242038);
+}
+
+.module-top {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 20rpx;
-  margin-bottom: 20rpx;
 }
 
-.main {
-  flex: 1;
-  min-width: 0;
-}
-
-.name {
+.module-name {
   display: block;
-  font-size: 32rpx;
-  font-weight: 600;
-  margin-bottom: 10rpx;
+  font-size: 36rpx;
+  font-weight: 700;
 }
 
-.desc {
+.summary {
+  display: block;
+  margin-top: 10rpx;
   font-size: 26rpx;
-  line-height: 1.6;
+  line-height: 1.5;
 }
 
-.side {
+.price-box {
   display: flex;
-  flex-direction: column;
   align-items: flex-end;
   flex-shrink: 0;
-  gap: 12rpx;
+  color: #8a74e5;
+  padding-top: 4rpx;
+}
+
+.price-mark {
+  font-size: 26rpx;
+  font-weight: 700;
+  margin-bottom: 6rpx;
 }
 
 .price {
+  font-size: 56rpx;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.price-unit {
+  font-size: 22rpx;
+  color: #9a9a9a;
+  margin: 0 0 6rpx 6rpx;
+}
+
+.module-arrow {
+  display: inline-flex;
+  align-items: center;
   color: #8a74e5;
-  font-size: 30rpx;
-  font-weight: 600;
+  font-size: 26rpx;
+  flex-shrink: 0;
+}
+
+.chips {
+  display: flex;
+  gap: 12rpx;
+  flex-wrap: wrap;
+}
+
+.chip {
+  font-size: 22rpx;
+  color: #d7d0ff;
+  background: rgba(138, 116, 229, 0.18);
+  padding: 8rpx 16rpx;
+  border-radius: 999rpx;
 }
 </style>

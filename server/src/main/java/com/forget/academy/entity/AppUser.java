@@ -20,6 +20,15 @@ public class AppUser extends BaseEntity {
     private String avatar;
     private String gender;
     private String birthday;
+    private String phone;
+    private String school;
+    private String collegeGrade;
+    /** student / teacher / employee */
+    private String role = "student";
+    /** 老师角色绑定的 Teacher.id */
+    private Long teacherId;
+    /** 员工角色绑定的校区 */
+    private String campusId;
     private Boolean profileComplete = false;
     private String workLevel = "T1";
     private String workStage = "兼职";
