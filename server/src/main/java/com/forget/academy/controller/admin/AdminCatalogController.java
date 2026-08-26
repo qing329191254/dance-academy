@@ -5,9 +5,11 @@ import com.forget.academy.common.BizException;
 import com.forget.academy.common.CampusIds;
 import com.forget.academy.common.ClosedClassGroup;
 import com.forget.academy.common.PageResult;
+import com.forget.academy.entity.AppUser;
 import com.forget.academy.entity.Course;
 import com.forget.academy.entity.Schedule;
 import com.forget.academy.entity.Teacher;
+import com.forget.academy.repo.AppUserRepo;
 import com.forget.academy.repo.BookingRepo;
 import com.forget.academy.repo.CourseRepo;
 import com.forget.academy.repo.ScheduleRepo;
@@ -26,11 +28,20 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
 @RestController
 @RequestMapping("/api/admin")
 @RequiredArgsConstructor
 public class AdminCatalogController {
     private final TeacherRepo teacherRepo;
+    private final AppUserRepo appUserRepo;
     private final CourseRepo courseRepo;
     private final ScheduleRepo scheduleRepo;
     private final BookingRepo bookingRepo;
@@ -50,7 +61,12 @@ public class AdminCatalogController {
                 pageSize,
                 Sort.by("sortOrder").ascending().and(Sort.by("id").ascending()));
         String query = keyword == null ? "" : keyword.trim();
-        return ApiResponse.ok(PageResult.of(teacherRepo.search(query, enabled, pageable)));
+        var pageResult = teacherRepo.search(query, enabled, pageable);
+        return ApiResponse.ok(new PageResult<>(
+                enrichTeachers(pageResult.getContent()),
+                pageResult.getTotalElements(),
+                pageResult.getNumber() + 1,
+                pageResult.getSize()));
     }
 
     @PostMapping("/teachers")
@@ -244,5 +260,36 @@ public class AdminCatalogController {
             throw new BizException("闭门课需选择面向分组：高潜闭门或基础闭门");
         }
         schedule.setAudienceGroup(audience);
+    }
+
+    private List<Map<String, Object>> enrichTeachers(List<Teacher> teachers) {
+        if (teachers == null || teachers.isEmpty()) {
+            return List.of();
+        }
+        var teacherIds = teachers.stream().map(Teacher::getId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Map<Long, AppUser> boundUsers = new HashMap<>();
+        if (!teacherIds.isEmpty()) {
+            for (AppUser user : appUserRepo.findByTeacherIdIn(teacherIds)) {
+                if (user.getTeacherId() != null) {
+                    boundUsers.putIfAbsent(user.getTeacherId(), user);
+                }
+            }
+        }
+        List<Map<String, Object>> rows = new ArrayList<>(teachers.size());
+        for (Teacher teacher : teachers) {
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("id", teacher.getId());
+            row.put("name", teacher.getName());
+            row.put("style", teacher.getStyle());
+            row.put("intro", teacher.getIntro());
+            row.put("avatar", teacher.getAvatar());
+            row.put("sortOrder", teacher.getSortOrder());
+            row.put("enabled", teacher.getEnabled());
+            AppUser bound = boundUsers.get(teacher.getId());
+            row.put("boundAccountNickname", bound == null ? null : bound.getNickname());
+            row.put("boundUserId", bound == null ? null : bound.getId());
+            rows.add(row);
+        }
+        return rows;
     }
 }

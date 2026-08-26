@@ -27,6 +27,12 @@
       <el-table-column prop="name" label="姓名" width="120" />
       <el-table-column prop="style" label="风格" width="120" />
       <el-table-column prop="intro" label="介绍" />
+      <el-table-column label="绑定账号" width="150">
+        <template #default="{ row }">
+          <span v-if="row.boundAccountNickname">{{ row.boundAccountNickname }}</span>
+          <el-button v-else link type="warning" @click="goBind(row)">待绑定</el-button>
+        </template>
+      </el-table-column>
       <el-table-column prop="sortOrder" label="排序" width="80" />
       <el-table-column label="启用" width="80">
         <template #default="{ row }">{{ row.enabled ? '是' : '否' }}</template>
@@ -52,7 +58,7 @@
       @size-change="search"
     />
   </div>
-  <el-dialog v-model="visible" :title="form.id ? '编辑老师' : '新增老师'" width="560px">
+  <el-dialog v-model="visible" :title="form.id ? '编辑老师档案' : '新增老师档案'" width="560px">
     <el-form :model="form" label-width="80px">
       <el-form-item label="姓名"><el-input v-model="form.name" /></el-form-item>
       <el-form-item label="风格"><el-input v-model="form.style" /></el-form-item>
@@ -70,11 +76,13 @@
 
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import http from '../api/http'
 import ImageField from '../components/ImageField.vue'
 import { mediaSrc } from '../utils/media'
 
+const router = useRouter()
 const list = ref([])
 const total = ref(0)
 const page = ref(1)
@@ -110,6 +118,16 @@ function search() {
 function edit(row) {
   Object.assign(form, { id: null, name: '', style: '', intro: '', avatar: '', sortOrder: 0, enabled: true }, row || {})
   visible.value = true
+}
+
+function goBind(row) {
+  router.push({
+    path: '/users',
+    query: {
+      role: 'teacher',
+      keyword: row.name || '',
+    },
+  })
 }
 
 async function save() {

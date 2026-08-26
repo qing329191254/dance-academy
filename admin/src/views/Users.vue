@@ -2,32 +2,37 @@
   <div class="page-card">
     <div class="toolbar">
       <div class="filters">
-        <el-input v-model="keyword" placeholder="搜索姓名/微信ID" style="width: 260px" clearable @keyup.enter="load" />
-        <el-button @click="load">查询</el-button>
+        <el-input v-model="keyword" placeholder="搜索姓名/微信ID" style="width: 260px" clearable @keyup.enter="search" />
+        <el-select v-model="roleFilter" placeholder="全部角色" clearable style="width: 140px" @change="onRoleChange">
+          <el-option label="学员" value="student" />
+          <el-option label="老师" value="teacher" />
+          <el-option label="员工" value="employee" />
+        </el-select>
+        <el-button @click="search">查询</el-button>
       </div>
     </div>
     <el-table :data="list">
       <el-table-column prop="nickname" label="姓名" width="110" align="left" header-align="left" show-overflow-tooltip />
+      <el-table-column label="角色" width="90" align="left" header-align="left">
+        <template #default="{ row }">
+          <el-tag size="small" :type="roleTagType(row.role)">{{ roleLabel(row.role) }}</el-tag>
+        </template>
+      </el-table-column>
       <el-table-column prop="phone" label="电话" width="120" align="left" header-align="left" />
-      <el-table-column prop="gender" label="性别" width="70" align="left" header-align="left" />
-      <el-table-column prop="birthday" label="生日" width="110" align="left" header-align="left" />
+      <el-table-column label="校区/档案" width="140" align="left" header-align="left" show-overflow-tooltip>
+        <template #default="{ row }">
+          <span v-if="row.role === 'employee'">{{ campusName(row.campusId) }}</span>
+          <span v-else-if="row.role === 'teacher'">{{ teacherName(row.teacherId) }}</span>
+          <span v-else class="muted">-</span>
+        </template>
+      </el-table-column>
       <el-table-column prop="school" label="学校" width="130" align="left" header-align="left" show-overflow-tooltip />
       <el-table-column prop="collegeGrade" label="学院年级" width="130" align="left" header-align="left" show-overflow-tooltip />
       <el-table-column prop="cardTypes" label="卡类" width="110" align="left" header-align="left" show-overflow-tooltip>
         <template #default="{ row }">{{ row.cardTypes || '-' }}</template>
       </el-table-column>
-      <el-table-column prop="workLevel" label="勤工等级" width="90" align="left" header-align="left" />
-      <el-table-column prop="danceLevel" label="舞蹈等级" width="90" align="left" header-align="left" />
       <el-table-column label="闭门分组" width="110" align="left" header-align="left">
         <template #default="{ row }">{{ row.closedClassGroupLabel || '普通' }}</template>
-      </el-table-column>
-      <el-table-column label="个人简历" width="120" align="left" header-align="left">
-        <template #default="{ row }">
-          <a v-if="row.resumeUrl" class="resume-link" :href="mediaSrc(row.resumeUrl)" target="_blank" rel="noreferrer">
-            {{ row.resumeName || '查看简历' }}
-          </a>
-          <span v-else class="muted">-</span>
-        </template>
       </el-table-column>
       <el-table-column label="微信ID" min-width="200" align="left" header-align="left">
         <template #default="{ row }">
@@ -56,7 +61,7 @@
     />
   </div>
 
-  <el-dialog v-model="visible" title="编辑学员" width="520px">
+  <el-dialog v-model="visible" :title="dialogTitle" width="520px">
     <el-form :model="form" label-width="100px">
       <el-form-item label="姓名"><el-input v-model="form.nickname" /></el-form-item>
       <el-form-item label="角色">
@@ -72,14 +77,16 @@
         </el-select>
       </el-form-item>
       <el-form-item v-if="form.role === 'employee'" label="所属校区">
-        <el-select v-model="form.campusId" placeholder="选择校区">
+        <el-select v-model="form.campusId" placeholder="选择舞室校区">
           <el-option v-for="item in CAMPUSES" :key="item.id" :label="item.name" :value="item.id" />
         </el-select>
       </el-form-item>
       <el-form-item v-if="form.role === 'employee'" label="岗位名称"><el-input v-model="form.jobTitle" /></el-form-item>
-      <el-form-item v-if="form.role === 'employee'" label="岗位职责"><el-input v-model="form.jobDescription" type="textarea" :rows="4" /></el-form-item>
+      <el-form-item v-if="form.role === 'employee'" label="岗位职责">
+        <el-input v-model="form.jobDescription" type="textarea" :rows="4" />
+      </el-form-item>
       <el-form-item label="电话"><el-input v-model="form.phone" maxlength="11" /></el-form-item>
-      <el-form-item label="学校">
+      <el-form-item v-if="form.role === 'student'" label="学校">
         <el-select v-model="form.school" filterable clearable placeholder="选择学校" style="width: 100%">
           <el-option
             v-if="form.school && !schoolNames.includes(form.school)"
@@ -89,7 +96,17 @@
           <el-option v-for="item in schools" :key="item.id" :label="item.name" :value="item.name" />
         </el-select>
       </el-form-item>
-      <el-form-item label="学院年级"><el-input v-model="form.collegeGrade" /></el-form-item>
+      <el-form-item v-else-if="form.role === 'employee'" label="就读学校">
+        <el-select v-model="form.school" filterable clearable placeholder="选填" style="width: 100%">
+          <el-option
+            v-if="form.school && !schoolNames.includes(form.school)"
+            :label="`${form.school}（历史）`"
+            :value="form.school"
+          />
+          <el-option v-for="item in schools" :key="item.id" :label="item.name" :value="item.name" />
+        </el-select>
+      </el-form-item>
+      <el-form-item v-if="form.role === 'student'" label="学院年级"><el-input v-model="form.collegeGrade" /></el-form-item>
       <el-form-item label="性别">
         <el-select v-model="form.gender" placeholder="请选择" clearable>
           <el-option label="男" value="男" />
@@ -99,24 +116,26 @@
       <el-form-item label="生日">
         <el-date-picker v-model="form.birthday" type="date" value-format="YYYY-MM-DD" placeholder="选择生日" />
       </el-form-item>
-      <el-form-item label="勤工等级">
-        <el-select v-model="form.workLevel">
-          <el-option label="T1" value="T1" /><el-option label="T2" value="T2" /><el-option label="T3" value="T3" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="勤工阶段"><el-input v-model="form.workStage" /></el-form-item>
-      <el-form-item label="舞蹈等级">
-        <el-select v-model="form.danceLevel">
-          <el-option label="T1" value="T1" /><el-option label="T2" value="T2" /><el-option label="T3" value="T3" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="舞蹈阶段"><el-input v-model="form.danceStage" /></el-form-item>
-      <el-form-item label="闭门分组">
-        <el-select v-model="form.closedClassGroup" placeholder="普通学员" clearable>
-          <el-option label="高潜闭门" value="advanced" />
-          <el-option label="基础闭门" value="foundation" />
-        </el-select>
-      </el-form-item>
+      <template v-if="form.role === 'student'">
+        <el-form-item label="勤工等级">
+          <el-select v-model="form.workLevel">
+            <el-option label="T1" value="T1" /><el-option label="T2" value="T2" /><el-option label="T3" value="T3" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="勤工阶段"><el-input v-model="form.workStage" /></el-form-item>
+        <el-form-item label="舞蹈等级">
+          <el-select v-model="form.danceLevel">
+            <el-option label="T1" value="T1" /><el-option label="T2" value="T2" /><el-option label="T3" value="T3" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="舞蹈阶段"><el-input v-model="form.danceStage" /></el-form-item>
+        <el-form-item label="闭门分组">
+          <el-select v-model="form.closedClassGroup" placeholder="普通学员" clearable>
+            <el-option label="高潜闭门" value="advanced" />
+            <el-option label="基础闭门" value="foundation" />
+          </el-select>
+        </el-form-item>
+      </template>
     </el-form>
     <template #footer>
       <el-button @click="visible = false">取消</el-button>
@@ -126,23 +145,50 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref, computed } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import http from '../api/http'
-import { CAMPUSES } from '../common/campuses'
-import { mediaSrc } from '../utils/media'
+import { CAMPUSES, campusName } from '../common/campuses'
 
+const route = useRoute()
 const list = ref([])
 const total = ref(0)
 const page = ref(1)
 const size = 15
 const keyword = ref('')
+const roleFilter = ref('')
 const visible = ref(false)
 const teachers = ref([])
 const schools = ref([])
 const form = reactive({})
 
 const schoolNames = computed(() => schools.value.map((item) => item.name))
+
+const dialogTitle = computed(() => {
+  const map = {
+    student: '编辑学员',
+    teacher: '编辑老师账号',
+    employee: '编辑员工',
+  }
+  return map[form.role] || '编辑用户'
+})
+
+function roleLabel(role) {
+  const map = { student: '学员', teacher: '老师', employee: '员工' }
+  return map[role] || '学员'
+}
+
+function roleTagType(role) {
+  if (role === 'teacher') return 'warning'
+  if (role === 'employee') return 'success'
+  return ''
+}
+
+function teacherName(teacherId) {
+  if (!teacherId) return '未绑定'
+  return teachers.value.find((item) => item.id === teacherId)?.name || `档案#${teacherId}`
+}
 
 async function loadSchools() {
   const res = await http.get('/admin/schools')
@@ -155,9 +201,25 @@ async function loadTeachers() {
 }
 
 async function load() {
-  const res = await http.get('/admin/users', { params: { keyword: keyword.value, page: page.value, size } })
+  const params = {
+    keyword: keyword.value,
+    role: roleFilter.value || '',
+    page: page.value,
+    size,
+  }
+  const res = await http.get('/admin/users', { params })
   list.value = res.data.list || []
   total.value = res.data.total || 0
+}
+
+function onRoleChange() {
+  page.value = 1
+  load()
+}
+
+function search() {
+  page.value = 1
+  return load()
 }
 
 function edit(row) {
@@ -195,13 +257,20 @@ async function save() {
   }
   await http.put(`/admin/users/${form.id}`, {
     ...form,
-    closedClassGroup: form.closedClassGroup || null,
+    closedClassGroup: form.role === 'student' ? form.closedClassGroup || null : null,
   })
   visible.value = false
   ElMessage.success('已保存')
   await load()
 }
+
 onMounted(async () => {
+  if (route.query.role) {
+    roleFilter.value = String(route.query.role)
+  }
+  if (route.query.keyword) {
+    keyword.value = String(route.query.keyword)
+  }
   await loadSchools()
   await loadTeachers()
   await load()
@@ -227,15 +296,6 @@ onMounted(async () => {
 .copy-btn {
   flex-shrink: 0;
   padding: 0;
-}
-
-.resume-link {
-  color: var(--brand);
-  text-decoration: none;
-}
-
-.resume-link:hover {
-  text-decoration: underline;
 }
 
 .muted {

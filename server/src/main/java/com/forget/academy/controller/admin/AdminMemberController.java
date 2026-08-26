@@ -7,7 +7,9 @@ import com.forget.academy.entity.AppUser;
 import com.forget.academy.entity.OpportunityApply;
 import com.forget.academy.entity.UserCard;
 import com.forget.academy.entity.UserCourse;
+import com.forget.academy.entity.EmployeeProfile;
 import com.forget.academy.repo.AppUserRepo;
+import com.forget.academy.repo.EmployeeProfileRepo;
 import com.forget.academy.repo.OpportunityApplyRepo;
 import com.forget.academy.repo.UserCardRepo;
 import com.forget.academy.repo.UserCourseRepo;
@@ -44,15 +46,21 @@ public class AdminMemberController {
     private final UserCourseRepo userCourseRepo;
     private final OpportunityApplyRepo opportunityApplyRepo;
     private final EmployeeService employeeService;
+    private final EmployeeProfileRepo employeeProfileRepo;
 
     @GetMapping("/users")
     public ApiResponse<PageResult<Map<String, Object>>> users(@RequestParam(defaultValue = "") String keyword,
+                               @RequestParam(defaultValue = "") String role,
                                @RequestParam(defaultValue = "1") int page,
                                @RequestParam(defaultValue = "20") int size) {
         var pageable = PageRequest.of(Math.max(page - 1, 0), size, Sort.by(Sort.Direction.DESC, "id"));
-        var pageResult = keyword == null || keyword.isBlank()
-                ? appUserRepo.findAll(pageable)
-                : appUserRepo.findByNicknameContainingOrOpenidContaining(keyword, keyword, pageable);
+        String query = keyword == null ? "" : keyword.trim();
+        String roleFilter = role == null ? "" : role.trim().toLowerCase();
+        var pageResult = switch (roleFilter) {
+            case "" -> appUserRepo.searchAll(query, pageable);
+            case "student" -> appUserRepo.searchStudents(query, pageable);
+            default -> appUserRepo.searchByRole(query, roleFilter, pageable);
+        };
         List<Map<String, Object>> list = enrichUsers(pageResult.getContent());
         return ApiResponse.ok(new PageResult<>(list, pageResult.getTotalElements(), pageResult.getNumber() + 1, pageResult.getSize()));
     }
@@ -271,6 +279,14 @@ public class AdminMemberController {
             }
             resumeByUser.put(apply.getUserId(), apply);
         }
+        Map<Long, EmployeeProfile> employeeProfiles = new HashMap<>();
+        if (!userIds.isEmpty()) {
+            for (EmployeeProfile profile : employeeProfileRepo.findByUserIdIn(userIds)) {
+                if (profile.getUserId() != null) {
+                    employeeProfiles.put(profile.getUserId(), profile);
+                }
+            }
+        }
         List<Map<String, Object>> rows = new ArrayList<>(users.size());
         for (AppUser user : users) {
             Map<String, Object> row = AppAuthService.toUserMap(user);
@@ -281,6 +297,11 @@ public class AdminMemberController {
             row.put("resumeName", apply == null ? null : apply.getResumeName());
             row.put("closedClassGroup", user.getClosedClassGroup());
             row.put("closedClassGroupLabel", com.forget.academy.common.ClosedClassGroup.label(user.getClosedClassGroup()));
+            EmployeeProfile employeeProfile = employeeProfiles.get(user.getId());
+            if (employeeProfile != null) {
+                row.put("jobTitle", employeeProfile.getJobTitle());
+                row.put("jobDescription", employeeProfile.getJobDescription());
+            }
             rows.add(row);
         }
         return rows;
