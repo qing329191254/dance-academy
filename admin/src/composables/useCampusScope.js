@@ -1,4 +1,4 @@
-import { computed, watch } from 'vue'
+import { computed, nextTick, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useCampusStore } from '../stores/campus'
 
@@ -9,7 +9,8 @@ export function useCampusScope(reload) {
   const campusParams = () => campusStore.campusParams
 
   if (reload) {
-    watch(campusId, reload, { immediate: true })
+    watch(campusId, reload)
+    nextTick(reload)
   }
 
   return { campusId, campusFiltered, campusParams, campusStore }
