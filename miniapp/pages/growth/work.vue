@@ -11,11 +11,11 @@
         class="card track"
         @click="go(item.key)"
       >
-        <view class="left">
+        <view class="track-head">
           <text class="name">{{ item.name }}</text>
-          <text class="muted desc">{{ item.desc }}</text>
+          <view class="badge">{{ item.level }}</view>
         </view>
-        <view class="badge">{{ item.level }}</view>
+        <text class="muted desc">{{ item.desc }}</text>
       </view>
     </view>
   </view>
@@ -60,17 +60,16 @@ function go(key) {
 
 .track {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20rpx;
+  flex-direction: column;
+  gap: 10rpx;
   margin-bottom: 20rpx;
 }
 
-.left {
+.track-head {
   display: flex;
-  flex-direction: column;
-  gap: 10rpx;
-  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
 }
 
 .name {
@@ -79,16 +78,21 @@ function go(key) {
 }
 
 .desc {
+  display: block;
+  line-height: 1.6;
   white-space: pre-line;
+  word-break: keep-all;
 }
 
 .badge {
-  min-width: 80rpx;
+  flex-shrink: 0;
+  min-width: 72rpx;
   text-align: center;
-  padding: 12rpx 18rpx;
+  padding: 10rpx 14rpx;
   border-radius: 16rpx;
   background: rgba(138, 116, 229, 0.18);
   color: #8a74e5;
   font-weight: 700;
+  font-size: 26rpx;
 }
 </style>

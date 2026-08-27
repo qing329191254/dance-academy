@@ -34,11 +34,16 @@
         <el-form-item label="品牌介绍"><el-input v-model="form.intro" type="textarea" :rows="4" /></el-form-item>
         <el-form-item label="业务"><el-input v-model="form.business" /></el-form-item>
         <el-form-item label="理念"><el-input v-model="form.slogan" /></el-form-item>
-        <el-form-item label="体系引导语">
-          <el-input v-model="form.courseSystemLead" type="textarea" :rows="2" placeholder="课程体系列表页顶部说明" />
+        <el-form-item label="课程产品引导">
+          <el-input v-model="form.courseSystemLead" type="textarea" :rows="2" placeholder="课程产品列表页顶部说明" />
         </el-form-item>
-        <el-form-item label="首页体系摘要">
-          <el-input v-model="form.courseSystemHomeSummary" placeholder="首页「课程体系介绍」卡片副标题" />
+        <el-form-item label="首页产品摘要">
+          <el-input
+            v-model="form.courseSystemHomeSummary"
+            type="textarea"
+            :rows="2"
+            placeholder="首页「课程产品」卡片副标题，回车可换行"
+          />
         </el-form-item>
         <el-form-item>
           <el-button type="primary" :loading="saving" :disabled="!campusId" @click="save">保存</el-button>

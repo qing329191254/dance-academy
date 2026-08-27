@@ -92,7 +92,7 @@ public class StudioService {
         studio.setBusiness("团课 / 固定班 / 私教课 / 成长中心");
         studio.setSlogan("DANCE UP · BREAK FREE");
         studio.setCourseSystemLead("按学习方式和目标选择：固定班、次通卡、私教，或定制赛事与商演。");
-        studio.setCourseSystemHomeSummary("精品固定班 · 次通卡 · 私教 · 定制赛事商演");
+        studio.setCourseSystemHomeSummary("特色固定班、次卡、通卡\n私教、定制课、商演赛事");
         applyCampusDefaults(studio, campusId);
         return studio;
     }

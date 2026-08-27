@@ -18,15 +18,6 @@ function mapTeacher(item) {
   }
 }
 
-function mapCourse(item) {
-  if (!item) return null
-  return {
-    ...item,
-    cover: mediaUrl(item.cover),
-    desc: item.desc || item.description || '',
-  }
-}
-
 function mapCourseModule(item) {
   if (!item) return null
   return {
@@ -55,7 +46,6 @@ export function getHome(campusId) {
     studio: mapStudio(data.studio),
     banners: (data.banners || []).map(mediaUrl),
     teachers: (data.teachers || []).map(mapTeacher),
-    courses: (data.courses || []).map(mapCourse),
   }))
 }
 
@@ -73,14 +63,6 @@ export function getTeachers() {
 
 export function getTeacher(id) {
   return request({ url: `/teachers/${id}` }).then(mapTeacher)
-}
-
-export function getCourses() {
-  return request({ url: '/courses' }).then((list) => (list || []).map(mapCourse))
-}
-
-export function getCourse(id) {
-  return request({ url: `/courses/${id}` }).then(mapCourse)
 }
 
 export function getCourseIntro(campusId) {

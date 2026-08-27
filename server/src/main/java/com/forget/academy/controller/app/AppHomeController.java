@@ -1,7 +1,6 @@
 package com.forget.academy.controller.app;
 
 import com.forget.academy.common.ApiResponse;
-import com.forget.academy.common.CourseModuleTypes;
 import com.forget.academy.entity.Banner;
 import com.forget.academy.entity.BrandPhoto;
 import com.forget.academy.entity.Course;
@@ -52,7 +51,6 @@ public class AppHomeController {
         data.put("banners", bannerRepo.findByCampusIdAndEnabledTrueOrderBySortOrderAscIdAsc(
                 campusContentService.normalizeCampusId(campusId)).stream().map(Banner::getImageUrl).toList());
         data.put("teachers", teacherRepo.findByEnabledTrueOrderBySortOrderAscIdAsc());
-        data.put("courses", productCourses());
         return ApiResponse.ok(data);
     }
 
@@ -78,16 +76,6 @@ public class AppHomeController {
     @GetMapping("/teachers/{id}")
     public ApiResponse<Teacher> teacher(@PathVariable Long id) {
         return ApiResponse.ok(teacherRepo.findById(id).orElse(null));
-    }
-
-    @GetMapping("/courses")
-    public ApiResponse<?> courses() {
-        return ApiResponse.ok(productCourses());
-    }
-
-    @GetMapping("/courses/{id}")
-    public ApiResponse<?> course(@PathVariable Long id) {
-        return ApiResponse.ok(courseRepo.findById(id).map(this::toCourse).orElse(null));
     }
 
     @GetMapping("/course-intro")
@@ -141,23 +129,5 @@ public class AppHomeController {
 
     private Studio studio(String campusId) {
         return studioService.resolveForApp(campusId);
-    }
-
-    private List<Map<String, Object>> productCourses() {
-        return courseRepo.findByEnabledTrueOrderBySortOrderAscIdAsc().stream()
-                .filter(this::isProductCourse)
-                .map(this::toCourse)
-                .toList();
-    }
-
-    private boolean isProductCourse(Course course) {
-        String type = course.getModuleType();
-        return type == null || type.isBlank() || CourseModuleTypes.PRODUCT.equals(type);
-    }
-
-    private Map<String, Object> toCourse(Course course) {
-        Map<String, Object> map = CourseModuleMapper.toModuleMap(course);
-        map.put("desc", course.getDescription());
-        return map;
     }
 }

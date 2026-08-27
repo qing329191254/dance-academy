@@ -23,12 +23,6 @@ export function getTeacherAvatar(name) {
   return teachers.find((t) => t.name === name)?.avatar || ''
 }
 
-export const courses = [
-  { id: 1, name: 'HipHop 入门', price: 199, level: '零基础', desc: '节奏、律动与基础脚步' },
-  { id: 2, name: 'Jazz 二星课', price: 299, level: '进阶', desc: '组合编排与表现力训练' },
-  { id: 3, name: 'Breaking 专项', price: 399, level: '进阶', desc: 'Footwork / Freeze / Power' },
-]
-
 export const trialCourse = {
   name: '体验课',
   price: '9.9',

@@ -25,7 +25,7 @@ public interface CourseRepo extends JpaRepository<Course, Long> {
                 or lower(coalesce(c.level, '')) like lower(concat('%', :keyword, '%'))
                 or lower(coalesce(c.description, '')) like lower(concat('%', :keyword, '%')))
               and (:enabled is null or c.enabled = :enabled)
-              and (:moduleType = '' or coalesce(c.moduleType, 'product') = :moduleType)
+              and (:moduleType = '' or coalesce(c.moduleType, 'system') = :moduleType)
             """)
     Page<Course> search(@Param("keyword") String keyword,
                         @Param("enabled") Boolean enabled,

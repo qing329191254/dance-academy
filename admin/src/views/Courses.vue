@@ -6,7 +6,7 @@
       <div class="filters">
         <el-input
           v-model="keyword"
-          placeholder="搜索名称 / 级别 / 介绍"
+          placeholder="搜索名称 / 介绍"
           style="width: 240px"
           clearable
           @keyup.enter="search"
@@ -21,7 +21,7 @@
         </el-select>
         <el-button @click="search">查询</el-button>
       </div>
-      <el-button type="primary" @click="edit()">新增课程</el-button>
+      <el-button type="primary" @click="edit()">新增</el-button>
     </div>
     <el-table :data="list">
       <el-table-column prop="name" label="名称" min-width="140" />
@@ -59,7 +59,7 @@
     />
     </div>
   </div>
-  <el-dialog v-model="visible" :title="form.id ? '编辑课程' : '新增课程'" width="640px">
+  <el-dialog v-model="visible" :title="form.id ? '编辑' : '新增'" width="640px">
     <el-form :model="form" label-width="96px">
       <el-form-item label="模块类型" required>
         <el-select v-model="form.moduleType" style="width: 100%">
@@ -70,26 +70,20 @@
         <el-input v-model="form.moduleKey" placeholder="如 fixed / pass / private / custom" />
       </el-form-item>
       <el-form-item label="名称"><el-input v-model="form.name" /></el-form-item>
-      <el-form-item v-if="form.moduleType === 'product'" label="价格">
-        <el-input-number v-model="form.price" :min="0" />
-      </el-form-item>
-      <el-form-item v-if="form.moduleType !== 'product'" label="展示价格">
+      <el-form-item label="展示价格">
         <el-input v-model="form.priceDisplay" placeholder="如 9.9，留空则不展示" style="width: 200px" />
         <el-input v-model="form.priceUnit" placeholder="单位" style="width: 100px; margin-left: 12px" />
-      </el-form-item>
-      <el-form-item v-if="form.moduleType === 'product'" label="级别">
-        <el-input v-model="form.level" />
       </el-form-item>
       <el-form-item v-if="form.moduleType === 'trial'" label="标签">
         <el-input v-model="form.tag" placeholder="如 新人专享" />
       </el-form-item>
-      <el-form-item v-if="form.moduleType !== 'product'" label="列表摘要">
+      <el-form-item label="列表摘要">
         <el-input v-model="form.summary" type="textarea" :rows="2" />
       </el-form-item>
       <el-form-item label="详细介绍">
         <el-input v-model="form.description" type="textarea" :rows="4" />
       </el-form-item>
-      <el-form-item v-if="form.moduleType !== 'product'" label="亮点">
+      <el-form-item label="亮点">
         <el-input
           v-model="form.highlights"
           type="textarea"
@@ -129,9 +123,8 @@ import ImageField from '../components/ImageField.vue'
 import OrgWideNotice from '../components/OrgWideNotice.vue'
 
 const moduleTypeOptions = [
-  { value: 'product', label: '课程产品' },
   { value: 'trial', label: '体验课' },
-  { value: 'system', label: '体系模块' },
+  { value: 'system', label: '课程产品' },
 ]
 
 const list = ref([])
@@ -145,7 +138,7 @@ const visible = ref(false)
 const form = reactive({})
 
 function moduleTypeLabel(type) {
-  return moduleTypeOptions.find((item) => item.value === type)?.label || type || '课程产品'
+  return moduleTypeOptions.find((item) => item.value === type)?.label || type || '—'
 }
 
 function displayPrice(row) {
@@ -175,13 +168,12 @@ function search() {
 function defaultForm() {
   return {
     id: null,
-    moduleType: 'product',
+    moduleType: 'trial',
     moduleKey: '',
     name: '',
-    price: 0,
+    price: null,
     priceDisplay: '',
     priceUnit: '节',
-    level: '零基础',
     summary: '',
     tag: '',
     description: '',
@@ -196,7 +188,7 @@ function defaultForm() {
 
 function edit(row) {
   Object.assign(form, defaultForm(), row || {})
-  if (!form.moduleType) form.moduleType = 'product'
+  if (!form.moduleType || form.moduleType === 'product') form.moduleType = 'trial'
   visible.value = true
 }
 
@@ -207,12 +199,7 @@ async function save() {
     payload.actionLabel = null
     payload.actionTab = null
   }
-  if (payload.moduleType === 'product') {
-    payload.priceDisplay = null
-    payload.tag = null
-    payload.summary = null
-    payload.highlights = null
-  }
+  payload.price = null
   if (form.id) await http.put(`/admin/courses/${form.id}`, payload)
   else await http.post('/admin/courses', payload)
   visible.value = false
@@ -221,7 +208,7 @@ async function save() {
 }
 
 async function remove(row) {
-  await ElMessageBox.confirm('确认删除该课程？', '提示')
+  await ElMessageBox.confirm('确认删除该条目？', '提示')
   await http.delete(`/admin/courses/${row.id}`)
   ElMessage.success('已删除')
   if (list.value.length === 1 && page.value > 1) page.value -= 1

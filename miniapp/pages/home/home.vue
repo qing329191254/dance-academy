@@ -116,7 +116,7 @@
         </view>
         <view class="course-card card" @click="go('/pages/course/system')">
           <view class="course-main">
-            <text class="course-name">课程体系介绍</text>
+            <text class="course-name">课程产品</text>
             <text class="muted">{{ courseIntro.systemHomeSummary }}</text>
           </view>
           <view class="course-side more-side">
@@ -244,7 +244,7 @@ const studio = reactive({
 })
 const courseIntro = reactive({
   trial: { ...mockTrial },
-  systemHomeSummary: '精品固定班 · 次通卡 · 私教 · 定制赛事商演',
+  systemHomeSummary: '特色固定班、次卡、通卡\n私教、定制课、商演赛事',
 })
 const splashSrc = computed(() => studio.splashImage || '')
 
@@ -546,6 +546,8 @@ function callStudio() {
 
 .course-main .muted {
   margin-top: 10rpx;
+  line-height: 1.6;
+  white-space: pre-line;
 }
 
 .course-name {

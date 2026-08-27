@@ -79,6 +79,7 @@ public class DataSeeder implements ApplicationRunner {
         seedSchools();
         seedCourseIntroModules();
         seedGrowthTracks();
+        removeLegacyProductCourses();
         removeDemoUsers();
         clearPackagedMedia();
         studioRepo.findAll().stream().findFirst().ifPresent(studio -> {
@@ -100,7 +101,7 @@ public class DataSeeder implements ApplicationRunner {
                 changed = true;
             }
             if (studio.getCourseSystemHomeSummary() == null || studio.getCourseSystemHomeSummary().isBlank()) {
-                studio.setCourseSystemHomeSummary("精品固定班 · 次通卡 · 私教 · 定制赛事商演");
+                studio.setCourseSystemHomeSummary("特色固定班、次卡、通卡\n私教、定制课、商演赛事");
                 changed = true;
             }
             if (studio.getGrowthIntro() == null || studio.getGrowthIntro().isBlank()) {
@@ -143,7 +144,6 @@ public class DataSeeder implements ApplicationRunner {
             return;
         }
         seedTeachers();
-        seedCourses();
         seedSchedules();
         seedOpportunities();
     }
@@ -265,7 +265,7 @@ public class DataSeeder implements ApplicationRunner {
         studio.setBusiness("团课 / 固定班 / 私教课 / 成长中心");
         studio.setSlogan("DANCE UP · BREAK FREE");
         studio.setCourseSystemLead("按学习方式和目标选择：固定班、次通卡、私教，或定制赛事与商演。");
-        studio.setCourseSystemHomeSummary("精品固定班 · 次通卡 · 私教 · 定制赛事商演");
+        studio.setCourseSystemHomeSummary("特色固定班、次卡、通卡\n私教、定制课、商演赛事");
         studio.setGrowthIntro("FOR-GET不仅是上课，我们把兼职、实习、就业演出、商演、考证等多样化资源嫁接给大家，用舞蹈发展、勤工俭学两条成长线，帮你从学员走向舞台与职场，愿你的大学，因为有FG而更好。");
         studio.setGrowthLevelTip("新学员默认享有 T1 权益，可通过年限、考核等途径升级至 T2 / T3。");
         studio.setWorkLead("勤工俭学成长线：从校园兼职到实习，再到管理角色。点击进入可查看近期机会并报名。");
@@ -293,10 +293,18 @@ public class DataSeeder implements ApplicationRunner {
         teacherRepo.save(teacher);
     }
 
-    private void seedCourses() {
-        saveCourse("HipHop 入门", 199, "零基础", "节奏、律动与基础脚步", 1);
-        saveCourse("Jazz 二星课", 299, "进阶", "组合编排与表现力训练", 2);
-        saveCourse("Breaking 专项", 399, "进阶", "Footwork / Freeze / Power", 3);
+    private void removeLegacyProductCourses() {
+        courseRepo.findAll().stream()
+                .filter(course -> {
+                    String type = course.getModuleType();
+                    return type == null || type.isBlank() || "product".equals(type);
+                })
+                .forEach(course -> {
+                    userCourseRepo.findAll().stream()
+                            .filter(item -> course.getId().equals(item.getCourseId()))
+                            .forEach(userCourseRepo::delete);
+                    courseRepo.delete(course);
+                });
     }
 
     private void seedCourseIntroModules() {
@@ -381,18 +389,6 @@ public class DataSeeder implements ApplicationRunner {
         track.setSortOrder(sort);
         track.setEnabled(true);
         growthTrackRepo.save(track);
-    }
-
-    private void saveCourse(String name, int price, String level, String desc, int sort) {
-        Course course = new Course();
-        course.setModuleType(CourseModuleTypes.PRODUCT);
-        course.setName(name);
-        course.setPrice(price);
-        course.setLevel(level);
-        course.setDescription(desc);
-        course.setSortOrder(sort);
-        course.setEnabled(true);
-        courseRepo.save(course);
     }
 
     private void seedSchedules() {

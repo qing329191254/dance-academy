@@ -24,8 +24,8 @@ public class Course extends BaseEntity {
     private String summary;
     /** 标签，如新人专享 */
     private String tag;
-    /** trial / system / product */
-    private String moduleType = "product";
+    /** trial / system */
+    private String moduleType = "system";
     /** system 模块标识，如 fixed/pass/private/custom */
     private String moduleKey;
     @Column(length = 2000)

@@ -19,7 +19,7 @@
 
       <view class="module card system" @click="go('/pages/course/system')">
         <view class="module-top">
-          <text class="module-name">课程体系介绍</text>
+          <text class="module-name">课程产品</text>
           <view class="module-arrow">
             <text>进入</text>
             <view class="link-arrow" />
@@ -42,7 +42,7 @@ import { openPage } from '@/common/navigate.js'
 
 const trialCourse = reactive({ ...mockTrial })
 const courseSystem = ref([...mockSystem])
-const systemHomeSummary = ref('固定班、次通卡、私教与定制商演')
+const systemHomeSummary = ref('特色固定班、次卡、通卡\n私教、定制课、商演赛事')
 
 function applyIntro(intro) {
   if (intro?.trial) Object.assign(trialCourse, intro.trial)
@@ -101,7 +101,8 @@ function goTrial() {
   display: block;
   margin-top: 10rpx;
   font-size: 26rpx;
-  line-height: 1.5;
+  line-height: 1.6;
+  white-space: pre-line;
 }
 
 .price-box {

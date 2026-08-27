@@ -13,12 +13,8 @@
 
     <view v-if="profileReady && !isStaffUser" class="section">
       <view class="card growth-card">
-        <view class="growth-head" @click="goGrowth">
+        <view class="growth-head">
           <text class="growth-title">成长等级</text>
-          <view class="growth-more">
-            <text class="muted">成长中心</text>
-            <view class="link-arrow" />
-          </view>
         </view>
 
         <view class="growth-tracks">
@@ -507,20 +503,12 @@ function goLegal(type) {
 .growth-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
 }
 
 .growth-title {
   font-size: 30rpx;
   font-weight: 700;
   color: #ffffff;
-}
-
-.growth-more {
-  display: inline-flex;
-  align-items: center;
-  gap: 8rpx;
-  font-size: 24rpx;
 }
 
 .growth-tracks {

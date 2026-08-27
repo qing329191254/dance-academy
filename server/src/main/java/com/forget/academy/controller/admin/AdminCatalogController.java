@@ -264,7 +264,7 @@ public class AdminCatalogController {
 
     private void normalizeCourseModule(Course course) {
         if (course.getModuleType() == null || course.getModuleType().isBlank()) {
-            course.setModuleType(CourseModuleTypes.PRODUCT);
+            course.setModuleType(CourseModuleTypes.SYSTEM);
         }
         if (!CourseModuleTypes.isValid(course.getModuleType())) {
             throw new BizException("模块类型无效");
@@ -274,7 +274,7 @@ public class AdminCatalogController {
         }
         if (CourseModuleTypes.SYSTEM.equals(course.getModuleType())
                 && (course.getModuleKey() == null || course.getModuleKey().isBlank())) {
-            throw new BizException("体系模块需填写模块标识");
+            throw new BizException("课程产品需填写模块标识");
         }
     }
 
