@@ -74,14 +74,25 @@ public class AdminOpsController {
     public ApiResponse<?> dashboard(@RequestParam(required = false) String campusId) {
         String today = LocalDate.now(ZoneId.of("Asia/Shanghai")).toString();
         Instant weekAgo = Instant.now().minusSeconds(7 * 24 * 3600L);
+        boolean campusFiltered = campusId != null && !campusId.isBlank();
         var campuses = adminAccessService.resolveCampusScope(campusId);
         Map<String, Object> data = new LinkedHashMap<>();
-        data.put("userCount", appUserRepo.count());
+        data.put("campusFiltered", campusFiltered);
+        data.put("userCount", campusFiltered
+                ? appUserRepo.countStudentsActiveInCampuses(campuses)
+                : appUserRepo.countStudents());
         data.put("bookingToday", bookingRepo.countByClassDateAndStatusInCampuses(today, "待上课", campuses));
-        data.put("pendingApplies", applyRepo.countByStatus("pending"));
+        data.put("pendingApplies", campusFiltered
+                ? applyRepo.countByStatusAndUserActiveInCampuses("pending", campuses)
+                : applyRepo.countByStatus("pending"));
         data.put("practiceWeek", practiceRecordRepo.countByCheckedAtAfterAndCampusIdIn(weekAgo, campuses));
-        data.put("latestBookings", bookingRepo.findLatestInCampuses(campuses, PageRequest.of(0, 8)).getContent());
-        data.put("latestApplies", applyRepo.findAll(PageRequest.of(0, 8, Sort.by(Sort.Direction.DESC, "id"))).getContent());
+        data.put("latestBookings", bookingRepo.findLatestInCampuses(campuses, PageRequest.of(0, 8)).getContent()
+                .stream()
+                .map(this::toBookingRow)
+                .toList());
+        data.put("latestApplies", (campusFiltered
+                ? applyRepo.findLatestByUserActiveInCampuses(campuses, PageRequest.of(0, 8))
+                : applyRepo.findAll(PageRequest.of(0, 8, Sort.by(Sort.Direction.DESC, "id")))).getContent());
         data.put("campusIds", campuses);
         return ApiResponse.ok(data);
     }
@@ -140,8 +151,26 @@ public class AdminOpsController {
         String date = booking.getClassDate() == null ? "" : booking.getClassDate();
         row.put("checkedIn", practiceRecordRepo.existsByUserIdAndSessionIdAndClassDate(
                 booking.getUserId(), sessionId, date));
-        scheduleRepo.findById(booking.getScheduleId()).ifPresent(schedule -> row.put("campusId", schedule.getCampusId()));
+        scheduleRepo.findById(booking.getScheduleId()).ifPresent(schedule -> {
+            row.put("campusId", schedule.getCampusId());
+            row.put("campusName", campusDisplayName(schedule.getCampusId()));
+        });
         return row;
+    }
+
+    private static String campusDisplayName(String campusId) {
+        if (campusId == null || campusId.isBlank()) {
+            return "-";
+        }
+        return switch (campusId) {
+            case "shizishan" -> "川师大狮子山校区";
+            case "chenglong" -> "川师大成龙校区";
+            case "bnu-zhuhai" -> "北京师范大学珠海校区";
+            case "uic" -> "北师香港浸会大学校区";
+            case "cdu" -> "成都大学校区";
+            case "swpu" -> "西南石油大学成都校区";
+            default -> campusId;
+        };
     }
 
     @DeleteMapping("/bookings/{id}")
@@ -232,17 +261,17 @@ public class AdminOpsController {
     @GetMapping("/applies")
     public ApiResponse<?> applies(@RequestParam(defaultValue = "") String keyword,
                                  @RequestParam(defaultValue = "") String status,
+                                 @RequestParam(required = false) String campusId,
                                  @RequestParam(defaultValue = "1") int page,
                                  @RequestParam(defaultValue = "20") int size) {
         var pageable = PageRequest.of(Math.max(page - 1, 0), size, Sort.by(Sort.Direction.DESC, "id"));
-        Page<OpportunityApply> result;
-        if (status != null && !status.isBlank()) {
-            result = applyRepo.findByStatus(status, pageable);
-        } else if (keyword != null && !keyword.isBlank()) {
-            result = applyRepo.findByTitleContainingOrNicknameContaining(keyword, keyword, pageable);
-        } else {
-            result = applyRepo.findAll(pageable);
-        }
+        String query = keyword == null ? "" : keyword.trim();
+        String st = status == null ? "" : status.trim();
+        boolean campusFiltered = campusId != null && !campusId.isBlank();
+        var campuses = adminAccessService.resolveCampusScope(campusId);
+        Page<OpportunityApply> result = campusFiltered
+                ? applyRepo.searchInCampuses(query, st, campuses, pageable)
+                : applyRepo.searchAll(query, st, pageable);
         return ApiResponse.ok(PageResult.of(result));
     }
 

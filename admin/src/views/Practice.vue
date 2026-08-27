@@ -3,9 +3,6 @@
     <div class="toolbar">
       <div class="filters">
         <el-input v-model="keyword" placeholder="搜索课程名" style="width: 240px" clearable @keyup.enter="load" />
-        <el-select v-if="campusOptions.length > 1" v-model="campusId" placeholder="校区" clearable style="width: 200px" @change="search">
-          <el-option v-for="item in campusOptions" :key="item.id" :label="item.name" :value="item.id" />
-        </el-select>
         <el-button @click="load">查询</el-button>
       </div>
     </div>
@@ -35,19 +32,15 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { ref } from 'vue'
 import http from '../api/http'
-import { allowedCampuses, defaultCampusId } from '../common/adminAccess'
-import { useAuthStore } from '../stores/auth'
+import { useCampusScope } from '../composables/useCampusScope'
 
-const auth = useAuthStore()
-const campusOptions = computed(() => allowedCampuses(auth.profile))
 const list = ref([])
 const total = ref(0)
 const page = ref(1)
 const size = 15
 const keyword = ref('')
-const campusId = ref('')
 
 function checkinSourceLabel(source) {
   if (source === 'manual') return '手动确认'
@@ -61,14 +54,11 @@ function search() {
 }
 
 async function load() {
-  const params = { keyword: keyword.value, page: page.value, size }
-  if (campusId.value) params.campusId = campusId.value
+  const params = { keyword: keyword.value, page: page.value, size, ...campusParams() }
   const res = await http.get('/admin/practice', { params })
   list.value = res.data.list || []
   total.value = res.data.total || 0
 }
-onMounted(() => {
-  campusId.value = defaultCampusId(auth.profile)
-  load()
-})
+
+const { campusParams } = useCampusScope(load)
 </script>

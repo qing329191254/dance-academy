@@ -39,6 +39,7 @@
           <el-menu-item index="/users">小程序用户</el-menu-item>
           <el-menu-item index="/cards">卡包发放</el-menu-item>
           <el-menu-item index="/opportunities">成长机会</el-menu-item>
+          <el-menu-item index="/growth">成长文案</el-menu-item>
           <el-menu-item index="/applies">报名审核</el-menu-item>
         </el-sub-menu>
 
@@ -47,18 +48,18 @@
           <el-menu-item index="/checkin-pending">待确认签到</el-menu-item>
           <el-menu-item index="/practice">签到记录</el-menu-item>
           <el-menu-item index="/teacher-attendance">教师考勤</el-menu-item>
-          <el-menu-item index="/employee-duty">员工值班</el-menu-item>
+          <el-menu-item index="/employee-duty">员工考勤</el-menu-item>
         </el-sub-menu>
 
         <el-sub-menu index="group-feedback">
           <template #title>反馈评价</template>
-          <el-menu-item index="/teacher-reviews">学员评价</el-menu-item>
+          <el-menu-item index="/teacher-reviews">评价教师</el-menu-item>
           <el-menu-item index="/feedback">意见反馈</el-menu-item>
         </el-sub-menu>
 
         <el-sub-menu v-if="auth.isSuperAdmin" index="group-system">
           <template #title>系统设置</template>
-          <el-menu-item index="/schools">学校管理</el-menu-item>
+          <el-menu-item index="/schools">校区管理员</el-menu-item>
           <el-menu-item index="/admins">管理员</el-menu-item>
         </el-sub-menu>
       </el-menu>
@@ -68,6 +69,18 @@
       <el-header class="header">
         <div class="crumb">{{ route.meta.title || '管理后台' }}</div>
         <div class="right">
+          <template v-if="campusOptions.length > 1">
+            <span class="campus-label">校区</span>
+            <el-select
+              v-model="campusId"
+              placeholder="全部校区"
+              clearable
+              style="width: 200px"
+              @change="onCampusChange"
+            >
+              <el-option v-for="item in campusOptions" :key="item.id" :label="item.name" :value="item.id" />
+            </el-select>
+          </template>
           <span class="role-tag">{{ roleLabel(auth.profile?.role) }}</span>
           <span>{{ auth.profile?.name || auth.profile?.username || '管理员' }}</span>
           <el-button text type="primary" @click="logout">退出</el-button>
@@ -81,14 +94,23 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { storeToRefs } from 'pinia'
 import { useAuthStore } from '../stores/auth'
-import { roleLabel } from '../common/adminAccess'
+import { useCampusStore } from '../stores/campus'
+import { allowedCampuses, roleLabel } from '../common/adminAccess'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+const campusStore = useCampusStore()
+const { campusId } = storeToRefs(campusStore)
+const campusOptions = computed(() => allowedCampuses(auth.profile))
+
+function onCampusChange(value) {
+  campusStore.setCampus(value || '')
+}
 
 const defaultOpeneds = computed(() => {
   const path = route.path
@@ -106,6 +128,7 @@ const defaultOpeneds = computed(() => {
     path.startsWith('/users') ||
     path.startsWith('/cards') ||
     path.startsWith('/opportunities') ||
+    path.startsWith('/growth') ||
     path.startsWith('/applies')
   ) {
     return ['group-user']
@@ -131,12 +154,20 @@ onMounted(async () => {
   if (auth.token) {
     try {
       await auth.fetchMe()
+      campusStore.syncWithProfile(auth.profile)
     } catch {
       auth.logout()
       router.push('/login')
     }
   }
 })
+
+watch(
+  () => auth.profile,
+  (profile) => {
+    if (profile) campusStore.syncWithProfile(profile)
+  },
+)
 
 function logout() {
   auth.logout()
@@ -201,6 +232,10 @@ function logout() {
   align-items: center;
   gap: 8px;
   color: #555;
+}
+.campus-label {
+  font-size: 13px;
+  color: #6b6b76;
 }
 .role-tag {
   font-size: 12px;

@@ -1,6 +1,5 @@
 package com.forget.academy.service;
 
-import com.forget.academy.common.BizException;
 import com.forget.academy.entity.AppUser;
 import com.forget.academy.entity.Opportunity;
 import com.forget.academy.entity.OpportunityApply;
@@ -23,38 +22,30 @@ public class GrowthService {
     private final OpportunityRepo opportunityRepo;
     private final OpportunityApplyRepo applyRepo;
     private final AppUserRepo appUserRepo;
+    private final GrowthContentService growthContentService;
 
-    public static final Map<String, Map<String, String>> TRACK_META = Map.of(
-            "parttime", Map.of("line", "勤工俭学", "name", "兼职", "level", "T1"),
-            "intern", Map.of("line", "勤工俭学", "name", "实习", "level", "T2"),
-            "manage", Map.of("line", "勤工俭学", "name", "管理", "level", "T3"),
-            "show", Map.of("line", "舞蹈发展", "name", "演出", "level", "T1"),
-            "commercial", Map.of("line", "舞蹈发展", "name", "商演", "level", "T2"),
-            "teacher", Map.of("line", "舞蹈发展", "name", "教师", "level", "T3")
-    );
-
-    public Map<String, Object> overview(AppUser user) {
+    public Map<String, Object> overview(AppUser user, String campusId) {
         Map<String, Object> work = new LinkedHashMap<>();
         work.put("line", "勤工俭学");
         work.put("current", user.getWorkStage());
         work.put("level", user.getWorkLevel());
-        work.put("path", "兼职 → 实习 → 管理");
+        work.put("path", growthContentService.pathForLine(campusId, "work"));
         work.put("url", "/pages/growth/work");
 
         Map<String, Object> dance = new LinkedHashMap<>();
         dance.put("line", "舞蹈发展");
         dance.put("current", user.getDanceStage());
         dance.put("level", user.getDanceLevel());
-        dance.put("path", "演出 → 商演 → 教师");
+        dance.put("path", growthContentService.pathForLine(campusId, "dance"));
         dance.put("url", "/pages/growth/dance");
 
         return Map.of("work", work, "dance", dance);
     }
 
-    public List<Map<String, Object>> listByTrack(String trackKey, Long userId) {
+    public List<Map<String, Object>> listByTrack(String trackKey, Long userId, String campusId) {
         List<Map<String, Object>> list = new ArrayList<>();
         for (Opportunity item : opportunityRepo.findByTrackKeyAndEnabledTrueOrderByIdAsc(trackKey)) {
-            Map<String, Object> row = toOppMap(item);
+            Map<String, Object> row = toOppMap(item, campusId);
             if (userId != null) {
                 applyRepo.findByUserIdAndOpportunityId(userId, item.getId()).ifPresent(apply -> {
                     boolean active = !"cancelled".equals(apply.getStatus());
@@ -73,8 +64,8 @@ public class GrowthService {
     @Transactional
     public Map<String, Object> toggleApply(Long userId, Long opportunityId, String resumeUrl, String resumeName) {
         Opportunity opportunity = opportunityRepo.findById(opportunityId)
-                .orElseThrow(() -> new BizException("机会不存在"));
-        AppUser user = appUserRepo.findById(userId).orElseThrow(() -> new BizException("用户不存在"));
+                .orElseThrow(() -> new com.forget.academy.common.BizException("机会不存在"));
+        AppUser user = appUserRepo.findById(userId).orElseThrow(() -> new com.forget.academy.common.BizException("用户不存在"));
         var existing = applyRepo.findByUserIdAndOpportunityId(userId, opportunityId);
         if (existing.isPresent() && !"cancelled".equals(existing.get().getStatus())) {
             OpportunityApply apply = existing.get();
@@ -102,7 +93,7 @@ public class GrowthService {
         try {
             applyRepo.save(apply);
         } catch (DataIntegrityViolationException e) {
-            throw new BizException("请勿重复报名");
+            throw new com.forget.academy.common.BizException("请勿重复报名");
         }
         return Map.of("applied", true, "message", "报名已提交");
     }
@@ -115,7 +106,7 @@ public class GrowthService {
         apply.setResumeName(resumeName == null || resumeName.isBlank() ? "个人简历" : resumeName.trim());
     }
 
-    public Map<String, Object> toOppMap(Opportunity item) {
+    public Map<String, Object> toOppMap(Opportunity item, String campusId) {
         Map<String, Object> map = new LinkedHashMap<>();
         map.put("id", item.getId());
         map.put("code", item.getCode());
@@ -125,7 +116,8 @@ public class GrowthService {
         map.put("spots", item.getSpots());
         map.put("level", item.getLevel());
         map.put("summary", item.getSummary());
-        map.put("meta", TRACK_META.getOrDefault(item.getTrackKey(), Map.of("name", "成长")));
+        map.put("meta", growthContentService.trackMetaMap(campusId)
+                .getOrDefault(item.getTrackKey(), Map.of("name", "成长")));
         return map;
     }
 }

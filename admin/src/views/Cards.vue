@@ -73,10 +73,11 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import http from '../api/http'
 import ImageField from '../components/ImageField.vue'
+import { useCampusScope } from '../composables/useCampusScope'
 
 const list = ref([])
 const total = ref(0)
@@ -88,7 +89,7 @@ const visible = ref(false)
 const form = reactive({})
 
 function queryParams() {
-  const params = { keyword: keyword.value, page: page.value, size: size.value }
+  const params = { keyword: keyword.value, page: page.value, size: size.value, ...campusParams() }
   if (type.value) params.type = type.value
   return params
 }
@@ -127,7 +128,8 @@ async function remove(row) {
   if (list.value.length === 1 && page.value > 1) page.value -= 1
   await load()
 }
-onMounted(load)
+
+const { campusParams } = useCampusScope(load)
 </script>
 
 <style scoped>

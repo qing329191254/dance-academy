@@ -1,5 +1,7 @@
 <template>
-  <div class="page-card">
+  <div>
+    <OrgWideNotice />
+    <div class="page-card">
     <div class="toolbar">
       <div class="filters">
         <el-input
@@ -55,6 +57,7 @@
       @current-change="load"
       @size-change="search"
     />
+    </div>
   </div>
   <el-dialog v-model="visible" :title="form.id ? '编辑课程' : '新增课程'" width="640px">
     <el-form :model="form" label-width="96px">
@@ -123,6 +126,7 @@ import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import http from '../api/http'
 import ImageField from '../components/ImageField.vue'
+import OrgWideNotice from '../components/OrgWideNotice.vue'
 
 const moduleTypeOptions = [
   { value: 'product', label: '课程产品' },

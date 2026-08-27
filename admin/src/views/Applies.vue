@@ -15,8 +15,14 @@
     <el-table :data="list">
       <el-table-column prop="nickname" label="学员" width="120" align="left" header-align="left" />
       <el-table-column prop="title" label="机会" align="left" header-align="left" />
-      <el-table-column prop="trackKey" label="赛道" width="120" align="left" header-align="left" />
-      <el-table-column prop="status" label="状态" width="120" align="left" header-align="left" />
+      <el-table-column label="机会类型" width="100" align="left" header-align="left">
+        <template #default="{ row }">{{ trackLabelOf(row.trackKey) }}</template>
+      </el-table-column>
+      <el-table-column label="状态" width="100" align="left" header-align="left">
+        <template #default="{ row }">
+          <el-tag size="small" :type="applyStatusTagType(row.status)">{{ applyStatusLabelOf(row.status) }}</el-tag>
+        </template>
+      </el-table-column>
       <el-table-column label="简历" width="140" align="left" header-align="left">
         <template #default="{ row }">
           <a v-if="row.resumeUrl" class="resume-link" :href="mediaSrc(row.resumeUrl)" target="_blank" rel="noreferrer">
@@ -47,10 +53,12 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import http from '../api/http'
 import { mediaSrc } from '../utils/media'
+import { useCampusScope } from '../composables/useCampusScope'
+import { applyStatusLabelOf, applyStatusTagType, trackLabelOf } from '../common/growth'
 
 const list = ref([])
 const total = ref(0)
@@ -60,14 +68,18 @@ const keyword = ref('')
 const status = ref('')
 
 async function load() {
-  const res = await http.get('/admin/applies', { params: { keyword: keyword.value, status: status.value, page: page.value, size } })
+  const res = await http.get('/admin/applies', {
+    params: { keyword: keyword.value, status: status.value, page: page.value, size, ...campusParams() },
+  })
   list.value = res.data.list || []
   total.value = res.data.total || 0
 }
+
+const { campusParams } = useCampusScope(load)
+
 async function setStatus(row, next) {
   await http.put(`/admin/applies/${row.id}`, { status: next })
   ElMessage.success('已更新')
   await load()
 }
-onMounted(load)
 </script>

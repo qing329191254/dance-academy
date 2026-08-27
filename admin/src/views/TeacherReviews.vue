@@ -40,6 +40,7 @@
 import { onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import http from '../api/http'
+import { useCampusScope } from '../composables/useCampusScope'
 
 const list = ref([])
 const total = ref(0)
@@ -67,12 +68,14 @@ async function loadTeachers() {
 }
 
 async function load() {
-  const params = { keyword: keyword.value, page: page.value, size }
+  const params = { keyword: keyword.value, page: page.value, size, ...campusParams() }
   if (teacherId.value) params.teacherId = teacherId.value
   const res = await http.get('/admin/teacher-reviews', { params })
   list.value = res.data.list || []
   total.value = res.data.total || 0
 }
+
+const { campusParams } = useCampusScope(load)
 
 async function remove(row) {
   await ElMessageBox.confirm(`确认删除「${row.nickname || '学员'}」对 ${row.teacherName || '老师'} 的评价？`, '提示')
@@ -81,8 +84,5 @@ async function remove(row) {
   await load()
 }
 
-onMounted(async () => {
-  await loadTeachers()
-  await load()
-})
+onMounted(loadTeachers)
 </script>

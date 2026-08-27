@@ -49,8 +49,9 @@ function mapStudio(item) {
   }
 }
 
-export function getHome() {
-  return request({ url: '/home' }).then((data) => ({
+export function getHome(campusId) {
+  const query = campusId ? `?campusId=${encodeURIComponent(campusId)}` : ''
+  return request({ url: `/home${query}` }).then((data) => ({
     studio: mapStudio(data.studio),
     banners: (data.banners || []).map(mediaUrl),
     teachers: (data.teachers || []).map(mapTeacher),
@@ -58,8 +59,9 @@ export function getHome() {
   }))
 }
 
-export function getBrand() {
-  return request({ url: '/brand' }).then((data) => ({
+export function getBrand(campusId) {
+  const query = campusId ? `?campusId=${encodeURIComponent(campusId)}` : ''
+  return request({ url: `/brand${query}` }).then((data) => ({
     studio: mapStudio(data.studio),
     photos: (data.photos || []).map(mediaUrl),
   }))
@@ -81,8 +83,9 @@ export function getCourse(id) {
   return request({ url: `/courses/${id}` }).then(mapCourse)
 }
 
-export function getCourseIntro() {
-  return request({ url: '/course-intro' }).then((data) => ({
+export function getCourseIntro(campusId) {
+  const query = campusId ? `?campusId=${encodeURIComponent(campusId)}` : ''
+  return request({ url: `/course-intro${query}` }).then((data) => ({
     trial: mapCourseModule(data.trial),
     systemModules: (data.systemModules || []).map(mapCourseModule),
     systemLead: data.systemLead || '',
@@ -185,8 +188,9 @@ function readFileBase64(filePath) {
   })
 }
 
-export function getMine() {
-  return request({ url: '/mine' })
+export function getMine(campusId) {
+  const query = campusId ? `?campusId=${encodeURIComponent(campusId)}` : ''
+  return request({ url: `/mine${query}` })
 }
 
 export function getCards() {
@@ -241,12 +245,37 @@ export function checkin(payload) {
   return request({ url: '/checkin', method: 'POST', data: { payload } })
 }
 
+export function getGrowthContent(campusId) {
+  const query = campusId ? `?campusId=${encodeURIComponent(campusId)}` : ''
+  return request({ url: `/growth-content${query}` }).then((data) => ({
+    intro: data.intro || '',
+    levelTip: data.levelTip || '',
+    workLead: data.workLead || '',
+    danceLead: data.danceLead || '',
+    workModuleSummary: data.workModuleSummary || '',
+    danceModuleSummary: data.danceModuleSummary || '',
+    workTracks: (data.workTracks || []).map((item) => ({
+      ...item,
+      key: item.key || item.trackKey,
+      desc: item.desc || item.description || '',
+    })),
+    danceTracks: (data.danceTracks || []).map((item) => ({
+      ...item,
+      key: item.key || item.trackKey,
+      desc: item.desc || item.description || '',
+    })),
+    trackMeta: data.trackMeta || {},
+  }))
+}
+
 export function getGrowth() {
   return request({ url: '/growth' })
 }
 
-export function getOpportunities(trackKey) {
-  return request({ url: `/opportunities?trackKey=${encodeURIComponent(trackKey)}` }).then((list) =>
+export function getOpportunities(trackKey, campusId) {
+  const params = new URLSearchParams({ trackKey })
+  if (campusId) params.set('campusId', campusId)
+  return request({ url: `/opportunities?${params.toString()}` }).then((list) =>
     (list || []).map((item) => ({
       ...item,
       deadline: formatDate(item.deadline),

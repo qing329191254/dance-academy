@@ -49,4 +49,55 @@ public interface AppUserRepo extends JpaRepository<AppUser, Long> {
                 or u.openid like concat('%', :keyword, '%'))
             """)
     Page<AppUser> searchAll(@Param("keyword") String keyword, Pageable pageable);
+
+    @Query("""
+            select u from AppUser u
+            where (:keyword = ''
+                or u.nickname like concat('%', :keyword, '%')
+                or u.openid like concat('%', :keyword, '%'))
+              and (
+                :roleFilter = ''
+                or (:roleFilter = 'student' and (u.role is null or u.role = '' or lower(u.role) = 'student'))
+                or lower(u.role) = lower(:roleFilter)
+              )
+              and (
+                lower(coalesce(u.role, '')) = 'employee' and u.campusId in :campusIds
+                or (lower(coalesce(u.role, '')) = 'teacher' and u.teacherId in (
+                    select distinct s.teacherId from Schedule s
+                    where s.campusId in :campusIds and s.teacherId is not null))
+                or ((u.role is null or u.role = '' or lower(u.role) = 'student') and (
+                    exists (
+                        select 1 from Booking b join Schedule s on b.scheduleId = s.id
+                        where b.userId = u.id and s.campusId in :campusIds)
+                    or exists (
+                        select 1 from PracticeRecord p
+                        where p.userId = u.id and p.campusId in :campusIds)))
+              )
+            """)
+    Page<AppUser> searchInCampuses(@Param("keyword") String keyword,
+                                   @Param("roleFilter") String roleFilter,
+                                   @Param("campusIds") List<String> campusIds,
+                                   Pageable pageable);
+
+    @Query("""
+            select count(u) from AppUser u
+            where u.role is null or u.role = '' or lower(u.role) = 'student'
+            """)
+    long countStudents();
+
+    @Query("""
+            select count(distinct u.id) from AppUser u
+            where (u.role is null or u.role = '' or lower(u.role) = 'student')
+              and (
+                exists (
+                    select 1 from Booking b join Schedule s on b.scheduleId = s.id
+                    where b.userId = u.id and s.campusId in :campusIds
+                )
+                or exists (
+                    select 1 from PracticeRecord p
+                    where p.userId = u.id and p.campusId in :campusIds
+                )
+              )
+            """)
+    long countStudentsActiveInCampuses(@Param("campusIds") List<String> campusIds);
 }

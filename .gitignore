@@ -1,6 +1,7 @@
 .env
 **/.env.development.local
 **/uploads/
+*.tar
 admin/node_modules/
 admin/dist/
 server/target/

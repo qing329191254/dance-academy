@@ -5,7 +5,7 @@
         <el-input v-model="keyword" placeholder="搜索姓名/微信ID" style="width: 260px" clearable @keyup.enter="search" />
         <el-select v-model="roleFilter" placeholder="全部角色" clearable style="width: 140px" @change="onRoleChange">
           <el-option label="学员" value="student" />
-          <el-option label="老师" value="teacher" />
+          <el-option label="教师" value="teacher" />
           <el-option label="员工" value="employee" />
         </el-select>
         <el-button @click="search">查询</el-button>
@@ -67,7 +67,7 @@
       <el-form-item label="角色">
         <el-select v-model="form.role">
           <el-option label="学员" value="student" />
-          <el-option label="老师" value="teacher" />
+          <el-option label="教师" value="teacher" />
           <el-option label="员工" value="employee" />
         </el-select>
       </el-form-item>
@@ -131,8 +131,8 @@
         <el-form-item label="舞蹈阶段"><el-input v-model="form.danceStage" /></el-form-item>
         <el-form-item label="闭门分组">
           <el-select v-model="form.closedClassGroup" placeholder="普通学员" clearable>
-            <el-option label="高潜闭门" value="advanced" />
-            <el-option label="基础闭门" value="foundation" />
+            <el-option label="高阶闭门" value="advanced" />
+            <el-option label="零基础闭门" value="foundation" />
           </el-select>
         </el-form-item>
       </template>
@@ -150,14 +150,15 @@ import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import http from '../api/http'
 import { CAMPUSES, campusName } from '../common/campuses'
+import { useCampusScope } from '../composables/useCampusScope'
 
 const route = useRoute()
 const list = ref([])
 const total = ref(0)
 const page = ref(1)
 const size = 15
-const keyword = ref('')
-const roleFilter = ref('')
+const keyword = ref(route.query.keyword ? String(route.query.keyword) : '')
+const roleFilter = ref(route.query.role ? String(route.query.role) : '')
 const visible = ref(false)
 const teachers = ref([])
 const schools = ref([])
@@ -168,14 +169,14 @@ const schoolNames = computed(() => schools.value.map((item) => item.name))
 const dialogTitle = computed(() => {
   const map = {
     student: '编辑学员',
-    teacher: '编辑老师账号',
+    teacher: '编辑教师账号',
     employee: '编辑员工',
   }
   return map[form.role] || '编辑用户'
 })
 
 function roleLabel(role) {
-  const map = { student: '学员', teacher: '老师', employee: '员工' }
+  const map = { student: '学员', teacher: '教师', employee: '员工' }
   return map[role] || '学员'
 }
 
@@ -206,11 +207,14 @@ async function load() {
     role: roleFilter.value || '',
     page: page.value,
     size,
+    ...campusParams(),
   }
   const res = await http.get('/admin/users', { params })
   list.value = res.data.list || []
   total.value = res.data.total || 0
 }
+
+const { campusParams } = useCampusScope(load)
 
 function onRoleChange() {
   page.value = 1
@@ -240,7 +244,7 @@ async function copyText(text) {
 
 async function save() {
   if (form.role === 'teacher' && !form.teacherId) {
-    ElMessage.warning('请为老师账号绑定老师档案')
+    ElMessage.warning('请为教师账号绑定老师档案')
     return
   }
   if (form.role === 'employee' && !form.campusId) {
@@ -265,15 +269,8 @@ async function save() {
 }
 
 onMounted(async () => {
-  if (route.query.role) {
-    roleFilter.value = String(route.query.role)
-  }
-  if (route.query.keyword) {
-    keyword.value = String(route.query.keyword)
-  }
   await loadSchools()
   await loadTeachers()
-  await load()
 })
 </script>
 

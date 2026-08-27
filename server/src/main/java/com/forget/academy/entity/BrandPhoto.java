@@ -10,6 +10,8 @@ import lombok.Setter;
 @Entity
 @Table(name = "brand_photo")
 public class BrandPhoto extends BaseEntity {
+    /** 所属校区 */
+    private String campusId;
     private String imageUrl;
     private Integer sortOrder = 0;
 }

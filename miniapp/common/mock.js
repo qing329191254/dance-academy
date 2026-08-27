@@ -132,14 +132,14 @@ export const growthIntro =
 
 export const workTracks = [
   { key: 'parttime', name: '兼职', level: 'T1', desc: '活动执行、课程助理等校园兼职机会' },
-  { key: 'intern', name: '实习', level: 'T2', desc: '教务部、招新部、宣传部等正式实习岗位' },
+  { key: 'intern', name: '实习', level: 'T2', desc: '教务部、招新部、宣传部等正式实习岗位\n链接、内推外界资源的各类可靠岗位' },
   { key: 'manage', name: '管理', level: 'T3', desc: '单项目/分校区/品牌负责人等深度方向' },
 ]
 
 export const danceTracks = [
   { key: 'show', name: '演出', level: 'T1', desc: '校园表演、学期派对、MV拍摄等机会' },
-  { key: 'commercial', name: '商演', level: 'T2', desc: 'FG舞队:品牌活动、商演、邀约与大型赛事' },
-  { key: 'teacher', name: '教师', level: 'T3', desc: '教师考证、带班助教与正式任教' },
+  { key: 'commercial', name: '商演', level: 'T2', desc: 'FG舞队：商演、品牌邀约和各类赛事' },
+  { key: 'teacher', name: '教师', level: 'T3', desc: '教师考证（国家级）、带班助教与正式任教' },
 ]
 
 export const opportunities = {

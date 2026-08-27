@@ -132,11 +132,11 @@
 </template>
 
 <script setup>
-import { computed, ref, reactive } from 'vue'
+import { computed, ref, reactive, watch } from 'vue'
 import { onLoad, onShow, onUnload, onPageScroll } from '@dcloudio/uni-app'
 import { getHome, getCourseIntro } from '@/common/api.js'
 import { teachers as mockTeachers, studio as mockStudio, trialCourse as mockTrial } from '@/common/mock.js'
-import { currentCampus } from '@/common/campus.js'
+import { currentCampus, selectedCampusId } from '@/common/campus.js'
 import { preloadTabPagesAsync } from '@/common/preloadTabs.js'
 import { openPage, switchTabPage } from '@/common/navigate.js'
 import { applyPageBackground, PAGE_BG, SPLASH_BG } from '@/common/pageTheme.js'
@@ -215,6 +215,7 @@ onPageScroll((e) => {
 })
 
 onShow(() => {
+  loadHome()
   if (showSplash.value) {
     applyPageBackground(SPLASH_BG)
     uni.hideTabBar({ animation: false })
@@ -222,6 +223,10 @@ onShow(() => {
   }
   applyPageBackground(PAGE_BG)
   uni.showTabBar({ animation: false })
+})
+
+watch(selectedCampusId, () => {
+  loadHome()
 })
 
 onUnload(() => {
@@ -259,9 +264,10 @@ function resolveBannerPreviewUrls() {
 
 async function loadHome() {
   try {
+    const campusId = selectedCampusId.value
     const [data, intro] = await Promise.all([
-      getHome(),
-      getCourseIntro().catch(() => null),
+      getHome(campusId),
+      getCourseIntro(campusId).catch(() => null),
     ])
     banners.value = (data.banners || []).filter(Boolean)
     if (data.teachers?.length) teachers.value = data.teachers

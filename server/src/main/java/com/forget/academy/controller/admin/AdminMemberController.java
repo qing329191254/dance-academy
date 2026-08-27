@@ -14,6 +14,7 @@ import com.forget.academy.repo.OpportunityApplyRepo;
 import com.forget.academy.repo.UserCardRepo;
 import com.forget.academy.repo.UserCourseRepo;
 import com.forget.academy.service.AppAuthService;
+import com.forget.academy.service.AdminAccessService;
 import com.forget.academy.service.EmployeeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -47,16 +48,22 @@ public class AdminMemberController {
     private final OpportunityApplyRepo opportunityApplyRepo;
     private final EmployeeService employeeService;
     private final EmployeeProfileRepo employeeProfileRepo;
+    private final AdminAccessService adminAccessService;
 
     @GetMapping("/users")
     public ApiResponse<PageResult<Map<String, Object>>> users(@RequestParam(defaultValue = "") String keyword,
                                @RequestParam(defaultValue = "") String role,
+                               @RequestParam(required = false) String campusId,
                                @RequestParam(defaultValue = "1") int page,
                                @RequestParam(defaultValue = "20") int size) {
         var pageable = PageRequest.of(Math.max(page - 1, 0), size, Sort.by(Sort.Direction.DESC, "id"));
         String query = keyword == null ? "" : keyword.trim();
         String roleFilter = role == null ? "" : role.trim().toLowerCase();
-        var pageResult = switch (roleFilter) {
+        boolean campusFiltered = campusId != null && !campusId.isBlank();
+        var campuses = adminAccessService.resolveCampusScope(campusId);
+        var pageResult = campusFiltered
+                ? appUserRepo.searchInCampuses(query, roleFilter, campuses, pageable)
+                : switch (roleFilter) {
             case "" -> appUserRepo.searchAll(query, pageable);
             case "student" -> appUserRepo.searchStudents(query, pageable);
             default -> appUserRepo.searchByRole(query, roleFilter, pageable);
@@ -156,7 +163,8 @@ public class AdminMemberController {
                                 @RequestParam(required = false) Integer page,
                                 @RequestParam(required = false) Integer size,
                                 @RequestParam(defaultValue = "") String keyword,
-                                @RequestParam(defaultValue = "") String type) {
+                                @RequestParam(defaultValue = "") String type,
+                                @RequestParam(required = false) String campusId) {
         if (page == null) {
             List<UserCard> cards = userId != null
                     ? userCardRepo.findByUserIdOrderByIdDesc(userId)
@@ -168,7 +176,11 @@ public class AdminMemberController {
         var pageable = PageRequest.of(Math.max(page - 1, 0), pageSize, Sort.by(Sort.Direction.DESC, "id"));
         String query = keyword == null ? "" : keyword.trim();
         String cardType = type == null ? "" : type.trim();
-        var result = userCardRepo.search(query, userId, cardType, pageable);
+        boolean campusFiltered = campusId != null && !campusId.isBlank();
+        var campuses = adminAccessService.resolveCampusScope(campusId);
+        var result = campusFiltered
+                ? userCardRepo.searchInCampuses(query, userId, cardType, campuses, pageable)
+                : userCardRepo.search(query, userId, cardType, pageable);
         fillCardUsers(result.getContent());
         return ApiResponse.ok(PageResult.of(result));
     }

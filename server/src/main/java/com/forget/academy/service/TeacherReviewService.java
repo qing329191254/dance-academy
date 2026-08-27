@@ -9,6 +9,7 @@ import com.forget.academy.entity.TeacherReview;
 import com.forget.academy.repo.AppUserRepo;
 import com.forget.academy.repo.TeacherRepo;
 import com.forget.academy.repo.TeacherReviewRepo;
+import com.forget.academy.service.AdminAccessService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -26,6 +27,7 @@ public class TeacherReviewService {
     private final TeacherRepo teacherRepo;
     private final AppUserRepo appUserRepo;
     private final TeacherService teacherService;
+    private final AdminAccessService adminAccessService;
 
     @Transactional
     public TeacherReview submit(Long userId, Long teacherId, String content) {
@@ -70,8 +72,13 @@ public class TeacherReviewService {
         teacherReviewRepo.delete(review);
     }
 
-    public PageResult<Map<String, Object>> listForAdmin(Long teacherId, String keyword, int page, int size) {
+    public PageResult<Map<String, Object>> listForAdmin(Long teacherId, String keyword, String campusId, int page, int size) {
         String query = keyword == null ? "" : keyword.trim();
+        boolean campusFiltered = campusId != null && !campusId.isBlank();
+        if (campusFiltered) {
+            var campuses = adminAccessService.resolveCampusScope(campusId);
+            return toPageResult(teacherReviewRepo.searchInCampuses(teacherId, query, campuses, pageable(page, size)));
+        }
         return toPageResult(teacherReviewRepo.search(teacherId, query, pageable(page, size)));
     }
 

@@ -34,10 +34,10 @@ public final class ClosedClassGroup {
 
     public static String label(String code) {
         if (ADVANCED.equals(code)) {
-            return "高潜闭门";
+            return "高阶闭门";
         }
         if (FOUNDATION.equals(code)) {
-            return "基础闭门";
+            return "零基础闭门";
         }
         return "普通";
     }

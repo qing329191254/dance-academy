@@ -1,12 +1,13 @@
 package com.forget.academy.controller.admin;
 
 import com.forget.academy.common.ApiResponse;
+import com.forget.academy.common.BizException;
 import com.forget.academy.entity.Banner;
 import com.forget.academy.entity.BrandPhoto;
 import com.forget.academy.entity.Studio;
 import com.forget.academy.repo.BannerRepo;
 import com.forget.academy.repo.BrandPhotoRepo;
-import com.forget.academy.repo.StudioRepo;
+import com.forget.academy.service.StudioService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,51 +16,40 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/admin")
 @RequiredArgsConstructor
 public class AdminContentController {
-    private final StudioRepo studioRepo;
+    private final StudioService studioService;
     private final BannerRepo bannerRepo;
     private final BrandPhotoRepo brandPhotoRepo;
 
     @GetMapping("/studio")
-    public ApiResponse<Studio> getStudio() {
-        return ApiResponse.ok(studioRepo.findAll().stream().findFirst().orElseGet(Studio::new));
+    public ApiResponse<Studio> getStudio(@RequestParam String campusId) {
+        return ApiResponse.ok(studioService.getForAdmin(campusId));
     }
 
     @PutMapping("/studio")
-    public ApiResponse<Studio> saveStudio(@RequestBody Studio body) {
-        Studio studio = studioRepo.findAll().stream().findFirst().orElseGet(Studio::new);
-        studio.setName(body.getName());
-        studio.setLocation(body.getLocation());
-        studio.setCity(body.getCity());
-        studio.setAddress(body.getAddress());
-        studio.setLatitude(body.getLatitude());
-        studio.setLongitude(body.getLongitude());
-        studio.setBusinessHours(body.getBusinessHours());
-        studio.setPhone(body.getPhone());
-        studio.setPhoneDisplay(body.getPhoneDisplay());
-        studio.setLogo(body.getLogo());
-        studio.setSplashImage(body.getSplashImage());
-        studio.setIntro(body.getIntro());
-        studio.setBusiness(body.getBusiness());
-        studio.setSlogan(body.getSlogan());
-        studio.setCourseSystemLead(body.getCourseSystemLead());
-        studio.setCourseSystemHomeSummary(body.getCourseSystemHomeSummary());
-        return ApiResponse.ok(studioRepo.save(studio));
+    public ApiResponse<Studio> saveStudio(@RequestBody Studio body,
+                                          @RequestParam String campusId) {
+        return ApiResponse.ok(studioService.saveForAdmin(campusId, body));
     }
 
     @GetMapping("/banners")
-    public ApiResponse<?> banners() {
-        return ApiResponse.ok(bannerRepo.findAllByOrderBySortOrderAscIdAsc());
+    public ApiResponse<?> banners(@RequestParam String campusId) {
+        String resolved = studioService.requireAdminCampusId(campusId);
+        return ApiResponse.ok(bannerRepo.findByCampusIdOrderBySortOrderAscIdAsc(resolved));
     }
 
     @PostMapping("/banners")
-    public ApiResponse<Banner> createBanner(@RequestBody Banner body) {
+    public ApiResponse<Banner> createBanner(@RequestBody Banner body,
+                                            @RequestParam String campusId) {
+        String resolved = studioService.requireAdminCampusId(campusId);
         body.setId(null);
+        body.setCampusId(resolved);
         if (body.getEnabled() == null) {
             body.setEnabled(true);
         }
@@ -70,8 +60,11 @@ public class AdminContentController {
     }
 
     @PutMapping("/banners/{id}")
-    public ApiResponse<Banner> updateBanner(@PathVariable Long id, @RequestBody Banner body) {
-        Banner banner = bannerRepo.findById(id).orElseThrow();
+    public ApiResponse<Banner> updateBanner(@PathVariable Long id,
+                                            @RequestBody Banner body,
+                                            @RequestParam String campusId) {
+        String resolved = studioService.requireAdminCampusId(campusId);
+        Banner banner = requireBanner(id, resolved);
         banner.setImageUrl(body.getImageUrl());
         banner.setSortOrder(body.getSortOrder());
         banner.setEnabled(body.getEnabled());
@@ -79,19 +72,26 @@ public class AdminContentController {
     }
 
     @DeleteMapping("/banners/{id}")
-    public ApiResponse<Void> deleteBanner(@PathVariable Long id) {
+    public ApiResponse<Void> deleteBanner(@PathVariable Long id,
+                                          @RequestParam String campusId) {
+        String resolved = studioService.requireAdminCampusId(campusId);
+        requireBanner(id, resolved);
         bannerRepo.deleteById(id);
         return ApiResponse.ok();
     }
 
     @GetMapping("/brand-photos")
-    public ApiResponse<?> photos() {
-        return ApiResponse.ok(brandPhotoRepo.findAllByOrderBySortOrderAscIdAsc());
+    public ApiResponse<?> photos(@RequestParam String campusId) {
+        String resolved = studioService.requireAdminCampusId(campusId);
+        return ApiResponse.ok(brandPhotoRepo.findByCampusIdOrderBySortOrderAscIdAsc(resolved));
     }
 
     @PostMapping("/brand-photos")
-    public ApiResponse<BrandPhoto> createPhoto(@RequestBody BrandPhoto body) {
+    public ApiResponse<BrandPhoto> createPhoto(@RequestBody BrandPhoto body,
+                                               @RequestParam String campusId) {
+        String resolved = studioService.requireAdminCampusId(campusId);
         body.setId(null);
+        body.setCampusId(resolved);
         if (body.getSortOrder() == null) {
             body.setSortOrder(0);
         }
@@ -99,16 +99,38 @@ public class AdminContentController {
     }
 
     @PutMapping("/brand-photos/{id}")
-    public ApiResponse<BrandPhoto> updatePhoto(@PathVariable Long id, @RequestBody BrandPhoto body) {
-        BrandPhoto photo = brandPhotoRepo.findById(id).orElseThrow();
+    public ApiResponse<BrandPhoto> updatePhoto(@PathVariable Long id,
+                                               @RequestBody BrandPhoto body,
+                                               @RequestParam String campusId) {
+        String resolved = studioService.requireAdminCampusId(campusId);
+        BrandPhoto photo = requirePhoto(id, resolved);
         photo.setImageUrl(body.getImageUrl());
         photo.setSortOrder(body.getSortOrder());
         return ApiResponse.ok(brandPhotoRepo.save(photo));
     }
 
     @DeleteMapping("/brand-photos/{id}")
-    public ApiResponse<Void> deletePhoto(@PathVariable Long id) {
+    public ApiResponse<Void> deletePhoto(@PathVariable Long id,
+                                         @RequestParam String campusId) {
+        String resolved = studioService.requireAdminCampusId(campusId);
+        requirePhoto(id, resolved);
         brandPhotoRepo.deleteById(id);
         return ApiResponse.ok();
+    }
+
+    private Banner requireBanner(Long id, String campusId) {
+        Banner banner = bannerRepo.findById(id).orElseThrow(() -> new BizException("轮播不存在"));
+        if (banner.getCampusId() != null && !banner.getCampusId().equals(campusId)) {
+            throw new BizException("轮播不属于当前校区");
+        }
+        return banner;
+    }
+
+    private BrandPhoto requirePhoto(Long id, String campusId) {
+        BrandPhoto photo = brandPhotoRepo.findById(id).orElseThrow(() -> new BizException("照片不存在"));
+        if (photo.getCampusId() != null && !photo.getCampusId().equals(campusId)) {
+            throw new BizException("照片不属于当前校区");
+        }
+        return photo;
     }
 }

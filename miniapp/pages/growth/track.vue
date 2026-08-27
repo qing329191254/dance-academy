@@ -35,27 +35,51 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { getOpportunities } from '@/common/api.js'
-import { trackMeta } from '@/common/mock.js'
+import { getGrowthContent, getOpportunities } from '@/common/api.js'
+import { trackMeta as mockTrackMeta } from '@/common/mock.js'
 import { openPage } from '@/common/navigate.js'
+import { selectedCampusId } from '@/common/campus.js'
 
 const key = ref('parttime')
 const list = ref([])
-const meta = computed(() => trackMeta[key.value] || { line: '成长', name: '路径', level: 'T1' })
+const trackMetaMap = ref({ ...mockTrackMeta })
+const meta = computed(() => trackMetaMap.value[key.value] || { line: '成长', name: '路径', level: 'T1' })
 
-onLoad(async (query) => {
-  key.value = query.key || 'parttime'
-  uni.setNavigationBarTitle({
-    title: `${meta.value.name}机会`,
-  })
+async function loadMeta() {
   try {
-    list.value = (await getOpportunities(key.value)) || []
+    const content = await getGrowthContent(selectedCampusId.value)
+    if (content.trackMeta && Object.keys(content.trackMeta).length) {
+      trackMetaMap.value = content.trackMeta
+    }
+  } catch (e) {
+    // 保留 mock 兜底
+  }
+}
+
+async function loadList() {
+  try {
+    list.value = (await getOpportunities(key.value, selectedCampusId.value)) || []
   } catch (e) {
     list.value = []
   }
+}
+
+async function loadAll() {
+  await loadMeta()
+  uni.setNavigationBarTitle({
+    title: `${meta.value.name}机会`,
+  })
+  await loadList()
+}
+
+onLoad(async (query) => {
+  key.value = query.key || 'parttime'
+  await loadAll()
 })
+
+watch(selectedCampusId, loadAll)
 
 function open(id) {
   openPage(`/pages/growth/opportunity?id=${id}&key=${key.value}`)

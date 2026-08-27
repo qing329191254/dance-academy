@@ -252,7 +252,7 @@ public class CheckinPendingService {
 
     private static String roleLabel(String role) {
         return switch (normalizeRole(role)) {
-            case AppRoles.TEACHER -> "老师";
+            case AppRoles.TEACHER -> "教师";
             case AppRoles.EMPLOYEE -> "员工";
             default -> "学员";
         };

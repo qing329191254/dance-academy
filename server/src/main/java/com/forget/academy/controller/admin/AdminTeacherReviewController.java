@@ -22,9 +22,10 @@ public class AdminTeacherReviewController {
     @GetMapping("/teacher-reviews")
     public ApiResponse<PageResult<Map<String, Object>>> list(@RequestParam(required = false) Long teacherId,
                                                              @RequestParam(defaultValue = "") String keyword,
+                                                             @RequestParam(required = false) String campusId,
                                                              @RequestParam(defaultValue = "1") int page,
                                                              @RequestParam(defaultValue = "20") int size) {
-        return ApiResponse.ok(teacherReviewService.listForAdmin(teacherId, keyword, page, size));
+        return ApiResponse.ok(teacherReviewService.listForAdmin(teacherId, keyword, campusId, page, size));
     }
 
     @DeleteMapping("/teacher-reviews/{id}")

@@ -25,4 +25,19 @@ public interface TeacherRepo extends JpaRepository<Teacher, Long> {
     Page<Teacher> search(@Param("keyword") String keyword,
                          @Param("enabled") Boolean enabled,
                          Pageable pageable);
+
+    @Query("""
+            select distinct t from Teacher t
+            join Schedule s on s.teacherId = t.id
+            where s.campusId in :campusIds
+              and (:keyword = ''
+                or lower(t.name) like lower(concat('%', :keyword, '%'))
+                or lower(t.style) like lower(concat('%', :keyword, '%'))
+                or lower(coalesce(t.intro, '')) like lower(concat('%', :keyword, '%')))
+              and (:enabled is null or t.enabled = :enabled)
+            """)
+    Page<Teacher> searchInCampuses(@Param("keyword") String keyword,
+                                   @Param("enabled") Boolean enabled,
+                                   @Param("campusIds") List<String> campusIds,
+                                   Pageable pageable);
 }

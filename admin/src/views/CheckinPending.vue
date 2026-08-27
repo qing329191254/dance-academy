@@ -47,9 +47,10 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import http from '../api/http'
+import { useCampusScope } from '../composables/useCampusScope'
 
 const list = ref([])
 const total = ref(0)
@@ -78,12 +79,14 @@ function search() {
 }
 
 async function load() {
-  const params = { keyword: keyword.value, status: status.value, page: page.value, size }
+  const params = { keyword: keyword.value, status: status.value, page: page.value, size, ...campusParams() }
   if (classDate.value) params.classDate = classDate.value
   const res = await http.get('/admin/checkin-pending', { params })
   list.value = res.data.list || []
   total.value = res.data.total || 0
 }
+
+const { campusParams } = useCampusScope(load)
 
 async function confirm(row) {
   await http.post(`/admin/checkin-pending/${row.id}/confirm`)
@@ -98,7 +101,6 @@ async function reject(row) {
   await load()
 }
 
-onMounted(load)
 </script>
 
 <style scoped>

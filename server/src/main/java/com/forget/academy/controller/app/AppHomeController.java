@@ -11,12 +11,14 @@ import com.forget.academy.repo.BannerRepo;
 import com.forget.academy.repo.BrandPhotoRepo;
 import com.forget.academy.repo.CourseRepo;
 import com.forget.academy.repo.SchoolRepo;
-import com.forget.academy.repo.StudioRepo;
 import com.forget.academy.repo.TeacherRepo;
 import com.forget.academy.security.AuthContext;
 import com.forget.academy.service.BookingService;
 import com.forget.academy.service.CourseModuleMapper;
+import com.forget.academy.service.CampusContentService;
+import com.forget.academy.service.GrowthContentService;
 import com.forget.academy.service.LeaderboardService;
+import com.forget.academy.service.StudioService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -32,7 +34,7 @@ import java.util.Map;
 @RequestMapping("/api/app")
 @RequiredArgsConstructor
 public class AppHomeController {
-    private final StudioRepo studioRepo;
+    private final StudioService studioService;
     private final BannerRepo bannerRepo;
     private final BrandPhotoRepo brandPhotoRepo;
     private final TeacherRepo teacherRepo;
@@ -40,27 +42,31 @@ public class AppHomeController {
     private final BookingService bookingService;
     private final LeaderboardService leaderboardService;
     private final SchoolRepo schoolRepo;
+    private final GrowthContentService growthContentService;
+    private final CampusContentService campusContentService;
 
     @GetMapping("/home")
-    public ApiResponse<Map<String, Object>> home() {
+    public ApiResponse<Map<String, Object>> home(@RequestParam(required = false) String campusId) {
         Map<String, Object> data = new LinkedHashMap<>();
-        data.put("studio", studio());
-        data.put("banners", bannerRepo.findByEnabledTrueOrderBySortOrderAscIdAsc().stream().map(Banner::getImageUrl).toList());
+        data.put("studio", studio(campusId));
+        data.put("banners", bannerRepo.findByCampusIdAndEnabledTrueOrderBySortOrderAscIdAsc(
+                campusContentService.normalizeCampusId(campusId)).stream().map(Banner::getImageUrl).toList());
         data.put("teachers", teacherRepo.findByEnabledTrueOrderBySortOrderAscIdAsc());
         data.put("courses", productCourses());
         return ApiResponse.ok(data);
     }
 
     @GetMapping("/studio")
-    public ApiResponse<Studio> studioInfo() {
-        return ApiResponse.ok(studio());
+    public ApiResponse<Studio> studioInfo(@RequestParam(required = false) String campusId) {
+        return ApiResponse.ok(studio(campusId));
     }
 
     @GetMapping("/brand")
-    public ApiResponse<Map<String, Object>> brand() {
+    public ApiResponse<Map<String, Object>> brand(@RequestParam(required = false) String campusId) {
         Map<String, Object> data = new LinkedHashMap<>();
-        data.put("studio", studio());
-        data.put("photos", brandPhotoRepo.findAllByOrderBySortOrderAscIdAsc().stream().map(BrandPhoto::getImageUrl).toList());
+        data.put("studio", studio(campusId));
+        data.put("photos", brandPhotoRepo.findByCampusIdOrderBySortOrderAscIdAsc(
+                campusContentService.normalizeCampusId(campusId)).stream().map(BrandPhoto::getImageUrl).toList());
         return ApiResponse.ok(data);
     }
 
@@ -85,8 +91,8 @@ public class AppHomeController {
     }
 
     @GetMapping("/course-intro")
-    public ApiResponse<Map<String, Object>> courseIntro() {
-        Studio studio = studio();
+    public ApiResponse<Map<String, Object>> courseIntro(@RequestParam(required = false) String campusId) {
+        Studio studio = studio(campusId);
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("trial", courseRepo.findByModuleTypeAndEnabledTrueOrderBySortOrderAscIdAsc("trial").stream()
                 .findFirst()
@@ -106,6 +112,11 @@ public class AppHomeController {
                 .filter(course -> Boolean.TRUE.equals(course.getEnabled()))
                 .map(CourseModuleMapper::toModuleMap)
                 .orElse(null));
+    }
+
+    @GetMapping("/growth-content")
+    public ApiResponse<Map<String, Object>> growthContent(@RequestParam(required = false) String campusId) {
+        return ApiResponse.ok(growthContentService.content(campusId));
     }
 
     @GetMapping("/schedules")
@@ -128,8 +139,8 @@ public class AppHomeController {
         return ApiResponse.ok(schoolRepo.findByEnabledTrueOrderBySortOrderAscIdAsc());
     }
 
-    private Studio studio() {
-        return studioRepo.findAll().stream().findFirst().orElseGet(Studio::new);
+    private Studio studio(String campusId) {
+        return studioService.resolveForApp(campusId);
     }
 
     private List<Map<String, Object>> productCourses() {

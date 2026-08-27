@@ -115,12 +115,12 @@ public class AppUserController {
     }
 
     @GetMapping("/mine")
-    public ApiResponse<?> mine() {
+    public ApiResponse<?> mine(@RequestParam(required = false) String campusId) {
         Long userId = AuthContext.requireApp().id();
         AppUser user = appUserRepo.findById(userId).orElseThrow();
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("user", AppAuthService.toUserMap(user));
-        data.put("growth", growthService.overview(user));
+        data.put("growth", growthService.overview(user, campusId));
         data.put("cards", userCardRepo.findByUserIdOrderByIdDesc(userId));
         data.put("courses", userCourseRepo.findByUserIdOrderByIdDesc(userId));
         data.put("bookings", bookingService.myBookings(userId));
@@ -191,16 +191,17 @@ public class AppUserController {
     }
 
     @GetMapping("/growth")
-    public ApiResponse<?> growth() {
+    public ApiResponse<?> growth(@RequestParam(required = false) String campusId) {
         AppUser user = appUserRepo.findById(AuthContext.requireApp().id()).orElseThrow();
-        return ApiResponse.ok(growthService.overview(user));
+        return ApiResponse.ok(growthService.overview(user, campusId));
     }
 
     @GetMapping("/opportunities")
-    public ApiResponse<?> opportunities(@RequestParam String trackKey) {
+    public ApiResponse<?> opportunities(@RequestParam String trackKey,
+                                        @RequestParam(required = false) String campusId) {
         Long userId = AuthContext.get() != null && AuthContext.ROLE_APP.equals(AuthContext.get().role())
                 ? AuthContext.get().id() : null;
-        return ApiResponse.ok(growthService.listByTrack(trackKey, userId));
+        return ApiResponse.ok(growthService.listByTrack(trackKey, userId, campusId));
     }
 
     @PostMapping("/opportunities/{id}/apply")

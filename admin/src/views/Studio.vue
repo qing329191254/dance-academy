@@ -1,53 +1,85 @@
 <template>
-  <div class="page-card">
-    <el-form :model="form" label-width="108px" style="max-width: 720px">
-      <el-form-item label="机构名称"><el-input v-model="form.name" /></el-form-item>
-      <el-form-item label="位置描述"><el-input v-model="form.location" /></el-form-item>
-      <el-form-item label="城市"><el-input v-model="form.city" /></el-form-item>
-      <el-form-item label="地址"><el-input v-model="form.address" /></el-form-item>
-      <el-form-item label="营业时间"><el-input v-model="form.businessHours" /></el-form-item>
-      <el-form-item label="电话"><el-input v-model="form.phone" /></el-form-item>
-      <el-form-item label="电话展示"><el-input v-model="form.phoneDisplay" /></el-form-item>
-      <el-form-item label="Logo">
-        <ImageField v-model="form.logo" auto-persist @uploaded="onLogoUploaded" />
-      </el-form-item>
-      <el-form-item label="开屏图">
-        <ImageField v-model="form.splashImage" auto-persist @uploaded="onSplashUploaded" />
-      </el-form-item>
-      <el-form-item label="品牌介绍"><el-input v-model="form.intro" type="textarea" :rows="4" /></el-form-item>
-      <el-form-item label="业务"><el-input v-model="form.business" /></el-form-item>
-      <el-form-item label="理念"><el-input v-model="form.slogan" /></el-form-item>
-      <el-form-item label="体系引导语">
-        <el-input v-model="form.courseSystemLead" type="textarea" :rows="2" placeholder="课程体系列表页顶部说明" />
-      </el-form-item>
-      <el-form-item label="首页体系摘要">
-        <el-input v-model="form.courseSystemHomeSummary" placeholder="首页「课程体系介绍」卡片副标题" />
-      </el-form-item>
-      <el-form-item>
-        <el-button type="primary" :loading="saving" @click="save">保存</el-button>
-      </el-form-item>
-    </el-form>
+  <div>
+    <el-alert
+      v-if="!campusId"
+      type="warning"
+      :closable="false"
+      show-icon
+      class="campus-hint"
+      title="请先在顶部选择校区，再编辑该校区门店信息"
+    />
+    <el-alert
+      v-else
+      type="info"
+      :closable="false"
+      show-icon
+      class="campus-hint"
+      :title="`正在编辑：${campusLabel}`"
+    />
+    <div class="page-card">
+      <el-form :model="form" label-width="108px" style="max-width: 720px" :disabled="!campusId">
+        <el-form-item label="机构名称"><el-input v-model="form.name" /></el-form-item>
+        <el-form-item label="位置描述"><el-input v-model="form.location" /></el-form-item>
+        <el-form-item label="城市"><el-input v-model="form.city" /></el-form-item>
+        <el-form-item label="地址"><el-input v-model="form.address" /></el-form-item>
+        <el-form-item label="营业时间"><el-input v-model="form.businessHours" /></el-form-item>
+        <el-form-item label="电话"><el-input v-model="form.phone" /></el-form-item>
+        <el-form-item label="电话展示"><el-input v-model="form.phoneDisplay" /></el-form-item>
+        <el-form-item label="Logo">
+          <ImageField v-model="form.logo" auto-persist @uploaded="onLogoUploaded" />
+        </el-form-item>
+        <el-form-item label="开屏图">
+          <ImageField v-model="form.splashImage" auto-persist @uploaded="onSplashUploaded" />
+        </el-form-item>
+        <el-form-item label="品牌介绍"><el-input v-model="form.intro" type="textarea" :rows="4" /></el-form-item>
+        <el-form-item label="业务"><el-input v-model="form.business" /></el-form-item>
+        <el-form-item label="理念"><el-input v-model="form.slogan" /></el-form-item>
+        <el-form-item label="体系引导语">
+          <el-input v-model="form.courseSystemLead" type="textarea" :rows="2" placeholder="课程体系列表页顶部说明" />
+        </el-form-item>
+        <el-form-item label="首页体系摘要">
+          <el-input v-model="form.courseSystemHomeSummary" placeholder="首页「课程体系介绍」卡片副标题" />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" :loading="saving" :disabled="!campusId" @click="save">保存</el-button>
+        </el-form-item>
+      </el-form>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import http from '../api/http'
 import ImageField from '../components/ImageField.vue'
+import { campusName } from '../common/campuses'
+import { useCampusScope } from '../composables/useCampusScope'
 
 const form = reactive({})
 const saving = ref(false)
 
-onMounted(async () => {
-  const res = await http.get('/admin/studio')
+const campusLabel = computed(() => campusName(campusId.value))
+
+async function load() {
+  if (!campusId.value) {
+    Object.keys(form).forEach((key) => delete form[key])
+    return
+  }
+  const res = await http.get('/admin/studio', { params: { campusId: campusId.value } })
   Object.assign(form, res.data || {})
-})
+}
+
+const { campusId } = useCampusScope(load)
 
 async function save() {
+  if (!campusId.value) {
+    ElMessage.warning('请先选择顶部校区')
+    return
+  }
   saving.value = true
   try {
-    await http.put('/admin/studio', form)
+    await http.put('/admin/studio', form, { params: { campusId: campusId.value } })
     ElMessage.success('已保存')
   } finally {
     saving.value = false
@@ -64,3 +96,9 @@ async function onSplashUploaded(url) {
   await save()
 }
 </script>
+
+<style scoped>
+.campus-hint {
+  margin-bottom: 16px;
+}
+</style>

@@ -79,25 +79,27 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
-import { getOpportunities, toggleOpportunityApply, uploadResume } from '@/common/api.js'
-import { trackMeta } from '@/common/mock.js'
+import { getGrowthContent, getOpportunities, toggleOpportunityApply, uploadResume } from '@/common/api.js'
+import { trackMeta as mockTrackMeta } from '@/common/mock.js'
 import { ensureLogin } from '@/common/auth.js'
 import { showSuccess, showToast, showError } from '@/common/toast.js'
+import { selectedCampusId } from '@/common/campus.js'
 
 const key = ref('parttime')
 const id = ref('')
 const applied = ref(false)
 const item = ref(null)
-const meta = computed(() => trackMeta[key.value] || { name: '成长' })
+const trackMetaMap = ref({ ...mockTrackMeta })
+const meta = computed(() => trackMetaMap.value[key.value] || { name: '成长' })
 const resumeUrl = ref('')
 const resumeName = ref('')
 const uploading = ref(false)
 
 async function loadItem() {
   try {
-    const list = (await getOpportunities(key.value)) || []
+    const list = (await getOpportunities(key.value, selectedCampusId.value)) || []
     item.value = list.find((o) => String(o.id) === String(id.value)) || null
     applied.value = !!item.value?.applied
     if (applied.value) {
@@ -109,9 +111,27 @@ async function loadItem() {
   }
 }
 
-onLoad((query) => {
+onLoad(async (query) => {
   key.value = query.key || 'parttime'
   id.value = query.id || ''
+  try {
+    const content = await getGrowthContent(selectedCampusId.value)
+    if (content.trackMeta && Object.keys(content.trackMeta).length) {
+      trackMetaMap.value = content.trackMeta
+    }
+  } catch (e) {
+    // 保留 mock 兜底
+  }
+})
+
+watch(selectedCampusId, async () => {
+  try {
+    const content = await getGrowthContent(selectedCampusId.value)
+    if (content.trackMeta && Object.keys(content.trackMeta).length) {
+      trackMetaMap.value = content.trackMeta
+    }
+  } catch (e) {}
+  if (id.value) loadItem()
 })
 
 onShow(() => {

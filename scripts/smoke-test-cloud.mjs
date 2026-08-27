@@ -92,15 +92,17 @@ async function main() {
   await request('GET', '/api/admin/applies?page=1&size=5', { token, label: '报名审核' })
   await request('GET', '/api/admin/feedbacks?page=1&size=5', { token, label: '意见反馈' })
   await request('GET', '/api/admin/class-archives?page=1&size=5', { token, label: '课堂档案' })
-  await request('GET', '/api/admin/studio', { token, label: '门店信息' })
-  await request('GET', '/api/admin/banners', { token, label: '轮播图' })
+  await request('GET', '/api/admin/studio?campusId=shizishan', { token, label: '门店信息' })
+  await request('GET', '/api/admin/banners?campusId=shizishan', { token, label: '轮播图' })
 
   // 小程序公开接口
-  await request('GET', '/api/app/home', { label: '小程序首页' })
+  await request('GET', '/api/app/home?campusId=shizishan', { label: '小程序首页' })
   await request('GET', '/api/app/schools', { label: '小程序学校列表' })
   await request('GET', '/api/app/schedules?type=group', { label: '小程序课表' })
   await request('GET', '/api/app/teachers', { label: '小程序老师列表' })
   await request('GET', '/api/app/course-intro', { label: '小程序课程介绍' })
+  await request('GET', '/api/app/growth-content?campusId=shizishan', { label: '小程序成长文案' })
+  await request('GET', '/api/admin/growth-tracks?campusId=shizishan', { token, label: '成长赛道配置' })
 
   // 角色筛选逻辑校验
   const emp = results.find((r) => r.label === '小程序用户-员工筛选')

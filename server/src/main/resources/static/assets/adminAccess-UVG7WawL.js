@@ -1,1 +1,0 @@
-import{C as r}from"./campuses-CEIpdLW6.js";function u(n){if(!n)return[];if(n.superAdmin)return r;const t=n.campusIds||[];return r.filter(s=>t.includes(s.id))}function a(n){const t=u(n);return t.length===1?t[0].id:""}function i(n){return n==="SUPER_ADMIN"?"超级管理员":"管理员"}export{u as a,a as d,i as r};

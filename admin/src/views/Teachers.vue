@@ -75,12 +75,13 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import http from '../api/http'
 import ImageField from '../components/ImageField.vue'
 import { mediaSrc } from '../utils/media'
+import { useCampusScope } from '../composables/useCampusScope'
 
 const router = useRouter()
 const list = ref([])
@@ -97,6 +98,7 @@ function queryParams() {
     keyword: keyword.value,
     page: page.value,
     size: size.value,
+    ...campusParams(),
   }
   if (enabled.value === true || enabled.value === false) {
     params.enabled = enabled.value
@@ -148,7 +150,7 @@ async function remove(row) {
   await load()
 }
 
-onMounted(load)
+const { campusParams } = useCampusScope(load)
 </script>
 
 <style scoped>

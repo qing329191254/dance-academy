@@ -6,9 +6,6 @@
         <el-select v-model="teacherId" placeholder="老师" clearable style="width: 180px" @change="load">
           <el-option v-for="item in teachers" :key="item.id" :label="item.name" :value="item.id" />
         </el-select>
-        <el-select v-if="campusOptions.length > 1" v-model="campusId" placeholder="校区" clearable style="width: 200px" @change="search">
-          <el-option v-for="item in campusOptions" :key="item.id" :label="item.name" :value="item.id" />
-        </el-select>
         <el-button @click="load">查询</el-button>
       </div>
     </div>
@@ -57,22 +54,18 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import http from '../api/http'
 import { campusName } from '../common/campuses'
-import { allowedCampuses, defaultCampusId } from '../common/adminAccess'
-import { useAuthStore } from '../stores/auth'
+import { useCampusScope } from '../composables/useCampusScope'
 
-const auth = useAuthStore()
-const campusOptions = computed(() => allowedCampuses(auth.profile))
 const list = ref([])
 const total = ref(0)
 const page = ref(1)
 const size = 15
 const keyword = ref('')
 const teacherId = ref()
-const campusId = ref('')
 const teachers = ref([])
 const visible = ref(false)
 const form = reactive({})
@@ -121,16 +114,14 @@ async function load() {
     teacherId: teacherId.value,
     page: page.value,
     size,
+    ...campusParams(),
   }
-  if (campusId.value) params.campusId = campusId.value
   const res = await http.get('/admin/class-archives', { params })
   list.value = res.data.list || []
   total.value = res.data.total || 0
 }
 
-onMounted(async () => {
-  campusId.value = defaultCampusId(auth.profile)
-  await loadTeachers()
-  await load()
-})
+const { campusParams } = useCampusScope(load)
+
+onMounted(loadTeachers)
 </script>

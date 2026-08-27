@@ -12,7 +12,7 @@
       <view class="intro card">
         <text class="title">成长中心</text>
         <text class="muted body">{{ growthIntro }}</text>
-        <text class="tip">新学员默认享有 T1 权益，可通过年限、考核等途径升级至 T2 / T3。</text>
+        <text class="tip">{{ growthLevelTip }}</text>
       </view>
     </view>
 
@@ -40,11 +40,9 @@
             <view class="link-arrow" />
           </view>
         </view>
-        <text class="muted">兼职 → 实习 → 管理（T1-T3）</text>
+        <text class="muted">{{ workModuleSummary }}</text>
         <view class="chips">
-          <text class="chip">兼职 T1</text>
-          <text class="chip">实习 T2</text>
-          <text class="chip">管理 T3</text>
+          <text v-for="item in workTracks" :key="item.key" class="chip">{{ item.name }} {{ item.level }}</text>
         </view>
       </view>
 
@@ -56,11 +54,9 @@
             <view class="link-arrow" />
           </view>
         </view>
-        <text class="muted">演出 → 商演 → 教师（T1-T3）</text>
+        <text class="muted">{{ danceModuleSummary }}</text>
         <view class="chips">
-          <text class="chip">演出 T1</text>
-          <text class="chip">商演 T2</text>
-          <text class="chip">教师 T3</text>
+          <text v-for="item in danceTracks" :key="item.key" class="chip">{{ item.name }} {{ item.level }}</text>
         </view>
       </view>
     </view>
@@ -68,24 +64,45 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { growthIntro, userGrowthProfile } from '@/common/mock.js'
-import { getMine } from '@/common/api.js'
+import { getGrowthContent, getMine } from '@/common/api.js'
+import { growthIntro as mockIntro, userGrowthProfile, workTracks as mockWorkTracks, danceTracks as mockDanceTracks } from '@/common/mock.js'
 import { isLoggedIn, isProfileComplete } from '@/common/auth.js'
 import { openPage } from '@/common/navigate.js'
 import { getStatusBarHeight } from '@/common/statusBar.js'
+import { selectedCampusId } from '@/common/campus.js'
 
 const statusBarHeight = getStatusBarHeight()
+const growthIntro = ref(mockIntro)
+const growthLevelTip = ref('新学员默认享有 T1 权益，可通过年限、考核等途径升级至 T2 / T3。')
+const workModuleSummary = ref('兼职 → 实习 → 管理（T1-T3）')
+const danceModuleSummary = ref('演出 → 商演 → 教师（T1-T3）')
+const workTracks = ref([...mockWorkTracks])
+const danceTracks = ref([...mockDanceTracks])
 const growthTracks = ref([
   { key: 'work', ...userGrowthProfile.work },
   { key: 'dance', ...userGrowthProfile.dance },
 ])
 
-onShow(async () => {
+async function loadContent() {
+  try {
+    const data = await getGrowthContent(selectedCampusId.value)
+    if (data.intro) growthIntro.value = data.intro
+    if (data.levelTip) growthLevelTip.value = data.levelTip
+    if (data.workModuleSummary) workModuleSummary.value = data.workModuleSummary
+    if (data.danceModuleSummary) danceModuleSummary.value = data.danceModuleSummary
+    if (data.workTracks?.length) workTracks.value = data.workTracks
+    if (data.danceTracks?.length) danceTracks.value = data.danceTracks
+  } catch (e) {
+    // 保留 mock 兜底
+  }
+}
+
+async function loadMine() {
   if (!isLoggedIn() || !isProfileComplete()) return
   try {
-    const data = await getMine()
+    const data = await getMine(selectedCampusId.value)
     if (data.growth) {
       growthTracks.value = [
         { key: 'work', ...data.growth.work },
@@ -93,6 +110,15 @@ onShow(async () => {
       ]
     }
   } catch (e) {}
+}
+
+onShow(async () => {
+  await Promise.all([loadContent(), loadMine()])
+})
+
+watch(selectedCampusId, () => {
+  loadContent()
+  loadMine()
 })
 
 function go(url) {
@@ -118,28 +144,21 @@ function go(url) {
 
 .brand-title {
   position: absolute;
-  left: 0;
-  right: 0;
-  font-size: 32rpx;
-  font-weight: 700;
-  color: #ffffff;
-  text-align: center;
-  line-height: 44px;
-  padding: 0 200rpx;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 34rpx;
+  font-weight: 600;
   white-space: nowrap;
-  pointer-events: none;
 }
 
 .intro {
   display: flex;
   flex-direction: column;
-  gap: 18rpx;
+  gap: 16rpx;
 }
 
 .title {
-  font-size: 40rpx;
+  font-size: 36rpx;
   font-weight: 700;
 }
 
@@ -155,56 +174,53 @@ function go(url) {
 }
 
 .level-card {
-  padding: 24rpx 28rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
 }
 
 .level-title {
-  font-size: 26rpx;
-  font-weight: 700;
-  margin-bottom: 16rpx;
+  font-size: 30rpx;
+  font-weight: 600;
 }
 
 .level-row {
   display: flex;
-  gap: 16rpx;
+  gap: 20rpx;
 }
 
 .level-item {
   flex: 1;
-  min-width: 0;
-  background: #242424;
+  background: rgba(255, 255, 255, 0.04);
   border-radius: 16rpx;
-  padding: 16rpx 18rpx;
+  padding: 20rpx;
 }
 
 .level-line {
   display: block;
   font-size: 24rpx;
-  color: #9a9a9a;
-  margin-bottom: 8rpx;
+  color: #8a74e5;
+  margin-bottom: 12rpx;
 }
 
 .level-meta {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8rpx;
+  gap: 12rpx;
 }
 
 .level-stage {
   font-size: 28rpx;
   font-weight: 600;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .level-pill {
-  color: #8a74e5;
-  font-size: 26rpx;
-  font-weight: 700;
-  flex-shrink: 0;
+  font-size: 22rpx;
+  color: #d7d0ff;
+  background: rgba(138, 116, 229, 0.18);
+  padding: 6rpx 14rpx;
+  border-radius: 999rpx;
 }
 
 .module {
@@ -215,11 +231,11 @@ function go(url) {
 }
 
 .work {
-  background: linear-gradient(145deg, #1c1c1c, #242038);
+  background: linear-gradient(145deg, #1c1c1c, #2a2038);
 }
 
 .dance {
-  background: linear-gradient(145deg, #1c1c1c, #2a2030);
+  background: linear-gradient(145deg, #1c1c1c, #242038);
 }
 
 .module-top {
@@ -229,7 +245,7 @@ function go(url) {
 }
 
 .module-name {
-  font-size: 34rpx;
+  font-size: 36rpx;
   font-weight: 700;
 }
 
@@ -244,7 +260,6 @@ function go(url) {
   display: flex;
   gap: 12rpx;
   flex-wrap: wrap;
-  margin-top: 8rpx;
 }
 
 .chip {

@@ -61,13 +61,13 @@ public class AdminCheckinController {
             @RequestParam(defaultValue = "pending") String status,
             @RequestParam(required = false) String classDate,
             @RequestParam(required = false) Long scheduleId,
+            @RequestParam(required = false) String campusId,
             @RequestParam(defaultValue = "") String keyword,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size) {
-        var admin = adminAccessService.currentAdmin();
-        List<String> campusIds = adminAccessService.allowedCampusIds(admin);
+        var campuses = adminAccessService.resolveCampusScope(campusId);
         return ApiResponse.ok(checkinPendingService.listPending(
-                status, classDate, scheduleId, campusIds, keyword, page, size));
+                status, classDate, scheduleId, campuses, keyword, page, size));
     }
 
     @PostMapping("/checkin-pending/{id}/confirm")

@@ -11,25 +11,6 @@
       </view>
     </view>
 
-    <view v-if="profileReady && !isStaffUser" class="stats section">
-      <view class="stat" @click="goAuth('/pages/mine/cards')">
-        <text class="num">{{ myCards.length }}</text>
-        <text>卡包</text>
-      </view>
-      <view class="stat" @click="goAuth('/pages/mine/courses')">
-        <text class="num">{{ myCourses.length }}</text>
-        <text>课程</text>
-      </view>
-      <view class="stat" @click="goAuth('/pages/mine/bookings')">
-        <text class="num">{{ bookingCount }}</text>
-        <text>已约</text>
-      </view>
-      <view class="stat" @click="goAuth('/pages/mine/practice')">
-        <text class="num">{{ practiceCount }}</text>
-        <text>习练</text>
-      </view>
-    </view>
-
     <view v-if="profileReady && !isStaffUser" class="section">
       <view class="card growth-card">
         <view class="growth-head" @click="goGrowth">
@@ -128,6 +109,7 @@ import { computed, ref } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
 import { userGrowthProfile } from '@/common/mock.js'
 import { getMine } from '@/common/api.js'
+import { selectedCampusId } from '@/common/campus.js'
 import { startCheckInScan } from '@/common/checkin.js'
 import { getUser, isLoggedIn, logout, isProfileComplete, isTeacher, isEmployee, saveUser } from '@/common/auth.js'
 import { openPage, switchTabPage } from '@/common/navigate.js'
@@ -136,10 +118,6 @@ import { mediaUrl } from '@/common/config.js'
 
 const statusBarHeight = ref(44)
 const headerTop = ref(88)
-const practiceCount = ref(0)
-const bookingCount = ref(0)
-const myCards = ref([])
-const myCourses = ref([])
 const growthTracks = ref([
   { key: 'work', ...userGrowthProfile.work },
   { key: 'dance', ...userGrowthProfile.dance },
@@ -167,14 +145,14 @@ function refreshUser() {
   if (profileReady.value && user) {
     userAvatar.value = displayAvatar(user.avatar)
     if (isTeacherUser.value) {
-      userNickname.value = user.nickname || '老师'
-      userSubtitle.value = '已登录 · 教师端'
+      userNickname.value = user.nickname || '教师'
+      userSubtitle.value = '已登录 · 教师'
     } else if (isEmployeeUser.value) {
       userNickname.value = user.nickname || '员工'
-      userSubtitle.value = '已登录 · 员工端'
+      userSubtitle.value = '已登录 · 员工'
     } else {
       userNickname.value = user.nickname || '学员'
-      userSubtitle.value = '已登录 · 高校街舞学员'
+      userSubtitle.value = '已登录 · 学员'
     }
     return
   }
@@ -191,18 +169,10 @@ function refreshUser() {
 
 async function loadMine() {
   if (!profileReady.value) {
-    myCards.value = []
-    myCourses.value = []
-    bookingCount.value = 0
-    practiceCount.value = 0
     return
   }
   try {
-    const data = await getMine()
-    myCards.value = data.cards || []
-    myCourses.value = data.courses || []
-    bookingCount.value = (data.bookings || []).length
-    practiceCount.value = (data.practice || []).length
+    const data = await getMine(selectedCampusId.value)
     if (data.growth) {
       growthTracks.value = [
         { key: 'work', ...data.growth.work },
@@ -220,8 +190,7 @@ async function loadMine() {
       }
     }
   } catch (e) {
-    myCards.value = []
-    myCourses.value = []
+    // ignore
   }
 }
 
@@ -240,6 +209,13 @@ const studentServices = [
     needLogin: true,
   },
   {
+    name: '我的课程',
+    icon: '/static/mine/growth.png',
+    key: 'courses',
+    url: '/pages/mine/courses',
+    needLogin: true,
+  },
+  {
     name: '已约课程',
     icon: '/static/mine/booking.png',
     key: 'bookings',
@@ -251,6 +227,13 @@ const studentServices = [
     icon: '/static/mine/queue.svg',
     key: 'queue',
     url: '/pages/mine/queue',
+    needLogin: true,
+  },
+  {
+    name: '我的习练',
+    icon: '/static/mine/feedback.svg',
+    key: 'practice',
+    url: '/pages/mine/practice',
     needLogin: true,
   },
   {
@@ -404,18 +387,6 @@ function goLogin() {
   go('/pages/login/login')
 }
 
-function goAuth(url) {
-  if (!profileReady.value) {
-    if (loggedIn.value && !isProfileComplete()) {
-      goProfile()
-      return
-    }
-    goLogin()
-    return
-  }
-  go(url)
-}
-
 function onServiceClick(item) {
   if (item.needLogin && !profileReady.value) {
     if (loggedIn.value && !isProfileComplete()) {
@@ -507,28 +478,6 @@ function goLegal(type) {
 
 .login {
   font-size: 36rpx;
-  font-weight: 700;
-}
-
-.stats {
-  display: flex;
-  justify-content: space-between;
-  padding-top: 8rpx;
-}
-
-.stat {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8rpx;
-  font-size: 24rpx;
-  color: #fff;
-}
-
-.num {
-  font-size: 40rpx;
-  color: #8a74e5;
   font-weight: 700;
 }
 

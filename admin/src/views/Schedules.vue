@@ -15,9 +15,6 @@
           <el-option label="固定班" value="fixed" />
           <el-option label="私教" value="private" />
         </el-select>
-        <el-select v-model="campusId" placeholder="校区" clearable style="width: 200px" @change="search">
-          <el-option v-for="item in campusOptions" :key="item.id" :label="item.name" :value="item.id" />
-        </el-select>
         <el-select v-model="enabled" placeholder="启用状态" clearable style="width: 140px" @change="search">
           <el-option label="启用" :value="true" />
           <el-option label="停用" :value="false" />
@@ -103,8 +100,8 @@
       </el-form-item>
       <el-form-item v-if="form.type === 'group' && form.closedDoor" label="面向分组">
         <el-select v-model="form.audienceGroup" placeholder="选择分组">
-          <el-option label="高潜闭门（跳得好）" value="advanced" />
-          <el-option label="基础闭门（需补基础）" value="foundation" />
+          <el-option label="高阶闭门" value="advanced" />
+          <el-option label="零基础闭门" value="foundation" />
         </el-select>
       </el-form-item>
       <el-form-item label="星级"><el-input-number v-model="form.stars" :min="1" :max="5" /></el-form-item>
@@ -143,8 +140,9 @@ import QRCode from 'qrcode'
 import http from '../api/http'
 import { campusName } from '../common/campuses'
 import { closedClassGroupLabel } from '../common/closedClass'
-import { allowedCampuses, defaultCampusId } from '../common/adminAccess'
+import { allowedCampuses } from '../common/adminAccess'
 import { useAuthStore } from '../stores/auth'
+import { useCampusScope } from '../composables/useCampusScope'
 
 const auth = useAuthStore()
 const campusOptions = computed(() => allowedCampuses(auth.profile))
@@ -158,7 +156,6 @@ const page = ref(1)
 const size = ref(15)
 const keyword = ref('')
 const type = ref('')
-const campusId = ref('')
 const enabled = ref()
 const teachers = ref([])
 const visible = ref(false)
@@ -172,9 +169,8 @@ const form = reactive({})
 const original = reactive({ timeText: '', weekday: null, type: '' })
 
 function queryParams() {
-  const params = { keyword: keyword.value, page: page.value, size: size.value }
+  const params = { keyword: keyword.value, page: page.value, size: size.value, ...campusParams() }
   if (type.value) params.type = type.value
-  if (campusId.value) params.campusId = campusId.value
   if (enabled.value === true || enabled.value === false) params.enabled = enabled.value
   return params
 }
@@ -193,8 +189,10 @@ function search() {
   page.value = 1
   return load()
 }
+const { campusId, campusParams } = useCampusScope(load)
+
 function edit(row) {
-  const fallbackCampus = defaultCampusId(auth.profile) || campusOptions.value[0]?.id || 'shizishan'
+  const fallbackCampus = campusId.value || campusOptions.value[0]?.id || 'shizishan'
   Object.assign(form, {
     id: null, type: 'group', campusId: fallbackCampus, name: '', timeText: '', teacherId: null, teacherName: '',
     room: '', weekday: 1, stars: 3, capacity: 20, status: '可预约', sortOrder: 0, enabled: true,
@@ -325,11 +323,7 @@ function downloadQr() {
   link.download = `签到码-${safe}.png`
   link.click()
 }
-onMounted(() => {
-  campusId.value = defaultCampusId(auth.profile)
-  loadTeachers()
-  load()
-})
+onMounted(loadTeachers)
 onUnmounted(stopQrRefresh)
 </script>
 

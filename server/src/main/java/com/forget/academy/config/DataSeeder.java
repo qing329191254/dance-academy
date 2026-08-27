@@ -4,7 +4,9 @@ import com.forget.academy.common.CampusIds;
 import com.forget.academy.common.CourseModuleTypes;
 import com.forget.academy.entity.AdminUser;
 import com.forget.academy.entity.AppUser;
+import com.forget.academy.entity.ClassArchive;
 import com.forget.academy.entity.Course;
+import com.forget.academy.entity.GrowthTrack;
 import com.forget.academy.entity.Opportunity;
 import com.forget.academy.entity.Schedule;
 import com.forget.academy.entity.School;
@@ -16,13 +18,17 @@ import com.forget.academy.repo.AppUserRepo;
 import com.forget.academy.repo.BannerRepo;
 import com.forget.academy.repo.BookingRepo;
 import com.forget.academy.repo.BrandPhotoRepo;
+import com.forget.academy.repo.ClassArchiveRepo;
 import com.forget.academy.repo.CourseRepo;
+import com.forget.academy.repo.GrowthTrackRepo;
 import com.forget.academy.repo.OpportunityApplyRepo;
 import com.forget.academy.repo.OpportunityRepo;
 import com.forget.academy.repo.PracticeRecordRepo;
 import com.forget.academy.repo.ScheduleRepo;
 import com.forget.academy.repo.SchoolRepo;
 import com.forget.academy.repo.StudioRepo;
+import com.forget.academy.service.CampusContentService;
+import com.forget.academy.service.StudioService;
 import com.forget.academy.repo.TeacherRepo;
 import com.forget.academy.repo.UserCardRepo;
 import com.forget.academy.repo.UserCourseRepo;
@@ -34,6 +40,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDate;
 
 @Component
@@ -41,11 +48,15 @@ import java.time.LocalDate;
 public class DataSeeder implements ApplicationRunner {
     private final AdminUserRepo adminUserRepo;
     private final StudioRepo studioRepo;
+    private final StudioService studioService;
+    private final CampusContentService campusContentService;
     private final BannerRepo bannerRepo;
     private final BrandPhotoRepo brandPhotoRepo;
     private final TeacherRepo teacherRepo;
     private final CourseRepo courseRepo;
+    private final GrowthTrackRepo growthTrackRepo;
     private final ScheduleRepo scheduleRepo;
+    private final ClassArchiveRepo classArchiveRepo;
     private final OpportunityRepo opportunityRepo;
     private final AppUserRepo appUserRepo;
     private final UserCardRepo userCardRepo;
@@ -67,6 +78,7 @@ public class DataSeeder implements ApplicationRunner {
         seedAdmin();
         seedSchools();
         seedCourseIntroModules();
+        seedGrowthTracks();
         removeDemoUsers();
         clearPackagedMedia();
         studioRepo.findAll().stream().findFirst().ifPresent(studio -> {
@@ -91,16 +103,45 @@ public class DataSeeder implements ApplicationRunner {
                 studio.setCourseSystemHomeSummary("精品固定班 · 次通卡 · 私教 · 定制赛事商演");
                 changed = true;
             }
+            if (studio.getGrowthIntro() == null || studio.getGrowthIntro().isBlank()) {
+                studio.setGrowthIntro("FOR-GET不仅是上课，我们把兼职、实习、就业演出、商演、考证等多样化资源嫁接给大家，用舞蹈发展、勤工俭学两条成长线，帮你从学员走向舞台与职场，愿你的大学，因为有FG而更好。");
+                changed = true;
+            }
+            if (studio.getGrowthLevelTip() == null || studio.getGrowthLevelTip().isBlank()) {
+                studio.setGrowthLevelTip("新学员默认享有 T1 权益，可通过年限、考核等途径升级至 T2 / T3。");
+                changed = true;
+            }
+            if (studio.getWorkLead() == null || studio.getWorkLead().isBlank()) {
+                studio.setWorkLead("勤工俭学成长线：从校园兼职到实习，再到管理角色。点击进入可查看近期机会并报名。");
+                changed = true;
+            }
+            if (studio.getDanceLead() == null || studio.getDanceLead().isBlank()) {
+                studio.setDanceLead("舞蹈发展成长线：演出练胆 → 商演实践 → 教师考证与任教。点击进入可查看近期机会并报名。");
+                changed = true;
+            }
+            if (studio.getWorkModuleSummary() == null || studio.getWorkModuleSummary().isBlank()) {
+                studio.setWorkModuleSummary("兼职 → 实习 → 管理（T1-T3）");
+                changed = true;
+            }
+            if (studio.getDanceModuleSummary() == null || studio.getDanceModuleSummary().isBlank()) {
+                studio.setDanceModuleSummary("演出 → 商演 → 教师（T1-T3）");
+                changed = true;
+            }
             if (changed) {
                 studioRepo.save(studio);
             }
         });
         fillScheduleCampus();
         fillPracticeCampus();
-        if (studioRepo.count() > 0) {
+        if (studioRepo.count() == 0) {
+            seedStudio();
+        }
+        studioService.ensureCampusRecords();
+        campusContentService.ensureCampusRecords();
+        seedClassArchives();
+        if (teacherRepo.count() > 0) {
             return;
         }
-        seedStudio();
         seedTeachers();
         seedCourses();
         seedSchedules();
@@ -209,6 +250,7 @@ public class DataSeeder implements ApplicationRunner {
 
     private void seedStudio() {
         Studio studio = new Studio();
+        studio.setCampusId(CampusIds.DEFAULT);
         studio.setName("高校FOR-GET舞室");
         studio.setLocation("四川成都 · 高校FOR-GET舞室");
         studio.setCity("四川成都");
@@ -224,6 +266,12 @@ public class DataSeeder implements ApplicationRunner {
         studio.setSlogan("DANCE UP · BREAK FREE");
         studio.setCourseSystemLead("按学习方式和目标选择：固定班、次通卡、私教，或定制赛事与商演。");
         studio.setCourseSystemHomeSummary("精品固定班 · 次通卡 · 私教 · 定制赛事商演");
+        studio.setGrowthIntro("FOR-GET不仅是上课，我们把兼职、实习、就业演出、商演、考证等多样化资源嫁接给大家，用舞蹈发展、勤工俭学两条成长线，帮你从学员走向舞台与职场，愿你的大学，因为有FG而更好。");
+        studio.setGrowthLevelTip("新学员默认享有 T1 权益，可通过年限、考核等途径升级至 T2 / T3。");
+        studio.setWorkLead("勤工俭学成长线：从校园兼职到实习，再到管理角色。点击进入可查看近期机会并报名。");
+        studio.setDanceLead("舞蹈发展成长线：演出练胆 → 商演实践 → 教师考证与任教。点击进入可查看近期机会并报名。");
+        studio.setWorkModuleSummary("兼职 → 实习 → 管理（T1-T3）");
+        studio.setDanceModuleSummary("演出 → 商演 → 教师（T1-T3）");
         studioRepo.save(studio);
     }
 
@@ -300,6 +348,39 @@ public class DataSeeder implements ApplicationRunner {
         course.setSortOrder(sort);
         course.setEnabled(true);
         courseRepo.save(course);
+    }
+
+    private void seedGrowthTracks() {
+        if (growthTrackRepo.count() > 0) {
+            return;
+        }
+        saveGrowthTrack("parttime", "work", "勤工俭学", "兼职", "T1",
+                "活动执行、课程助理等校园兼职机会", 1);
+        saveGrowthTrack("intern", "work", "勤工俭学", "实习", "T2",
+                "教务部、招新部、宣传部等正式实习岗位\n链接、内推外界资源的各类可靠岗位", 2);
+        saveGrowthTrack("manage", "work", "勤工俭学", "管理", "T3",
+                "单项目/分校区/品牌负责人等深度方向", 3);
+        saveGrowthTrack("show", "dance", "舞蹈发展", "演出", "T1",
+                "校园表演、学期派对、MV拍摄等机会", 1);
+        saveGrowthTrack("commercial", "dance", "舞蹈发展", "商演", "T2",
+                "FG舞队：商演、品牌邀约和各类赛事", 2);
+        saveGrowthTrack("teacher", "dance", "舞蹈发展", "教师", "T3",
+                "教师考证（国家级）、带班助教与正式任教", 3);
+    }
+
+    private void saveGrowthTrack(String trackKey, String lineKey, String lineName, String name, String level,
+                                 String description, int sort) {
+        GrowthTrack track = new GrowthTrack();
+        track.setCampusId(CampusIds.DEFAULT);
+        track.setTrackKey(trackKey);
+        track.setLineKey(lineKey);
+        track.setLineName(lineName);
+        track.setName(name);
+        track.setLevel(level);
+        track.setDescription(description);
+        track.setSortOrder(sort);
+        track.setEnabled(true);
+        growthTrackRepo.save(track);
     }
 
     private void saveCourse(String name, int price, String level, String desc, int sort) {
@@ -383,6 +464,39 @@ public class DataSeeder implements ApplicationRunner {
                 scheduleRepo.save(schedule);
             }
         });
+    }
+
+    /** 插入一条课堂档案示例，便于后台预览续报率等字段 */
+    private void seedClassArchives() {
+        Schedule schedule = scheduleRepo.findAll().stream()
+                .filter(item -> "group".equals(item.getType()) && item.getTeacherId() != null)
+                .findFirst()
+                .orElse(null);
+        if (schedule == null) {
+            return;
+        }
+        String classDate = LocalDate.now().minusDays(3).toString();
+        if (classArchiveRepo.findByTeacherIdAndScheduleIdAndClassDate(
+                schedule.getTeacherId(), schedule.getId(), classDate).isPresent()) {
+            return;
+        }
+        ClassArchive archive = new ClassArchive();
+        archive.setTeacherId(schedule.getTeacherId());
+        archive.setScheduleId(schedule.getId());
+        archive.setClassDate(classDate);
+        archive.setName(schedule.getName());
+        archive.setTimeText(schedule.getTimeText());
+        archive.setRoom(schedule.getRoom());
+        archive.setCampusId(schedule.getCampusId() == null || schedule.getCampusId().isBlank()
+                ? CampusIds.DEFAULT : schedule.getCampusId());
+        archive.setDuration("75分钟");
+        archive.setTeacherCheckedAt(Instant.now());
+        archive.setBookedCount(12);
+        archive.setCheckedInCount(10);
+        archive.setRenewalRate("85%");
+        archive.setStudentFeedback("学员整体节奏跟得上，续报意愿较高。");
+        archive.setNote("示例数据，便于后台预览课堂档案。");
+        classArchiveRepo.save(archive);
     }
 
     private void seedOpportunities() {

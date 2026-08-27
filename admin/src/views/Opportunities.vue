@@ -1,5 +1,7 @@
 <template>
-  <div class="page-card">
+  <div>
+    <OrgWideNotice />
+    <div class="page-card">
     <div class="toolbar">
       <div class="filters">
         <el-input
@@ -52,6 +54,7 @@
       @current-change="load"
       @size-change="search"
     />
+    </div>
   </div>
   <el-dialog v-model="visible" :title="form.id ? '编辑机会' : '新增机会'" width="560px">
     <el-form :model="form" label-width="90px">
@@ -82,11 +85,8 @@
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import http from '../api/http'
-
-const trackLabel = {
-  parttime: '兼职', intern: '实习', manage: '管理',
-  show: '演出', commercial: '商演', teacher: '教师',
-}
+import OrgWideNotice from '../components/OrgWideNotice.vue'
+import { trackLabel } from '../common/growth'
 const list = ref([])
 const total = ref(0)
 const page = ref(1)

@@ -2,6 +2,7 @@ package com.forget.academy.controller.admin;
 
 import com.forget.academy.common.ApiResponse;
 import com.forget.academy.common.BizException;
+import com.forget.academy.common.CampusIds;
 import com.forget.academy.common.CourseModuleTypes;
 import com.forget.academy.common.ClosedClassGroup;
 import com.forget.academy.common.PageResult;
@@ -52,7 +53,8 @@ public class AdminCatalogController {
     public ApiResponse<?> teachers(@RequestParam(required = false) Integer page,
                                    @RequestParam(required = false) Integer size,
                                    @RequestParam(defaultValue = "") String keyword,
-                                   @RequestParam(required = false) Boolean enabled) {
+                                   @RequestParam(required = false) Boolean enabled,
+                                   @RequestParam(required = false) String campusId) {
         if (page == null) {
             return ApiResponse.ok(teacherRepo.findAllByOrderBySortOrderAscIdAsc());
         }
@@ -62,7 +64,11 @@ public class AdminCatalogController {
                 pageSize,
                 Sort.by("sortOrder").ascending().and(Sort.by("id").ascending()));
         String query = keyword == null ? "" : keyword.trim();
-        var pageResult = teacherRepo.search(query, enabled, pageable);
+        boolean campusFiltered = campusId != null && !campusId.isBlank();
+        var campuses = adminAccessService.resolveCampusScope(campusId);
+        var pageResult = campusFiltered
+                ? teacherRepo.searchInCampuses(query, enabled, campuses, pageable)
+                : teacherRepo.search(query, enabled, pageable);
         return ApiResponse.ok(new PageResult<>(
                 enrichTeachers(pageResult.getContent()),
                 pageResult.getTotalElements(),
@@ -291,7 +297,7 @@ public class AdminCatalogController {
         }
         String audience = schedule.getAudienceGroup() == null ? "" : schedule.getAudienceGroup().trim();
         if (!ClosedClassGroup.isValid(audience)) {
-            throw new BizException("闭门课需选择面向分组：高潜闭门或基础闭门");
+            throw new BizException("闭门课需选择面向分组：高阶闭门或零基础闭门");
         }
         schedule.setAudienceGroup(audience);
     }

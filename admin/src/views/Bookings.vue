@@ -9,9 +9,6 @@
           <el-option label="已完成" value="已完成" />
           <el-option label="已取消" value="已取消" />
         </el-select>
-        <el-select v-if="campusOptions.length > 1" v-model="campusId" placeholder="校区" clearable style="width: 200px" @change="search">
-          <el-option v-for="item in campusOptions" :key="item.id" :label="item.name" :value="item.id" />
-        </el-select>
         <el-button @click="search">查询</el-button>
       </div>
       <el-button type="primary" @click="openCreate">帮学员预约</el-button>
@@ -135,12 +132,13 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import http from '../api/http'
-import { allowedCampuses, defaultCampusId } from '../common/adminAccess'
+import { allowedCampuses } from '../common/adminAccess'
 import { campusName } from '../common/campuses'
 import { useAuthStore } from '../stores/auth'
+import { useCampusScope } from '../composables/useCampusScope'
 
 const auth = useAuthStore()
 const campusOptions = computed(() => allowedCampuses(auth.profile))
@@ -150,8 +148,6 @@ const page = ref(1)
 const size = 15
 const keyword = ref('')
 const status = ref('')
-const campusId = ref('')
-
 const createVisible = ref(false)
 const creating = ref(false)
 const userLoading = ref(false)
@@ -185,12 +181,13 @@ function search() {
 }
 
 async function load() {
-  const params = { keyword: keyword.value, status: status.value, page: page.value, size }
-  if (campusId.value) params.campusId = campusId.value
+  const params = { keyword: keyword.value, status: status.value, page: page.value, size, ...campusParams() }
   const res = await http.get('/admin/bookings', { params })
   list.value = res.data.list || []
   total.value = res.data.total || 0
 }
+
+const { campusId, campusParams } = useCampusScope(load)
 
 async function searchUsers(query) {
   if (!query) {
@@ -226,7 +223,7 @@ function onScheduleChange() {
 function openCreate() {
   Object.assign(createForm, {
     userId: null,
-    campusId: campusId.value || defaultCampusId(auth.profile) || campusOptions.value[0]?.id || '',
+    campusId: campusId.value || campusOptions.value[0]?.id || '',
     scheduleId: null,
     classDate: '',
   })
@@ -295,10 +292,6 @@ async function manualCheckin(row) {
   await load()
 }
 
-onMounted(() => {
-  campusId.value = defaultCampusId(auth.profile)
-  load()
-})
 </script>
 
 <style scoped>

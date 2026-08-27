@@ -72,11 +72,12 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
+import { reactive, ref, watch } from 'vue'
+import { onLoad, onShow } from '@dcloudio/uni-app'
 import { getBrand } from '@/common/api.js'
 import { brandPhotos as mockPhotos, studio as mockStudio } from '@/common/mock.js'
 import { mediaUrl } from '@/common/config.js'
+import { selectedCampusId } from '@/common/campus.js'
 
 const studio = reactive({ ...mockStudio })
 const brandPhotos = ref([...mockPhotos])
@@ -84,9 +85,11 @@ const intro = ref('深耕高校街舞文化的俱乐部品牌。课堂之外，�
 const business = ref('团课 / 固定班 / 私教课 / 成长中心')
 const slogan = ref('DANCE UP · BREAK FREE')
 
-onLoad(async () => {
+const photoPreviewUrls = ref([...brandPhotos.value])
+
+async function loadBrand() {
   try {
-    const data = await getBrand()
+    const data = await getBrand(selectedCampusId.value)
     if (data.studio) Object.assign(studio, data.studio)
     brandPhotos.value = (data.photos || []).map(mediaUrl).filter(Boolean)
     if (data.studio?.intro) intro.value = data.studio.intro
@@ -94,7 +97,11 @@ onLoad(async () => {
     if (data.studio?.slogan) slogan.value = data.studio.slogan
     photoPreviewUrls.value = [...brandPhotos.value]
   } catch (e) {}
-})
+}
+
+onLoad(loadBrand)
+onShow(loadBrand)
+watch(selectedCampusId, loadBrand)
 
 function callStudio() {
   uni.makePhoneCall({
@@ -130,7 +137,6 @@ function openLocation() {
   })
 }
 
-const photoPreviewUrls = ref([...brandPhotos.value])
 
 function previewPhoto(index) {
   uni.previewImage({
