@@ -11,13 +11,13 @@
         <text class="body muted">{{ item.desc }}</text>
       </view>
     </view>
-    <view class="section">
+    <view v-if="item.highlights?.length" class="section">
       <view class="card">
         <text class="label">适合谁</text>
         <text v-for="point in item.highlights" :key="point" class="point muted">· {{ point }}</text>
       </view>
     </view>
-    <view class="section">
+    <view v-if="item.actionLabel" class="section">
       <view class="btn-primary action" @click="onAction">{{ item.actionLabel }}</view>
     </view>
     <app-toast />
@@ -27,16 +27,33 @@
 <script setup>
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { courseSystem } from '@/common/mock.js'
+import { getCourseIntro, getCourseModule } from '@/common/api.js'
+import { courseSystem as mockSystem } from '@/common/mock.js'
 import { legalInfo } from '@/common/legal.js'
 import { openBookTab } from '@/common/navigate.js'
 import { showToast } from '@/common/toast.js'
 
 const item = ref(null)
 
-onLoad((query) => {
+async function loadModule(query) {
+  const id = query?.id
   const key = query?.key || ''
-  item.value = courseSystem.find((row) => row.key === key) || courseSystem[0]
+  try {
+    if (id) {
+      item.value = await getCourseModule(id)
+      return
+    }
+    const intro = await getCourseIntro()
+    item.value = intro.systemModules.find((row) => row.key === key) || intro.systemModules[0] || null
+    if (item.value) return
+  } catch (e) {
+    // fall through to mock
+  }
+  item.value = mockSystem.find((row) => row.key === key) || mockSystem[0]
+}
+
+onLoad(async (query) => {
+  await loadModule(query)
   if (item.value?.name) {
     uni.setNavigationBarTitle({ title: item.value.name })
   }

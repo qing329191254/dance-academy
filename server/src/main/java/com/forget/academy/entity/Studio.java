@@ -26,4 +26,10 @@ public class Studio extends BaseEntity {
     private String intro;
     private String business;
     private String slogan;
+    /** 课程体系列表页引导文案 */
+    @Column(length = 500)
+    private String courseSystemLead;
+    /** 首页/列表页课程体系卡片摘要 */
+    @Column(length = 500)
+    private String courseSystemHomeSummary;
 }

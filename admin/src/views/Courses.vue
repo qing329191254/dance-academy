@@ -10,6 +10,9 @@
           @keyup.enter="search"
           @clear="search"
         />
+        <el-select v-model="moduleType" placeholder="模块类型" clearable style="width: 140px" @change="search">
+          <el-option v-for="opt in moduleTypeOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
+        </el-select>
         <el-select v-model="enabled" placeholder="启用状态" clearable style="width: 140px" @change="search">
           <el-option label="启用" :value="true" />
           <el-option label="停用" :value="false" />
@@ -19,11 +22,19 @@
       <el-button type="primary" @click="edit()">新增课程</el-button>
     </div>
     <el-table :data="list">
-      <el-table-column prop="name" label="名称" />
-      <el-table-column prop="price" label="价格" width="100" />
-      <el-table-column prop="level" label="级别" width="100" />
-      <el-table-column prop="description" label="介绍" />
-      <el-table-column prop="sortOrder" label="排序" width="80" />
+      <el-table-column prop="name" label="名称" min-width="140" />
+      <el-table-column label="类型" width="100">
+        <template #default="{ row }">{{ moduleTypeLabel(row.moduleType) }}</template>
+      </el-table-column>
+      <el-table-column prop="moduleKey" label="标识" width="90" />
+      <el-table-column label="价格" width="100">
+        <template #default="{ row }">{{ displayPrice(row) }}</template>
+      </el-table-column>
+      <el-table-column prop="summary" label="摘要" min-width="160" show-overflow-tooltip />
+      <el-table-column prop="sortOrder" label="排序" width="70" />
+      <el-table-column label="启用" width="70">
+        <template #default="{ row }">{{ row.enabled ? '是' : '否' }}</template>
+      </el-table-column>
       <el-table-column label="操作" width="120" class-name="col-actions" label-class-name="col-actions" align="left" header-align="left">
         <template #default="{ row }">
           <div class="table-actions">
@@ -45,12 +56,57 @@
       @size-change="search"
     />
   </div>
-  <el-dialog v-model="visible" :title="form.id ? '编辑课程' : '新增课程'" width="560px">
-    <el-form :model="form" label-width="80px">
+  <el-dialog v-model="visible" :title="form.id ? '编辑课程' : '新增课程'" width="640px">
+    <el-form :model="form" label-width="96px">
+      <el-form-item label="模块类型" required>
+        <el-select v-model="form.moduleType" style="width: 100%">
+          <el-option v-for="opt in moduleTypeOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
+        </el-select>
+      </el-form-item>
+      <el-form-item v-if="form.moduleType === 'system'" label="模块标识" required>
+        <el-input v-model="form.moduleKey" placeholder="如 fixed / pass / private / custom" />
+      </el-form-item>
       <el-form-item label="名称"><el-input v-model="form.name" /></el-form-item>
-      <el-form-item label="价格"><el-input-number v-model="form.price" :min="0" /></el-form-item>
-      <el-form-item label="级别"><el-input v-model="form.level" /></el-form-item>
-      <el-form-item label="介绍"><el-input v-model="form.description" type="textarea" :rows="3" /></el-form-item>
+      <el-form-item v-if="form.moduleType === 'product'" label="价格">
+        <el-input-number v-model="form.price" :min="0" />
+      </el-form-item>
+      <el-form-item v-if="form.moduleType !== 'product'" label="展示价格">
+        <el-input v-model="form.priceDisplay" placeholder="如 9.9，留空则不展示" style="width: 200px" />
+        <el-input v-model="form.priceUnit" placeholder="单位" style="width: 100px; margin-left: 12px" />
+      </el-form-item>
+      <el-form-item v-if="form.moduleType === 'product'" label="级别">
+        <el-input v-model="form.level" />
+      </el-form-item>
+      <el-form-item v-if="form.moduleType === 'trial'" label="标签">
+        <el-input v-model="form.tag" placeholder="如 新人专享" />
+      </el-form-item>
+      <el-form-item v-if="form.moduleType !== 'product'" label="列表摘要">
+        <el-input v-model="form.summary" type="textarea" :rows="2" />
+      </el-form-item>
+      <el-form-item label="详细介绍">
+        <el-input v-model="form.description" type="textarea" :rows="4" />
+      </el-form-item>
+      <el-form-item v-if="form.moduleType !== 'product'" label="亮点">
+        <el-input
+          v-model="form.highlights"
+          type="textarea"
+          :rows="4"
+          placeholder="每行一条，如：&#10;一节团课体验&#10;到店即可上课"
+        />
+      </el-form-item>
+      <template v-if="form.moduleType === 'system'">
+        <el-form-item label="按钮文案">
+          <el-input v-model="form.actionLabel" placeholder="如 查看固定班课表" />
+        </el-form-item>
+        <el-form-item label="按钮动作">
+          <el-select v-model="form.actionTab" clearable placeholder="留空则拨打电话" style="width: 100%">
+            <el-option label="拨打电话" value="" />
+            <el-option label="跳转团课约课" value="group" />
+            <el-option label="跳转固定班" value="fixed" />
+            <el-option label="跳转私教" value="private" />
+          </el-select>
+        </el-form-item>
+      </template>
       <el-form-item label="封面"><ImageField v-model="form.cover" /></el-form-item>
       <el-form-item label="排序"><el-input-number v-model="form.sortOrder" :min="0" /></el-form-item>
       <el-form-item label="启用"><el-switch v-model="form.enabled" /></el-form-item>
@@ -68,18 +124,36 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import http from '../api/http'
 import ImageField from '../components/ImageField.vue'
 
+const moduleTypeOptions = [
+  { value: 'product', label: '课程产品' },
+  { value: 'trial', label: '体验课' },
+  { value: 'system', label: '体系模块' },
+]
+
 const list = ref([])
 const total = ref(0)
 const page = ref(1)
 const size = ref(15)
 const keyword = ref('')
+const moduleType = ref()
 const enabled = ref()
 const visible = ref(false)
 const form = reactive({})
 
+function moduleTypeLabel(type) {
+  return moduleTypeOptions.find((item) => item.value === type)?.label || type || '课程产品'
+}
+
+function displayPrice(row) {
+  if (row.priceDisplay) return row.priceDisplay
+  if (row.price != null) return row.price
+  return '-'
+}
+
 function queryParams() {
   const params = { keyword: keyword.value, page: page.value, size: size.value }
   if (enabled.value === true || enabled.value === false) params.enabled = enabled.value
+  if (moduleType.value) params.moduleType = moduleType.value
   return params
 }
 
@@ -93,17 +167,55 @@ function search() {
   page.value = 1
   return load()
 }
+
+function defaultForm() {
+  return {
+    id: null,
+    moduleType: 'product',
+    moduleKey: '',
+    name: '',
+    price: 0,
+    priceDisplay: '',
+    priceUnit: '节',
+    level: '零基础',
+    summary: '',
+    tag: '',
+    description: '',
+    highlights: '',
+    actionLabel: '',
+    actionTab: '',
+    cover: '',
+    sortOrder: 0,
+    enabled: true,
+  }
+}
+
 function edit(row) {
-  Object.assign(form, { id: null, name: '', price: 0, level: '零基础', description: '', cover: '', sortOrder: 0, enabled: true }, row || {})
+  Object.assign(form, defaultForm(), row || {})
+  if (!form.moduleType) form.moduleType = 'product'
   visible.value = true
 }
+
 async function save() {
-  if (form.id) await http.put(`/admin/courses/${form.id}`, form)
-  else await http.post('/admin/courses', form)
+  const payload = { ...form }
+  if (payload.moduleType !== 'system') {
+    payload.moduleKey = null
+    payload.actionLabel = null
+    payload.actionTab = null
+  }
+  if (payload.moduleType === 'product') {
+    payload.priceDisplay = null
+    payload.tag = null
+    payload.summary = null
+    payload.highlights = null
+  }
+  if (form.id) await http.put(`/admin/courses/${form.id}`, payload)
+  else await http.post('/admin/courses', payload)
   visible.value = false
   ElMessage.success('已保存')
   await load()
 }
+
 async function remove(row) {
   await ElMessageBox.confirm('确认删除该课程？', '提示')
   await http.delete(`/admin/courses/${row.id}`)
@@ -111,6 +223,7 @@ async function remove(row) {
   if (list.value.length === 1 && page.value > 1) page.value -= 1
   await load()
 }
+
 onMounted(load)
 </script>
 

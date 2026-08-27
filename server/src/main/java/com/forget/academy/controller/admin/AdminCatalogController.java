@@ -2,7 +2,7 @@ package com.forget.academy.controller.admin;
 
 import com.forget.academy.common.ApiResponse;
 import com.forget.academy.common.BizException;
-import com.forget.academy.common.CampusIds;
+import com.forget.academy.common.CourseModuleTypes;
 import com.forget.academy.common.ClosedClassGroup;
 import com.forget.academy.common.PageResult;
 import com.forget.academy.entity.AppUser;
@@ -15,6 +15,7 @@ import com.forget.academy.repo.CourseRepo;
 import com.forget.academy.repo.ScheduleRepo;
 import com.forget.academy.repo.TeacherRepo;
 import com.forget.academy.service.AdminAccessService;
+import com.forget.academy.service.CourseModuleMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -98,7 +99,8 @@ public class AdminCatalogController {
     public ApiResponse<?> courses(@RequestParam(required = false) Integer page,
                                   @RequestParam(required = false) Integer size,
                                   @RequestParam(defaultValue = "") String keyword,
-                                  @RequestParam(required = false) Boolean enabled) {
+                                  @RequestParam(required = false) Boolean enabled,
+                                  @RequestParam(defaultValue = "") String moduleType) {
         if (page == null) {
             return ApiResponse.ok(courseRepo.findAllByOrderBySortOrderAscIdAsc());
         }
@@ -108,7 +110,8 @@ public class AdminCatalogController {
                 pageSize,
                 Sort.by("sortOrder").ascending().and(Sort.by("id").ascending()));
         String query = keyword == null ? "" : keyword.trim();
-        return ApiResponse.ok(PageResult.of(courseRepo.search(query, enabled, pageable)));
+        String type = moduleType == null ? "" : moduleType.trim();
+        return ApiResponse.ok(PageResult.of(courseRepo.search(query, enabled, type, pageable)));
     }
 
     @PostMapping("/courses")
@@ -120,19 +123,15 @@ public class AdminCatalogController {
         if (body.getSortOrder() == null) {
             body.setSortOrder(0);
         }
+        normalizeCourseModule(body);
         return ApiResponse.ok(courseRepo.save(body));
     }
 
     @PutMapping("/courses/{id}")
     public ApiResponse<Course> updateCourse(@PathVariable Long id, @RequestBody Course body) {
         Course course = courseRepo.findById(id).orElseThrow(() -> new BizException("课程不存在"));
-        course.setName(body.getName());
-        course.setPrice(body.getPrice());
-        course.setLevel(body.getLevel());
-        course.setDescription(body.getDescription());
-        course.setCover(body.getCover());
-        course.setSortOrder(body.getSortOrder());
-        course.setEnabled(body.getEnabled());
+        applyCourseFields(course, body);
+        normalizeCourseModule(course);
         return ApiResponse.ok(courseRepo.save(course));
     }
 
@@ -235,6 +234,41 @@ public class AdminCatalogController {
         }
         if (body.getSortOrder() == null) {
             body.setSortOrder(0);
+        }
+    }
+
+    private void applyCourseFields(Course course, Course body) {
+        course.setName(body.getName());
+        course.setPrice(body.getPrice());
+        course.setPriceDisplay(body.getPriceDisplay());
+        course.setPriceUnit(body.getPriceUnit());
+        course.setLevel(body.getLevel());
+        course.setDescription(body.getDescription());
+        course.setSummary(body.getSummary());
+        course.setTag(body.getTag());
+        course.setModuleType(body.getModuleType());
+        course.setModuleKey(body.getModuleKey());
+        course.setHighlights(body.getHighlights());
+        course.setActionLabel(body.getActionLabel());
+        course.setActionTab(body.getActionTab());
+        course.setCover(body.getCover());
+        course.setSortOrder(body.getSortOrder());
+        course.setEnabled(body.getEnabled());
+    }
+
+    private void normalizeCourseModule(Course course) {
+        if (course.getModuleType() == null || course.getModuleType().isBlank()) {
+            course.setModuleType(CourseModuleTypes.PRODUCT);
+        }
+        if (!CourseModuleTypes.isValid(course.getModuleType())) {
+            throw new BizException("模块类型无效");
+        }
+        if (course.getPriceUnit() == null || course.getPriceUnit().isBlank()) {
+            course.setPriceUnit("节");
+        }
+        if (CourseModuleTypes.SYSTEM.equals(course.getModuleType())
+                && (course.getModuleKey() == null || course.getModuleKey().isBlank())) {
+            throw new BizException("体系模块需填写模块标识");
         }
     }
 

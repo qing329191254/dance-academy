@@ -1,6 +1,7 @@
 package com.forget.academy.controller.app;
 
 import com.forget.academy.common.ApiResponse;
+import com.forget.academy.common.CourseModuleTypes;
 import com.forget.academy.entity.Banner;
 import com.forget.academy.entity.BrandPhoto;
 import com.forget.academy.entity.Course;
@@ -14,6 +15,7 @@ import com.forget.academy.repo.StudioRepo;
 import com.forget.academy.repo.TeacherRepo;
 import com.forget.academy.security.AuthContext;
 import com.forget.academy.service.BookingService;
+import com.forget.academy.service.CourseModuleMapper;
 import com.forget.academy.service.LeaderboardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -44,7 +47,7 @@ public class AppHomeController {
         data.put("studio", studio());
         data.put("banners", bannerRepo.findByEnabledTrueOrderBySortOrderAscIdAsc().stream().map(Banner::getImageUrl).toList());
         data.put("teachers", teacherRepo.findByEnabledTrueOrderBySortOrderAscIdAsc());
-        data.put("courses", courseRepo.findByEnabledTrueOrderBySortOrderAscIdAsc().stream().map(this::toCourse).toList());
+        data.put("courses", productCourses());
         return ApiResponse.ok(data);
     }
 
@@ -73,12 +76,36 @@ public class AppHomeController {
 
     @GetMapping("/courses")
     public ApiResponse<?> courses() {
-        return ApiResponse.ok(courseRepo.findByEnabledTrueOrderBySortOrderAscIdAsc().stream().map(this::toCourse).toList());
+        return ApiResponse.ok(productCourses());
     }
 
     @GetMapping("/courses/{id}")
     public ApiResponse<?> course(@PathVariable Long id) {
         return ApiResponse.ok(courseRepo.findById(id).map(this::toCourse).orElse(null));
+    }
+
+    @GetMapping("/course-intro")
+    public ApiResponse<Map<String, Object>> courseIntro() {
+        Studio studio = studio();
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("trial", courseRepo.findByModuleTypeAndEnabledTrueOrderBySortOrderAscIdAsc("trial").stream()
+                .findFirst()
+                .map(CourseModuleMapper::toModuleMap)
+                .orElse(null));
+        data.put("systemModules", courseRepo.findByModuleTypeAndEnabledTrueOrderBySortOrderAscIdAsc("system").stream()
+                .map(CourseModuleMapper::toModuleMap)
+                .toList());
+        data.put("systemLead", studio.getCourseSystemLead());
+        data.put("systemHomeSummary", studio.getCourseSystemHomeSummary());
+        return ApiResponse.ok(data);
+    }
+
+    @GetMapping("/course-modules/{id}")
+    public ApiResponse<?> courseModule(@PathVariable Long id) {
+        return ApiResponse.ok(courseRepo.findById(id)
+                .filter(course -> Boolean.TRUE.equals(course.getEnabled()))
+                .map(CourseModuleMapper::toModuleMap)
+                .orElse(null));
     }
 
     @GetMapping("/schedules")
@@ -105,14 +132,21 @@ public class AppHomeController {
         return studioRepo.findAll().stream().findFirst().orElseGet(Studio::new);
     }
 
+    private List<Map<String, Object>> productCourses() {
+        return courseRepo.findByEnabledTrueOrderBySortOrderAscIdAsc().stream()
+                .filter(this::isProductCourse)
+                .map(this::toCourse)
+                .toList();
+    }
+
+    private boolean isProductCourse(Course course) {
+        String type = course.getModuleType();
+        return type == null || type.isBlank() || CourseModuleTypes.PRODUCT.equals(type);
+    }
+
     private Map<String, Object> toCourse(Course course) {
-        Map<String, Object> map = new LinkedHashMap<>();
-        map.put("id", course.getId());
-        map.put("name", course.getName());
-        map.put("price", course.getPrice());
-        map.put("level", course.getLevel());
+        Map<String, Object> map = CourseModuleMapper.toModuleMap(course);
         map.put("desc", course.getDescription());
-        map.put("cover", course.getCover());
         return map;
     }
 }

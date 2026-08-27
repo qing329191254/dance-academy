@@ -1,10 +1,10 @@
 <template>
   <page-meta root-background-color="#111111" background-color="#111111" page-style="background-color:#111111;" />
-  <view class="page">
+  <view class="page" v-if="ready">
     <view class="banner">
-      <text class="tag">{{ trialCourse.tag }}</text>
+      <text v-if="trialCourse.tag" class="tag">{{ trialCourse.tag }}</text>
       <text class="banner-name">{{ trialCourse.name }}</text>
-      <view class="price-row">
+      <view v-if="trialCourse.price" class="price-row">
         <text class="price-mark">¥</text>
         <text class="price">{{ trialCourse.price }}</text>
         <text class="price-unit">/ {{ trialCourse.unit }}</text>
@@ -18,7 +18,7 @@
       </view>
     </view>
 
-    <view class="section">
+    <view v-if="trialCourse.highlights?.length" class="section">
       <view class="card">
         <text class="label">包含内容</text>
         <text v-for="item in trialCourse.highlights" :key="item" class="point muted">· {{ item }}</text>
@@ -36,10 +36,37 @@
 </template>
 
 <script setup>
-import { trialCourse } from '@/common/mock.js'
+import { onLoad } from '@dcloudio/uni-app'
+import { reactive, ref } from 'vue'
+import { getCourseIntro, getCourseModule } from '@/common/api.js'
+import { trialCourse as mockTrial } from '@/common/mock.js'
 import { legalInfo } from '@/common/legal.js'
 import { openBookTab } from '@/common/navigate.js'
 import { showToast } from '@/common/toast.js'
+
+const trialCourse = reactive({ ...mockTrial })
+const ready = ref(false)
+
+function applyTrial(data) {
+  if (!data) return
+  Object.assign(trialCourse, data)
+  if (data.name) uni.setNavigationBarTitle({ title: data.name })
+}
+
+onLoad(async (query) => {
+  try {
+    if (query?.id) {
+      applyTrial(await getCourseModule(query.id))
+    } else {
+      const intro = await getCourseIntro()
+      applyTrial(intro.trial)
+    }
+  } catch (e) {
+    applyTrial(mockTrial)
+  } finally {
+    ready.value = true
+  }
+})
 
 function callStudio() {
   uni.makePhoneCall({

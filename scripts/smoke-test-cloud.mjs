@@ -100,6 +100,7 @@ async function main() {
   await request('GET', '/api/app/schools', { label: '小程序学校列表' })
   await request('GET', '/api/app/schedules?type=group', { label: '小程序课表' })
   await request('GET', '/api/app/teachers', { label: '小程序老师列表' })
+  await request('GET', '/api/app/course-intro', { label: '小程序课程介绍' })
 
   // 角色筛选逻辑校验
   const emp = results.find((r) => r.label === '小程序用户-员工筛选')

@@ -1,6 +1,7 @@
 package com.forget.academy.config;
 
 import com.forget.academy.common.CampusIds;
+import com.forget.academy.common.CourseModuleTypes;
 import com.forget.academy.entity.AdminUser;
 import com.forget.academy.entity.AppUser;
 import com.forget.academy.entity.Course;
@@ -65,6 +66,7 @@ public class DataSeeder implements ApplicationRunner {
     public void run(ApplicationArguments args) {
         seedAdmin();
         seedSchools();
+        seedCourseIntroModules();
         removeDemoUsers();
         clearPackagedMedia();
         studioRepo.findAll().stream().findFirst().ifPresent(studio -> {
@@ -79,6 +81,14 @@ public class DataSeeder implements ApplicationRunner {
             }
             if (studio.getLogo() == null || studio.getLogo().isBlank() || studio.getLogo().startsWith("/uploads/")) {
                 studio.setLogo("/logo.png");
+                changed = true;
+            }
+            if (studio.getCourseSystemLead() == null || studio.getCourseSystemLead().isBlank()) {
+                studio.setCourseSystemLead("按学习方式和目标选择：固定班、次通卡、私教，或定制赛事与商演。");
+                changed = true;
+            }
+            if (studio.getCourseSystemHomeSummary() == null || studio.getCourseSystemHomeSummary().isBlank()) {
+                studio.setCourseSystemHomeSummary("精品固定班 · 次通卡 · 私教 · 定制赛事商演");
                 changed = true;
             }
             if (changed) {
@@ -212,6 +222,8 @@ public class DataSeeder implements ApplicationRunner {
         studio.setIntro("深耕高校街舞文化的俱乐部品牌。课堂之外，用勤工俭学与舞蹈发展双线赋能大学生成长，增强机构黏性。");
         studio.setBusiness("团课 / 固定班 / 私教课 / 成长中心");
         studio.setSlogan("DANCE UP · BREAK FREE");
+        studio.setCourseSystemLead("按学习方式和目标选择：固定班、次通卡、私教，或定制赛事与商演。");
+        studio.setCourseSystemHomeSummary("精品固定班 · 次通卡 · 私教 · 定制赛事商演");
         studioRepo.save(studio);
     }
 
@@ -239,8 +251,60 @@ public class DataSeeder implements ApplicationRunner {
         saveCourse("Breaking 专项", 399, "进阶", "Footwork / Freeze / Power", 3);
     }
 
+    private void seedCourseIntroModules() {
+        if (courseRepo.countByModuleType(CourseModuleTypes.TRIAL) > 0) {
+            return;
+        }
+        Course trial = new Course();
+        trial.setModuleType(CourseModuleTypes.TRIAL);
+        trial.setName("体验课");
+        trial.setPriceDisplay("9.9");
+        trial.setPriceUnit("节");
+        trial.setTag("新人专享");
+        trial.setSummary("一次到店，感受课堂氛围与老师风格");
+        trial.setDescription("适合第一次来舞室的同学。用一节体验课了解教室、音乐和上课节奏，再决定适合自己的课程体系。");
+        trial.setHighlights("一节团课体验\n到店即可上课\n可咨询老师选课建议");
+        trial.setSortOrder(1);
+        trial.setEnabled(true);
+        courseRepo.save(trial);
+
+        saveSystemModule("fixed", "精品固定班", "固定时段、固定老师，按体系进阶",
+                "每周固定上课时间，跟着同一位老师系统训练。适合想长期学、把基础打扎实的同学。",
+                "固定班次与教室\n按阶段进阶\n适合持续出勤",
+                "查看固定班课表", "fixed", 1);
+        saveSystemModule("pass", "次通卡", "按次计费，团课灵活通刷",
+                "买次卡后可预约团课，时间更灵活。适合课表不固定、想按自己节奏来上课的同学。",
+                "按次扣课\n团课通刷\n约满即来、更自由",
+                "咨询购卡", "", 2);
+        saveSystemModule("private", "私教", "1 对 1，针对个人问题专项突破",
+                "根据你的基础、目标和赛程单独排课。适合想快速提升、准备比赛或需要纠错巩固的同学。",
+                "1 对 1 授课\n内容可定制\n时间需与老师协商",
+                "预约私教", "private", 3);
+        saveSystemModule("custom", "定制课程 · 赛事商演", "编舞定制、比赛集训与商演排练",
+                "为社团、比赛、商演或品牌活动定制编舞与排练计划。可按人数、风格和上场时间单独沟通。",
+                "编舞定制\n赛事集训\n商演排练",
+                "预约咨询", "", 4);
+    }
+
+    private void saveSystemModule(String key, String name, String summary, String desc, String highlights,
+                                  String actionLabel, String actionTab, int sort) {
+        Course course = new Course();
+        course.setModuleType(CourseModuleTypes.SYSTEM);
+        course.setModuleKey(key);
+        course.setName(name);
+        course.setSummary(summary);
+        course.setDescription(desc);
+        course.setHighlights(highlights);
+        course.setActionLabel(actionLabel);
+        course.setActionTab(actionTab == null || actionTab.isBlank() ? null : actionTab);
+        course.setSortOrder(sort);
+        course.setEnabled(true);
+        courseRepo.save(course);
+    }
+
     private void saveCourse(String name, int price, String level, String desc, int sort) {
         Course course = new Course();
+        course.setModuleType(CourseModuleTypes.PRODUCT);
         course.setName(name);
         course.setPrice(price);
         course.setLevel(level);

@@ -47,6 +47,8 @@ public class AdminContentController {
         studio.setIntro(body.getIntro());
         studio.setBusiness(body.getBusiness());
         studio.setSlogan(body.getSlogan());
+        studio.setCourseSystemLead(body.getCourseSystemLead());
+        studio.setCourseSystemHomeSummary(body.getCourseSystemHomeSummary());
         return ApiResponse.ok(studioRepo.save(studio));
     }
 

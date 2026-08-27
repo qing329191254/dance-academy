@@ -27,6 +27,19 @@ function mapCourse(item) {
   }
 }
 
+function mapCourseModule(item) {
+  if (!item) return null
+  return {
+    ...item,
+    key: item.moduleKey || item.key || '',
+    cover: mediaUrl(item.cover),
+    desc: item.desc || item.description || '',
+    price: item.price ?? item.priceDisplay ?? '',
+    unit: item.unit || item.priceUnit || '节',
+    highlights: Array.isArray(item.highlights) ? item.highlights : [],
+  }
+}
+
 function mapStudio(item) {
   if (!item) return {}
   return {
@@ -66,6 +79,19 @@ export function getCourses() {
 
 export function getCourse(id) {
   return request({ url: `/courses/${id}` }).then(mapCourse)
+}
+
+export function getCourseIntro() {
+  return request({ url: '/course-intro' }).then((data) => ({
+    trial: mapCourseModule(data.trial),
+    systemModules: (data.systemModules || []).map(mapCourseModule),
+    systemLead: data.systemLead || '',
+    systemHomeSummary: data.systemHomeSummary || '',
+  }))
+}
+
+export function getCourseModule(id) {
+  return request({ url: `/course-modules/${id}` }).then(mapCourseModule)
 }
 
 export function getSchedules(type, date, campusId) {

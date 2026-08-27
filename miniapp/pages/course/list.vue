@@ -2,19 +2,19 @@
   <page-meta root-background-color="#111111" background-color="#111111" page-style="background-color:#111111;" />
   <view class="page">
     <view class="section">
-      <view class="module card trial" @click="go('/pages/course/trial')">
+      <view class="module card trial" @click="goTrial">
         <view class="module-top">
           <view>
-            <text class="module-name">体验课</text>
+            <text class="module-name">{{ trialCourse.name }}</text>
             <text class="muted summary">{{ trialCourse.summary }}</text>
           </view>
-          <view class="price-box">
+          <view v-if="trialCourse.price" class="price-box">
             <text class="price-mark">¥</text>
             <text class="price">{{ trialCourse.price }}</text>
             <text class="price-unit">/ {{ trialCourse.unit }}</text>
           </view>
         </view>
-        <text class="tag">{{ trialCourse.tag }}</text>
+        <text v-if="trialCourse.tag" class="tag">{{ trialCourse.tag }}</text>
       </view>
 
       <view class="module card system" @click="go('/pages/course/system')">
@@ -25,9 +25,9 @@
             <view class="link-arrow" />
           </view>
         </view>
-        <text class="muted summary">固定班、次通卡、私教与定制商演</text>
+        <text class="muted summary">{{ systemHomeSummary }}</text>
         <view class="chips">
-          <text v-for="item in courseSystem" :key="item.key" class="chip">{{ item.name }}</text>
+          <text v-for="item in courseSystem" :key="item.id || item.key" class="chip">{{ item.name }}</text>
         </view>
       </view>
     </view>
@@ -35,11 +35,36 @@
 </template>
 
 <script setup>
-import { trialCourse, courseSystem } from '@/common/mock.js'
+import { onMounted, reactive, ref } from 'vue'
+import { getCourseIntro } from '@/common/api.js'
+import { trialCourse as mockTrial, courseSystem as mockSystem } from '@/common/mock.js'
 import { openPage } from '@/common/navigate.js'
+
+const trialCourse = reactive({ ...mockTrial })
+const courseSystem = ref([...mockSystem])
+const systemHomeSummary = ref('固定班、次通卡、私教与定制商演')
+
+function applyIntro(intro) {
+  if (intro?.trial) Object.assign(trialCourse, intro.trial)
+  if (intro?.systemModules?.length) courseSystem.value = intro.systemModules
+  if (intro?.systemHomeSummary) systemHomeSummary.value = intro.systemHomeSummary
+}
+
+onMounted(async () => {
+  try {
+    applyIntro(await getCourseIntro())
+  } catch (e) {
+    // 保留 mock 兜底
+  }
+})
 
 function go(url) {
   openPage(url)
+}
+
+function goTrial() {
+  const query = trialCourse.id ? `?id=${trialCourse.id}` : ''
+  openPage(`/pages/course/trial${query}`)
 }
 </script>
 

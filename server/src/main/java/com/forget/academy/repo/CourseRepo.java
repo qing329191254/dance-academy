@@ -12,6 +12,10 @@ import java.util.List;
 public interface CourseRepo extends JpaRepository<Course, Long> {
     List<Course> findByEnabledTrueOrderBySortOrderAscIdAsc();
 
+    List<Course> findByModuleTypeAndEnabledTrueOrderBySortOrderAscIdAsc(String moduleType);
+
+    long countByModuleType(String moduleType);
+
     List<Course> findAllByOrderBySortOrderAscIdAsc();
 
     @Query("""
@@ -21,8 +25,10 @@ public interface CourseRepo extends JpaRepository<Course, Long> {
                 or lower(coalesce(c.level, '')) like lower(concat('%', :keyword, '%'))
                 or lower(coalesce(c.description, '')) like lower(concat('%', :keyword, '%')))
               and (:enabled is null or c.enabled = :enabled)
+              and (:moduleType = '' or coalesce(c.moduleType, 'product') = :moduleType)
             """)
     Page<Course> search(@Param("keyword") String keyword,
                         @Param("enabled") Boolean enabled,
+                        @Param("moduleType") String moduleType,
                         Pageable pageable);
 }

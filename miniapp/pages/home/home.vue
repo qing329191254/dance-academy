@@ -63,6 +63,22 @@
       </view>
 
       <view class="section">
+        <view class="studio card">
+          <view class="studio-left">
+            <image v-if="studio.logo" class="studio-logo" :src="studio.logo" mode="aspectFit" />
+            <view v-else class="studio-logo avatar-ph" />
+            <view>
+              <text class="studio-name">{{ studio.name }}</text>
+              <text class="muted">{{ currentCampus.name }}</text>
+            </view>
+          </view>
+          <view class="phone" @click.stop="callStudio">
+            <image class="phone-icon" src="/static/nav/phone.png" mode="aspectFit" />
+          </view>
+        </view>
+      </view>
+
+      <view class="section">
         <view class="section-head">
           <text class="section-title">明星老师</text>
           <view class="section-more" @click="go('/pages/teachers/teachers')">
@@ -88,40 +104,24 @@
             <view class="link-arrow" />
           </view>
         </view>
-        <view class="course-card card" @click="go('/pages/course/trial')">
+        <view class="course-card card" @click="goTrial">
           <view class="course-main">
-            <text class="course-name">体验课</text>
-            <text class="muted">{{ trialCourse.summary }}</text>
+            <text class="course-name">{{ courseIntro.trial.name }}</text>
+            <text class="muted">{{ courseIntro.trial.summary }}</text>
           </view>
           <view class="course-side">
-            <text class="price">¥{{ trialCourse.price }}</text>
-            <text class="tag">{{ trialCourse.tag }}</text>
+            <text v-if="courseIntro.trial.price" class="price">¥{{ courseIntro.trial.price }}</text>
+            <text v-if="courseIntro.trial.tag" class="tag">{{ courseIntro.trial.tag }}</text>
           </view>
         </view>
         <view class="course-card card" @click="go('/pages/course/system')">
           <view class="course-main">
             <text class="course-name">课程体系介绍</text>
-            <text class="muted">精品固定班 · 次通卡 · 私教 · 定制赛事商演</text>
+            <text class="muted">{{ courseIntro.systemHomeSummary }}</text>
           </view>
           <view class="course-side more-side">
             <text class="more-text">进入</text>
             <view class="link-arrow" />
-          </view>
-        </view>
-      </view>
-
-      <view class="section">
-        <view class="studio card">
-          <view class="studio-left">
-            <image v-if="studio.logo" class="studio-logo" :src="studio.logo" mode="aspectFit" />
-            <view v-else class="studio-logo avatar-ph" />
-            <view>
-              <text class="studio-name">{{ studio.name }}</text>
-              <text class="muted">{{ currentCampus.name }}</text>
-            </view>
-          </view>
-          <view class="phone" @click.stop="callStudio">
-            <image class="phone-icon" src="/static/nav/phone.png" mode="aspectFit" />
           </view>
         </view>
       </view>
@@ -134,8 +134,8 @@
 <script setup>
 import { computed, ref, reactive } from 'vue'
 import { onLoad, onShow, onUnload, onPageScroll } from '@dcloudio/uni-app'
-import { getHome } from '@/common/api.js'
-import { teachers as mockTeachers, studio as mockStudio, trialCourse } from '@/common/mock.js'
+import { getHome, getCourseIntro } from '@/common/api.js'
+import { teachers as mockTeachers, studio as mockStudio, trialCourse as mockTrial } from '@/common/mock.js'
 import { currentCampus } from '@/common/campus.js'
 import { preloadTabPagesAsync } from '@/common/preloadTabs.js'
 import { openPage, switchTabPage } from '@/common/navigate.js'
@@ -237,6 +237,10 @@ const studio = reactive({
   ...mockStudio,
   splashImage: readSplashCache(),
 })
+const courseIntro = reactive({
+  trial: { ...mockTrial },
+  systemHomeSummary: '精品固定班 · 次通卡 · 私教 · 定制赛事商演',
+})
 const splashSrc = computed(() => studio.splashImage || '')
 
 const bannerPreviewUrls = ref([...banners.value])
@@ -255,16 +259,26 @@ function resolveBannerPreviewUrls() {
 
 async function loadHome() {
   try {
-    const data = await getHome()
+    const [data, intro] = await Promise.all([
+      getHome(),
+      getCourseIntro().catch(() => null),
+    ])
     banners.value = (data.banners || []).filter(Boolean)
     if (data.teachers?.length) teachers.value = data.teachers
     if (data.studio) Object.assign(studio, data.studio)
+    if (intro?.trial) Object.assign(courseIntro.trial, intro.trial)
+    if (intro?.systemHomeSummary) courseIntro.systemHomeSummary = intro.systemHomeSummary
     if (studio.splashImage) uni.setStorageSync('splashImage', studio.splashImage)
     else uni.removeStorageSync('splashImage')
     resolveBannerPreviewUrls()
   } catch (e) {
     resolveBannerPreviewUrls()
   }
+}
+
+function goTrial() {
+  const query = courseIntro.trial.id ? `?id=${courseIntro.trial.id}` : ''
+  go(`/pages/course/trial${query}`)
 }
 
 function previewBanner(index) {
