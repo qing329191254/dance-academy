@@ -36,6 +36,13 @@ app:
     region: ${COS_REGION:}
     bucket: ${COS_BUCKET:}
     public-base-url: ${COS_PUBLIC_BASE_URL:}
+  oss:
+    endpoint: ${OSS_ENDPOINT:}
+    region: ${OSS_REGION:}
+    bucket: ${OSS_BUCKET:}
+    public-base-url: ${OSS_PUBLIC_BASE_URL:}
+    access-key-id: ${OSS_ACCESS_KEY_ID:}
+    access-key-secret: ${OSS_ACCESS_KEY_SECRET:}
   wx-cos:
     auth-url: ${WX_COS_AUTH_URL:http://api.weixin.qq.com/_/cos/getauth}
     meta-url: ${WX_COS_META_URL:http://api.weixin.qq.com/_/cos/metaid/encode}
