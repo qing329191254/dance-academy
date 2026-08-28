@@ -1,9 +1,11 @@
 const LOCAL_ORIGIN = 'http://127.0.0.1:8080'
 const CLOUD_ORIGIN = 'https://forgetdance.top'
 
-/** 本地调试改成 false */
-export const USE_CLOUD = true
-export const API_ORIGIN = USE_CLOUD ? CLOUD_ORIGIN : LOCAL_ORIGIN
+/** 微信云托管容器调用开关：已迁移至阿里云，必须保持 false。 */
+export const USE_CLOUD = false
+/** 仅本地联调时改为 true，正式包保持 false。 */
+export const USE_LOCAL_API = false
+export const API_ORIGIN = USE_LOCAL_API ? LOCAL_ORIGIN : CLOUD_ORIGIN
 export const API_BASE = `${API_ORIGIN}/api/app`
 export const USER_STORAGE_KEY = 'forget_user'
 
