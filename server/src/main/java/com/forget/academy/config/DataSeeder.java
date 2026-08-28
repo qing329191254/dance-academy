@@ -78,6 +78,7 @@ public class DataSeeder implements ApplicationRunner {
         seedAdmin();
         seedSchools();
         seedCourseIntroModules();
+        seedCustomerServiceQr();
         seedGrowthTracks();
         removeLegacyProductCourses();
         removeDemoUsers();
@@ -146,6 +147,14 @@ public class DataSeeder implements ApplicationRunner {
         seedTeachers();
         seedSchedules();
         seedOpportunities();
+    }
+
+    private void seedCustomerServiceQr() {
+        courseRepo.findAll().stream()
+                .filter(course -> CourseModuleTypes.SYSTEM.equals(course.getModuleType()))
+                .filter(course -> course.getActionTab() == null || course.getActionTab().isBlank())
+                .filter(course -> course.getCustomerServiceQr() == null || course.getCustomerServiceQr().isBlank())
+                .forEach(course -> course.setCustomerServiceQr("/customer-service-qr.jpg"));
     }
 
     private void clearPackagedMedia() {

@@ -96,12 +96,16 @@
           <el-input v-model="form.actionLabel" placeholder="如 查看固定班课表" />
         </el-form-item>
         <el-form-item label="按钮动作">
-          <el-select v-model="form.actionTab" clearable placeholder="留空则拨打电话" style="width: 100%">
-            <el-option label="拨打电话" value="" />
+          <el-select v-model="form.actionTab" clearable placeholder="留空则展示客服二维码" style="width: 100%">
+            <el-option label="展示客服二维码" value="" />
             <el-option label="跳转团课约课" value="group" />
             <el-option label="跳转固定班" value="fixed" />
             <el-option label="跳转私教" value="private" />
           </el-select>
+        </el-form-item>
+        <el-form-item v-if="!form.actionTab" label="客服二维码">
+          <ImageField v-model="form.customerServiceQr" />
+          <div class="form-tip">无课程预约入口时，小程序详情页会直接展示此二维码。</div>
         </el-form-item>
       </template>
       <el-form-item label="封面"><ImageField v-model="form.cover" /></el-form-item>
@@ -180,6 +184,7 @@ function defaultForm() {
     highlights: '',
     actionLabel: '',
     actionTab: '',
+    customerServiceQr: '',
     cover: '',
     sortOrder: 0,
     enabled: true,
@@ -194,10 +199,15 @@ function edit(row) {
 
 async function save() {
   const payload = { ...form }
+  if (payload.moduleType === 'system' && !payload.actionTab && !payload.customerServiceQr) {
+    ElMessage.warning('无预约入口的课程产品请上传客服二维码')
+    return
+  }
   if (payload.moduleType !== 'system') {
     payload.moduleKey = null
     payload.actionLabel = null
     payload.actionTab = null
+    payload.customerServiceQr = null
   }
   payload.price = null
   if (form.id) await http.put(`/admin/courses/${form.id}`, payload)
@@ -223,5 +233,11 @@ onMounted(load)
   display: flex;
   gap: 12px;
   align-items: center;
+}
+.form-tip {
+  margin-top: 8px;
+  color: #909399;
+  font-size: 12px;
+  line-height: 1.5;
 }
 </style>

@@ -31,8 +31,10 @@ public class Course extends BaseEntity {
     @Column(length = 2000)
     private String highlights;
     private String actionLabel;
-    /** 约课 tab：group/fixed/private，空则拨打电话 */
+    /** 约课 tab：group/fixed/private，空则展示客服二维码 */
     private String actionTab;
+    /** 无约课入口时展示的客服二维码 */
+    private String customerServiceQr;
     private String cover;
     private Integer sortOrder = 0;
     private Boolean enabled = true;

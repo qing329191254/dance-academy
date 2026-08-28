@@ -50,6 +50,7 @@ export const courseSystem = [
     desc: '买次卡后可预约团课，时间更灵活。适合课表不固定、想按自己节奏来上课的同学。',
     highlights: ['按次扣课', '团课通刷', '约满即来、更自由'],
     actionLabel: '咨询购卡',
+    customerServiceQr: '/static/customer-service-qr.jpg',
     actionTab: '',
   },
   {

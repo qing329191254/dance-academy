@@ -17,8 +17,21 @@
         <text v-for="point in item.highlights" :key="point" class="point muted">· {{ point }}</text>
       </view>
     </view>
-    <view v-if="item.actionLabel" class="section">
+    <view v-if="item.actionTab && item.actionLabel" class="section">
       <view class="btn-primary action" @click="onAction">{{ item.actionLabel }}</view>
+    </view>
+    <view v-else-if="item.customerServiceQr" class="section">
+      <view class="card service-card">
+        <text class="label">联系客服</text>
+        <text class="service-tip muted">长按识别二维码，添加客服咨询课程</text>
+        <image
+          class="service-qr"
+          :src="item.customerServiceQr"
+          mode="aspectFit"
+          :show-menu-by-longpress="true"
+          @click="previewQr"
+        />
+      </view>
     </view>
     <app-toast />
   </view>
@@ -29,9 +42,7 @@ import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { getCourseIntro, getCourseModule } from '@/common/api.js'
 import { courseSystem as mockSystem } from '@/common/mock.js'
-import { legalInfo } from '@/common/legal.js'
 import { openBookTab } from '@/common/navigate.js'
-import { showToast } from '@/common/toast.js'
 
 const item = ref(null)
 
@@ -62,13 +73,14 @@ onLoad(async (query) => {
 function onAction() {
   if (item.value?.actionTab) {
     openBookTab(item.value.actionTab)
-    return
   }
-  uni.makePhoneCall({
-    phoneNumber: legalInfo.phone,
-    fail() {
-      showToast('暂无法拨打电话')
-    },
+}
+
+function previewQr() {
+  if (!item.value?.customerServiceQr) return
+  uni.previewImage({
+    current: item.value.customerServiceQr,
+    urls: [item.value.customerServiceQr],
   })
 }
 </script>
@@ -113,5 +125,30 @@ function onAction() {
 
 .action {
   width: 100%;
+}
+
+.service-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32rpx;
+}
+
+.service-card .label {
+  align-self: flex-start;
+}
+
+.service-tip {
+  align-self: flex-start;
+  margin-bottom: 24rpx;
+  font-size: 24rpx;
+}
+
+.service-qr {
+  width: 460rpx;
+  height: 560rpx;
+  max-width: 100%;
+  border-radius: 16rpx;
+  background: #ffffff;
 }
 </style>

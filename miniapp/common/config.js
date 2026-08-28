@@ -14,7 +14,7 @@ export function mediaUrl(url) {
   if (!url) return ''
   if (isPackagedDemoImage(url)) return ''
   if (/^https?:\/\//i.test(url) || url.startsWith('wxfile://')) return url
-  if (url.startsWith('/uploads/') || url.startsWith('/logo.png')) return API_ORIGIN + url
+  if (url.startsWith('/uploads/') || url.startsWith('/logo.png') || url.startsWith('/customer-service-qr.jpg')) return API_ORIGIN + url
   return url
 }
 

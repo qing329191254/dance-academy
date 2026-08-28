@@ -24,6 +24,7 @@ function mapCourseModule(item) {
     ...item,
     key: item.moduleKey || item.key || '',
     cover: mediaUrl(item.cover),
+    customerServiceQr: mediaUrl(item.customerServiceQr),
     desc: item.desc || item.description || '',
     price: item.price ?? item.priceDisplay ?? '',
     unit: item.unit || item.priceUnit || '节',

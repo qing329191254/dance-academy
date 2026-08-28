@@ -32,6 +32,7 @@ public final class CourseModuleMapper {
         map.put("highlights", parseHighlights(course.getHighlights()));
         map.put("actionLabel", course.getActionLabel());
         map.put("actionTab", course.getActionTab());
+        map.put("customerServiceQr", course.getCustomerServiceQr());
         map.put("sortOrder", course.getSortOrder());
         map.put("enabled", course.getEnabled());
         return map;
