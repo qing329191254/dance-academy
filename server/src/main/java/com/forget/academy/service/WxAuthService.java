@@ -50,11 +50,7 @@ public class WxAuthService {
                     + "&js_code=" + encode(code)
                     + "&grant_type=authorization_code";
             String query = queryNoSecret + "&secret=" + encode(secret);
-            JsonNode node = getJson(
-                    "http://api.weixin.qq.com/sns/jscode2session?" + queryNoSecret,
-                    "http://api.weixin.qq.com/sns/jscode2session?" + query,
-                    "https://api.weixin.qq.com/sns/jscode2session?" + query
-            );
+            JsonNode node = getJson("https://api.weixin.qq.com/sns/jscode2session?" + query);
             if (node.hasNonNull("errcode") && node.get("errcode").asInt() != 0) {
                 throw new BizException("微信登录失败：" + node.path("errmsg").asText());
             }
@@ -83,10 +79,7 @@ public class WxAuthService {
         }
         try {
             String query = "grant_type=client_credential&appid=" + encode(appid) + "&secret=" + encode(secret);
-            JsonNode node = getJson(
-                    "http://api.weixin.qq.com/cgi-bin/token?" + query,
-                    "https://api.weixin.qq.com/cgi-bin/token?" + query
-            );
+            JsonNode node = getJson("https://api.weixin.qq.com/cgi-bin/token?" + query);
             if (node.hasNonNull("errcode") && node.get("errcode").asInt() != 0) {
                 throw new BizException("获取微信 access_token 失败：" + node.path("errmsg").asText());
             }
@@ -114,7 +107,14 @@ public class WxAuthService {
             try {
                 HttpRequest request = HttpRequest.newBuilder(URI.create(url)).GET().timeout(Duration.ofSeconds(8)).build();
                 HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
-                return mapper.readTree(response.body());
+                if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                    throw new IllegalStateException("weixin api returned HTTP " + response.statusCode());
+                }
+                JsonNode body = mapper.readTree(response.body());
+                if (body == null) {
+                    throw new IllegalStateException("weixin api returned an empty response");
+                }
+                return body;
             } catch (Exception e) {
                 last = e;
                 log.warn("weixin api miss {}: {}", url.replace(secret, "***"), e.toString());
