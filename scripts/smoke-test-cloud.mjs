@@ -1,4 +1,4 @@
-const BASE = process.env.API_BASE || 'https://springboot-1g7c-301404-6-1473444650.sh.run.tcloudbase.com'
+const BASE = process.env.API_BASE || 'https://forgetdance.top'
 const ADMIN_USER = process.env.ADMIN_USERNAME || 'admin'
 const ADMIN_PASS = process.env.ADMIN_PASSWORD || 'admin123'
 

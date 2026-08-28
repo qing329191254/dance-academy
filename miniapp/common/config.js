@@ -1,5 +1,5 @@
 const LOCAL_ORIGIN = 'http://127.0.0.1:8080'
-const CLOUD_ORIGIN = 'https://springboot-1g7c-301404-6-1473444650.sh.run.tcloudbase.com'
+const CLOUD_ORIGIN = 'https://forgetdance.top'
 
 /** 本地调试改成 false */
 export const USE_CLOUD = true
