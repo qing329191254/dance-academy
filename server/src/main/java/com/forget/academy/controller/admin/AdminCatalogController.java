@@ -17,6 +17,7 @@ import com.forget.academy.repo.ScheduleRepo;
 import com.forget.academy.repo.TeacherRepo;
 import com.forget.academy.service.AdminAccessService;
 import com.forget.academy.service.CourseModuleMapper;
+import com.forget.academy.service.TeacherResumeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -48,6 +49,7 @@ public class AdminCatalogController {
     private final ScheduleRepo scheduleRepo;
     private final BookingRepo bookingRepo;
     private final AdminAccessService adminAccessService;
+    private final TeacherResumeService teacherResumeService;
 
     @GetMapping("/teachers")
     public ApiResponse<?> teachers(@RequestParam(required = false) Integer page,
@@ -97,8 +99,14 @@ public class AdminCatalogController {
 
     @DeleteMapping("/teachers/{id}")
     public ApiResponse<Void> deleteTeacher(@PathVariable Long id) {
+        teacherResumeService.deleteByTeacherId(id);
         teacherRepo.deleteById(id);
         return ApiResponse.ok();
+    }
+
+    @GetMapping("/teachers/{id}/resume")
+    public ApiResponse<?> teacherResume(@PathVariable Long id) {
+        return ApiResponse.ok(teacherResumeService.adminResume(id));
     }
 
     @GetMapping("/courses")
@@ -328,6 +336,10 @@ public class AdminCatalogController {
             AppUser bound = boundUsers.get(teacher.getId());
             row.put("boundAccountNickname", bound == null ? null : bound.getNickname());
             row.put("boundUserId", bound == null ? null : bound.getId());
+            Map<String, Object> resume = teacherResumeService.summary(teacher.getId());
+            row.put("hasResume", resume.get("hasResume"));
+            row.put("resumePhotoCount", resume.get("photoCount"));
+            row.put("resumeVideoCount", resume.get("videoCount"));
             rows.add(row);
         }
         return rows;

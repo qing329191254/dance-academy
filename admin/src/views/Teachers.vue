@@ -27,6 +27,12 @@
       <el-table-column prop="name" label="姓名" width="120" />
       <el-table-column prop="style" label="风格" width="120" />
       <el-table-column prop="intro" label="介绍" />
+      <el-table-column label="简历" width="120">
+        <template #default="{ row }">
+          <el-button v-if="row.hasResume" link type="primary" @click="viewResume(row)">查看</el-button>
+          <span v-else class="muted">未填写</span>
+        </template>
+      </el-table-column>
       <el-table-column label="绑定账号" width="150">
         <template #default="{ row }">
           <span v-if="row.boundAccountNickname">{{ row.boundAccountNickname }}</span>
@@ -58,6 +64,7 @@
       @size-change="search"
     />
   </div>
+
   <el-dialog v-model="visible" :title="form.id ? '编辑老师档案' : '新增老师档案'" width="560px">
     <el-form :model="form" label-width="80px">
       <el-form-item label="姓名"><el-input v-model="form.name" /></el-form-item>
@@ -66,16 +73,56 @@
       <el-form-item label="头像"><ImageField v-model="form.avatar" /></el-form-item>
       <el-form-item label="排序"><el-input-number v-model="form.sortOrder" :min="0" /></el-form-item>
       <el-form-item label="启用"><el-switch v-model="form.enabled" /></el-form-item>
+      <el-form-item v-if="form.id" label="简历">
+        <el-button @click="viewResume(form)">打开简历管理</el-button>
+      </el-form-item>
     </el-form>
     <template #footer>
       <el-button @click="visible = false">取消</el-button>
       <el-button type="primary" @click="save">确定</el-button>
     </template>
   </el-dialog>
+
+  <el-drawer v-model="resumeVisible" size="680px" :title="resumeTitle">
+    <el-alert
+      type="info"
+      :closable="false"
+      show-icon
+      title="老师在小程序自行填写与上传，此处仅供查看"
+      style="margin-bottom: 16px"
+    />
+    <template v-if="resume">
+      <h4>文字自我介绍</h4>
+      <p class="resume-intro">{{ resume.resumeIntro || '暂无' }}</p>
+      <h4>照片（{{ (resume.photos || []).length }}）</h4>
+      <div class="media-grid">
+        <el-image
+          v-for="item in resume.photos || []"
+          :key="item.id || item.url"
+          class="photo"
+          :src="mediaSrc(item.url)"
+          :preview-src-list="(resume.photos || []).map((p) => mediaSrc(p.url))"
+          fit="cover"
+        />
+        <span v-if="!(resume.photos || []).length" class="muted">暂无照片</span>
+      </div>
+      <h4>视频（{{ (resume.videos || []).length }}）</h4>
+      <div class="video-list">
+        <video
+          v-for="item in resume.videos || []"
+          :key="item.id || item.url"
+          class="video"
+          :src="mediaSrc(item.url)"
+          controls
+        />
+        <span v-if="!(resume.videos || []).length" class="muted">暂无视频</span>
+      </div>
+    </template>
+  </el-drawer>
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import http from '../api/http'
@@ -92,6 +139,13 @@ const keyword = ref('')
 const enabled = ref()
 const visible = ref(false)
 const form = reactive({})
+const resumeVisible = ref(false)
+const resume = ref(null)
+const resumeTeacher = ref(null)
+
+const resumeTitle = computed(() =>
+  resumeTeacher.value ? `简历管理 · ${resumeTeacher.value.name || resumeTeacher.value.teacherName || ''}` : '简历管理',
+)
 
 function queryParams() {
   const params = {
@@ -132,6 +186,15 @@ function goBind(row) {
   })
 }
 
+async function viewResume(row) {
+  const id = row.id || row.teacherId
+  if (!id) return
+  resumeTeacher.value = row
+  const res = await http.get(`/admin/teachers/${id}/resume`)
+  resume.value = res.data || null
+  resumeVisible.value = true
+}
+
 async function save() {
   if (form.id) await http.put(`/admin/teachers/${form.id}`, form)
   else await http.post('/admin/teachers', form)
@@ -158,5 +221,39 @@ const { campusParams } = useCampusScope(load)
   display: flex;
   gap: 12px;
   align-items: center;
+}
+.muted {
+  color: #999;
+}
+.resume-intro {
+  white-space: pre-wrap;
+  line-height: 1.7;
+  color: #303133;
+  margin: 8px 0 20px;
+}
+.media-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.photo {
+  width: 120px;
+  height: 120px;
+  border-radius: 8px;
+}
+.video-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.video {
+  width: 100%;
+  max-height: 280px;
+  background: #000;
+  border-radius: 8px;
+}
+h4 {
+  margin: 0 0 8px;
 }
 </style>

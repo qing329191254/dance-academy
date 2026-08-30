@@ -4,7 +4,7 @@
     <view class="brand">
       <image v-if="logo" class="logo" :src="logo" mode="aspectFit" />
       <text class="title">高校FOR-GET舞室</text>
-      <text class="muted subtitle">登录后同步课程、卡包与习练记录</text>
+      <text class="muted subtitle">登录后同步课程、卡包与已上课程</text>
     </view>
 
     <view class="actions">

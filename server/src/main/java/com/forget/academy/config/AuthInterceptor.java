@@ -145,6 +145,9 @@ public class AuthInterceptor implements HandlerInterceptor {
                 || path.startsWith("/api/app/checkin")
                 || path.startsWith("/api/app/applies")
                 || path.startsWith("/api/app/feedback")
+                || path.startsWith("/api/app/practice-room")
+                || path.startsWith("/api/app/practice-rooms")
+                || path.startsWith("/api/app/surveys")
                 || ("POST".equalsIgnoreCase(method) && path.startsWith("/api/app/opportunities"));
     }
 }

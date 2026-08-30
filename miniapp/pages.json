@@ -243,7 +243,17 @@
     {
       "path": "pages/mine/practice",
       "style": {
-        "navigationBarTitleText": "习练记录",
+        "navigationBarTitleText": "已上课程",
+        "navigationBarBackgroundColor": "#111111",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#111111",
+        "backgroundColorContent": "#111111"
+      }
+    },
+    {
+      "path": "pages/mine/practice-room",
+      "style": {
+        "navigationBarTitleText": "练舞预约",
         "navigationBarBackgroundColor": "#111111",
         "navigationBarTextStyle": "white",
         "backgroundColor": "#111111",
@@ -264,6 +274,26 @@
       "path": "pages/mine/feedback",
       "style": {
         "navigationBarTitleText": "意见反馈",
+        "navigationBarBackgroundColor": "#111111",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#111111",
+        "backgroundColorContent": "#111111"
+      }
+    },
+    {
+      "path": "pages/mine/survey",
+      "style": {
+        "navigationBarTitleText": "问卷调查",
+        "navigationBarBackgroundColor": "#111111",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#111111",
+        "backgroundColorContent": "#111111"
+      }
+    },
+    {
+      "path": "pages/mine/survey-detail",
+      "style": {
+        "navigationBarTitleText": "填写问卷",
         "navigationBarBackgroundColor": "#111111",
         "navigationBarTextStyle": "white",
         "backgroundColor": "#111111",
@@ -364,6 +394,16 @@
       "path": "pages/teacher/reviews",
       "style": {
         "navigationBarTitleText": "学员评价",
+        "navigationBarBackgroundColor": "#111111",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#111111",
+        "backgroundColorContent": "#111111"
+      }
+    },
+    {
+      "path": "pages/teacher/resume",
+      "style": {
+        "navigationBarTitleText": "教师简历",
         "navigationBarBackgroundColor": "#111111",
         "navigationBarTextStyle": "white",
         "backgroundColor": "#111111",

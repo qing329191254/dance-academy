@@ -44,26 +44,26 @@ function pick(item) {
   position: relative;
   z-index: 2;
   pointer-events: auto;
-  max-width: 220rpx;
+  max-width: 280rpx;
 }
 
 .trigger {
   display: flex;
   align-items: center;
-  gap: 6rpx;
-  max-width: 220rpx;
-  padding: 8rpx 4rpx;
+  gap: 8rpx;
+  max-width: 280rpx;
+  padding: 10rpx 6rpx;
 }
 
 .pin {
-  width: 28rpx;
-  height: 28rpx;
+  width: 34rpx;
+  height: 34rpx;
   flex-shrink: 0;
 }
 
 .name {
   min-width: 0;
-  font-size: 24rpx;
+  font-size: 28rpx;
   font-weight: 600;
   color: #ffffff;
   overflow: hidden;
@@ -73,11 +73,11 @@ function pick(item) {
 }
 
 .chevron {
-  width: 10rpx;
-  height: 10rpx;
+  width: 12rpx;
+  height: 12rpx;
   margin-top: -4rpx;
-  border-right: 2rpx solid #ffffff;
-  border-bottom: 2rpx solid #ffffff;
+  border-right: 2.5rpx solid #ffffff;
+  border-bottom: 2.5rpx solid #ffffff;
   transform: rotate(45deg);
   flex-shrink: 0;
   opacity: 0.9;

@@ -43,14 +43,14 @@
     <view v-else-if="loggedIn" class="section">
       <view class="card login-tip" @click="goProfile">
         <text class="login-tip-title">请完善个人资料</text>
-        <text class="muted login-tip-desc">完善后即可查看卡包、课程与学习记录</text>
+        <text class="muted login-tip-desc">完善后即可查看卡包、预约与已上课程</text>
       </view>
     </view>
 
     <view v-else class="section">
       <view class="card login-tip" @click="goLogin">
         <text class="login-tip-title">登录后查看学习数据</text>
-        <text class="muted login-tip-desc">卡包、课程、预约与习练记录登录后同步展示</text>
+        <text class="muted login-tip-desc">卡包、预约与已上课程登录后同步展示</text>
       </view>
     </view>
 
@@ -205,13 +205,6 @@ const studentServices = [
     needLogin: true,
   },
   {
-    name: '我的课程',
-    icon: '/static/mine/growth.png',
-    key: 'courses',
-    url: '/pages/mine/courses',
-    needLogin: true,
-  },
-  {
     name: '已约课程',
     icon: '/static/mine/booking.png',
     key: 'bookings',
@@ -226,10 +219,17 @@ const studentServices = [
     needLogin: true,
   },
   {
-    name: '我的习练',
+    name: '已上课程',
     icon: '/static/mine/feedback.svg',
     key: 'practice',
     url: '/pages/mine/practice',
+    needLogin: true,
+  },
+  {
+    name: '练舞预约',
+    icon: '/static/mine/practice-room.svg',
+    key: 'practice-room',
+    url: '/pages/mine/practice-room',
     needLogin: true,
   },
   {
@@ -257,6 +257,13 @@ const studentServices = [
     icon: '/static/mine/notice.svg',
     key: 'teacher-review',
     url: '/pages/mine/teacher-review',
+    needLogin: true,
+  },
+  {
+    name: '问卷调查',
+    icon: '/static/mine/survey.svg',
+    key: 'survey',
+    url: '/pages/mine/survey',
     needLogin: true,
   },
 ]
@@ -294,6 +301,13 @@ const teacherServices = [
     icon: '/static/mine/notice.svg',
     key: 'teacher-reviews',
     url: '/pages/teacher/reviews',
+    needLogin: true,
+  },
+  {
+    name: '教师简历',
+    icon: '/static/mine/survey.svg',
+    key: 'teacher-resume',
+    url: '/pages/teacher/resume',
     needLogin: true,
   },
 ]

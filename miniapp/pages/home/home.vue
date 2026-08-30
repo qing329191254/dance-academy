@@ -64,7 +64,7 @@
 
       <view class="section">
         <view class="studio card">
-          <view class="studio-left">
+          <view class="studio-left" hover-class="studio-left-hover" @click="go('/pages/brand/brand')">
             <image v-if="studio.logo" class="studio-logo" :src="studio.logo" mode="aspectFit" />
             <view v-else class="studio-logo avatar-ph" />
             <view>
@@ -594,6 +594,11 @@ function callStudio() {
   display: flex;
   align-items: center;
   flex: 1;
+  min-width: 0;
+}
+
+.studio-left-hover {
+  opacity: 0.85;
 }
 
 .studio-logo {

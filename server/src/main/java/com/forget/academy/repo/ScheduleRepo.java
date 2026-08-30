@@ -21,7 +21,11 @@ public interface ScheduleRepo extends JpaRepository<Schedule, Long> {
 
     List<Schedule> findByTeacherIdAndEnabledTrueOrderBySortOrderAscIdAsc(Long teacherId);
 
+    List<Schedule> findByCampusIdAndEnabledTrue(String campusId);
+
     List<Schedule> findAllByOrderByTypeAscSortOrderAscIdAsc();
+
+    long countByCampusId(String campusId);
 
     @Query("""
             select s from Schedule s

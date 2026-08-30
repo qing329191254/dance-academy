@@ -1,36 +1,75 @@
 import { computed, ref } from 'vue'
+import { getSchools } from './api.js'
 
-export const CAMPUSES = [
-  { id: 'shizishan', name: '川师大狮子山校区', shortName: '狮子山' },
-  { id: 'chenglong', name: '川师大成龙校区', shortName: '成龙' },
-  { id: 'bnu-zhuhai', name: '北京师范大学珠海校区', shortName: '北师珠海' },
-  { id: 'uic', name: '北师香港浸会大学校区', shortName: '北师浸会' },
-  { id: 'cdu', name: '成都大学校区', shortName: '成都大学' },
-  { id: 'swpu', name: '西南石油大学成都校区', shortName: '西南石油' },
+/** 兜底：接口失败时仍可用；启动后用「校区管理员」列表覆盖 */
+const FALLBACK_CAMPUSES = [
+  { id: '1', name: '四川师范大学', shortName: '川师大' },
 ]
 
-export const DEFAULT_CAMPUS_ID = CAMPUSES[0].id
+export const CAMPUSES = ref([...FALLBACK_CAMPUSES])
+
+export const DEFAULT_CAMPUS_ID = '1'
 
 const STORAGE_KEY = 'selectedCampusId'
 
+function shortNameOf(name) {
+  if (!name) return ''
+  if (name.length <= 6) return name
+  const shortName = name
+    .replace('（珠海）', '')
+    .replace('(珠海)', '')
+    .replace('师范大学', '师大')
+    .replace('大学', '')
+  return shortName.length > 8 ? name.slice(0, 6) : shortName
+}
+
 function readCampusId() {
   try {
-    const id = uni.getStorageSync(STORAGE_KEY)
-    if (CAMPUSES.some((item) => item.id === id)) return id
+    const id = String(uni.getStorageSync(STORAGE_KEY) || '')
+    if (CAMPUSES.value.some((item) => item.id === id)) return id
   } catch (e) {}
-  return DEFAULT_CAMPUS_ID
+  return CAMPUSES.value[0]?.id || DEFAULT_CAMPUS_ID
 }
 
 export const selectedCampusId = ref(readCampusId())
 
 export const currentCampus = computed(
-  () => CAMPUSES.find((item) => item.id === selectedCampusId.value) || CAMPUSES[0],
+  () => CAMPUSES.value.find((item) => item.id === selectedCampusId.value) || CAMPUSES.value[0] || FALLBACK_CAMPUSES[0],
 )
 
 export function selectCampus(id) {
-  if (!CAMPUSES.some((item) => item.id === id)) return
-  selectedCampusId.value = id
+  const key = String(id)
+  if (!CAMPUSES.value.some((item) => item.id === key)) return
+  selectedCampusId.value = key
   try {
-    uni.setStorageSync(STORAGE_KEY, id)
+    uni.setStorageSync(STORAGE_KEY, key)
   } catch (e) {}
+}
+
+function applyCampusList(list) {
+  if (!Array.isArray(list) || !list.length) return
+  CAMPUSES.value = list.map((item) => ({
+    id: String(item.id),
+    name: item.name,
+    shortName: shortNameOf(item.name),
+  }))
+  if (!CAMPUSES.value.some((item) => item.id === selectedCampusId.value)) {
+    selectCampus(CAMPUSES.value[0].id)
+  }
+}
+
+let loadPromise = null
+
+export function loadCampuses(force = false) {
+  if (loadPromise && !force) return loadPromise
+  loadPromise = getSchools()
+    .then((list) => {
+      applyCampusList(list)
+      return CAMPUSES.value
+    })
+    .catch(() => CAMPUSES.value)
+    .finally(() => {
+      loadPromise = null
+    })
+  return loadPromise
 }

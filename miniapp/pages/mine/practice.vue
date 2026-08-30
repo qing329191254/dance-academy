@@ -12,8 +12,8 @@
       </view>
     </view>
     <view v-else class="empty">
-      <text class="empty-title">暂无习练记录</text>
-      <text class="muted">完成课程签到后，习练记录会显示在这里</text>
+      <text class="empty-title">暂无已上课程</text>
+      <text class="muted">完成课程签到后，记录会显示在这里</text>
       <view class="btn-primary empty-btn" @click="goScan">去扫码签到</view>
     </view>
   </view>

@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class StudioService {
     private final StudioRepo studioRepo;
     private final AdminAccessService adminAccessService;
+    private final CampusCatalogService campusCatalogService;
 
     /** 成长文案等随校区配置，读当前校区记录 */
     public Studio resolveForApp(String campusId) {
@@ -67,7 +68,7 @@ public class StudioService {
             template = studioRepo.findByCampusId(CampusIds.DEFAULT).orElse(null);
         }
 
-        for (String campusId : CampusIds.ALL) {
+        for (String campusId : campusCatalogService.allKeys()) {
             if (studioRepo.findByCampusId(campusId).isPresent()) {
                 continue;
             }
@@ -139,32 +140,15 @@ public class StudioService {
         target.setDanceModuleSummary(body.getDanceModuleSummary());
     }
 
-    private static String normalizeCampusId(String campusId) {
-        if (campusId != null && !campusId.isBlank() && CampusIds.ALL.contains(campusId.trim())) {
-            return campusId.trim();
-        }
-        return CampusIds.DEFAULT;
+    private String normalizeCampusId(String campusId) {
+        return campusCatalogService.normalize(campusId);
     }
 
-    private static String campusLabel(String campusId) {
-        return switch (campusId) {
-            case "chenglong" -> "川师大成龙校区";
-            case "bnu-zhuhai" -> "北京师范大学珠海校区";
-            case "uic" -> "北师香港浸会大学校区";
-            case "cdu" -> "成都大学校区";
-            case "swpu" -> "西南石油大学成都校区";
-            default -> "川师大狮子山校区";
-        };
+    private String campusLabel(String campusId) {
+        return campusCatalogService.displayName(campusId);
     }
 
-    private static String shortCampusLabel(String campusId) {
-        return switch (campusId) {
-            case "chenglong" -> "成龙";
-            case "bnu-zhuhai" -> "北师珠海";
-            case "uic" -> "北师浸会";
-            case "cdu" -> "成都大学";
-            case "swpu" -> "西南石油";
-            default -> "狮子山";
-        };
+    private String shortCampusLabel(String campusId) {
+        return campusCatalogService.shortName(campusId);
     }
 }

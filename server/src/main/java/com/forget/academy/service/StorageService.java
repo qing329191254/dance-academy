@@ -18,6 +18,9 @@ import java.util.UUID;
 public class StorageService {
     private static final Set<String> IMAGE_EXT = Set.of(".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg");
     private static final Set<String> FILE_EXT = Set.of(".png", ".jpg", ".jpeg", ".gif", ".webp", ".pdf");
+    private static final Set<String> MEDIA_EXT = Set.of(
+            ".png", ".jpg", ".jpeg", ".gif", ".webp",
+            ".mp4", ".mov", ".m4v");
 
     private final List<ObjectStorage> storages;
 
@@ -29,18 +32,35 @@ public class StorageService {
     }
 
     public Map<String, String> saveImageBytes(byte[] bytes, String filename) {
-        return saveBytes(bytes, filename, IMAGE_EXT, "仅支持图片文件");
+        return saveBytes(bytes, filename, IMAGE_EXT, "仅支持图片文件", 8 * 1024 * 1024);
     }
 
     public Map<String, String> saveFileBytes(byte[] bytes, String filename) {
-        return saveBytes(bytes, filename, FILE_EXT, "请上传图片或 PDF");
+        return saveBytes(bytes, filename, FILE_EXT, "请上传图片或 PDF", 8 * 1024 * 1024);
     }
 
-    private Map<String, String> saveBytes(byte[] bytes, String filename, Set<String> allowed, String invalidMessage) {
+    public Map<String, String> saveMedia(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new BizException("请选择文件");
+        }
+        if (file.getSize() > 35L * 1024 * 1024) {
+            throw new BizException("文件过大，请压缩后上传（建议 35MB 以内）");
+        }
+        String ext = extension(file.getOriginalFilename());
+        if (ext.isEmpty()) {
+            throw new BizException("无法识别文件类型");
+        }
+        if (!MEDIA_EXT.contains(ext)) {
+            throw new BizException("仅支持图片或视频（mp4/mov）");
+        }
+        return put(file, ext);
+    }
+
+    private Map<String, String> saveBytes(byte[] bytes, String filename, Set<String> allowed, String invalidMessage, int maxBytes) {
         if (bytes == null || bytes.length == 0) {
             throw new BizException("请选择文件");
         }
-        if (bytes.length > 8 * 1024 * 1024) {
+        if (bytes.length > maxBytes) {
             throw new BizException("文件过大");
         }
         String name = (filename == null || filename.isBlank()) ? "file.jpg" : filename;
@@ -93,6 +113,8 @@ public class StorageService {
             case ".gif" -> "image/gif";
             case ".webp" -> "image/webp";
             case ".pdf" -> "application/pdf";
+            case ".mp4" -> "video/mp4";
+            case ".mov", ".m4v" -> "video/quicktime";
             default -> "image/jpeg";
         };
     }

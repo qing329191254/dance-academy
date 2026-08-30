@@ -1,4 +1,4 @@
-import { mediaUrl } from './config.js'
+import { API_BASE, USER_STORAGE_KEY, mediaUrl } from './config.js'
 import { request } from './request.js'
 
 function formatDate(value) {
@@ -140,6 +140,58 @@ export function uploadResume(filePath, filename) {
     }))
 }
 
+export function uploadMediaFile(filePath, filename) {
+  return new Promise((resolve, reject) => {
+    const token = (() => {
+      try {
+        return uni.getStorageSync(USER_STORAGE_KEY)?.token || ''
+      } catch (e) {
+        return ''
+      }
+    })()
+    uni.uploadFile({
+      url: `${API_BASE}/upload-media`,
+      filePath,
+      name: 'file',
+      formData: {
+        filename: filename || 'media.bin',
+      },
+      header: {
+        Authorization: token ? `Bearer ${token}` : '',
+        'X-App-Token': token,
+        'X-Token': token,
+      },
+      success(res) {
+        try {
+          const body = typeof res.data === 'string' ? JSON.parse(res.data) : res.data
+          if (res.statusCode === 401 || body?.code === 401) {
+            reject(new Error(body?.message || '请先登录'))
+            return
+          }
+          if (res.statusCode >= 400 || (typeof body?.code === 'number' && body.code !== 0)) {
+            reject(new Error(body?.message || body?.msg || '上传失败'))
+            return
+          }
+          resolve(body?.data || body)
+        } catch (e) {
+          reject(new Error('上传失败'))
+        }
+      },
+      fail() {
+        reject(new Error('网络异常，上传失败'))
+      },
+    })
+  })
+}
+
+export function getTeacherResume() {
+  return request({ url: '/teacher/resume' })
+}
+
+export function saveTeacherResume(payload) {
+  return request({ url: '/teacher/resume', method: 'PUT', data: payload })
+}
+
 function compressImage(filePath) {
   return new Promise((resolve) => {
     uni.compressImage({
@@ -224,6 +276,36 @@ export function getPractice() {
   return request({ url: '/practice' })
 }
 
+export function getPracticeRooms(campusId) {
+  const query = campusId ? `?campusId=${encodeURIComponent(campusId)}` : ''
+  return request({ url: `/practice-rooms${query}` })
+}
+
+export function getPracticeRoomSlots(classroomId, date) {
+  return request({
+    url: `/practice-rooms/${classroomId}/slots?date=${encodeURIComponent(date)}`,
+  })
+}
+
+export function getPracticeRoomBookings() {
+  return request({ url: '/practice-room-bookings' }).then((list) =>
+    (list || []).map((item) => ({
+      ...item,
+      classDate: formatDate(item.classDate),
+      timeText: item.timeText || `${item.startTime || ''}-${item.endTime || ''}`,
+      statusLabel: item.statusLabel || item.status,
+    })),
+  )
+}
+
+export function createPracticeRoomBooking(payload) {
+  return request({ url: '/practice-room-bookings', method: 'POST', data: payload })
+}
+
+export function cancelPracticeRoomBooking(id) {
+  return request({ url: `/practice-room-bookings/${id}/cancel`, method: 'POST' })
+}
+
 export function checkin(payload) {
   return request({ url: '/checkin', method: 'POST', data: { payload } })
 }
@@ -272,6 +354,19 @@ export function toggleOpportunityApply(id, payload = {}) {
 
 export function submitFeedback(payload) {
   return request({ url: '/feedback', method: 'POST', data: payload })
+}
+
+export function getSurveys(campusId) {
+  const query = campusId ? `?campusId=${encodeURIComponent(campusId)}` : ''
+  return request({ url: `/surveys${query}` })
+}
+
+export function getSurveyDetail(id) {
+  return request({ url: `/surveys/${id}` })
+}
+
+export function submitSurvey(id, payload) {
+  return request({ url: `/surveys/${id}/submit`, method: 'POST', data: payload })
 }
 
 export function submitTeacherReview(payload) {

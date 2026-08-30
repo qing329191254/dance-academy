@@ -1,0 +1,1 @@
+import{s as o,i as u,C as e,q as p}from"./index-CNxkVAUg.js";import{u as r}from"./campus-CeuOrYuh.js";function f(t){const s=r(),{campusId:a}=o(s),c=p(()=>s.filtered),m=()=>s.campusParams;return t&&(u(a,t),e(t)),{campusId:a,campusFiltered:c,campusParams:m,campusStore:s}}export{f as u};

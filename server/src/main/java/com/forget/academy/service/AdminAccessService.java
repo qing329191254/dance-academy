@@ -2,7 +2,6 @@ package com.forget.academy.service;
 
 import com.forget.academy.common.AdminRoles;
 import com.forget.academy.common.BizException;
-import com.forget.academy.common.CampusIds;
 import com.forget.academy.entity.AdminUser;
 import com.forget.academy.repo.AdminUserRepo;
 import com.forget.academy.security.AdminContext;
@@ -21,6 +20,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AdminAccessService {
     private final AdminUserRepo adminUserRepo;
+    private final CampusCatalogService campusCatalogService;
 
     public AdminUser currentAdmin() {
         AdminUser cached = AdminContext.get();
@@ -51,13 +51,17 @@ public class AdminAccessService {
 
     public List<String> allowedCampusIds(AdminUser admin) {
         if (isSuperAdmin(admin)) {
-            return CampusIds.ALL;
+            return campusCatalogService.allKeys();
         }
         List<String> campuses = parseCampusIds(admin);
         if (campuses.isEmpty()) {
             throw new BizException("管理员账号未分配校区，请联系超级管理员");
         }
-        return campuses.stream().filter(CampusIds.ALL::contains).toList();
+        return campuses.stream()
+                .filter(campusCatalogService::contains)
+                .map(campusCatalogService::normalize)
+                .distinct()
+                .toList();
     }
 
     public List<String> resolveCampusScope(String requestedCampusId) {
@@ -109,13 +113,13 @@ public class AdminAccessService {
                 .collect(Collectors.joining(","));
     }
 
-    public static List<String> normalizeCampusIds(List<String> campusIds) {
+    public List<String> normalizeCampusIds(List<String> campusIds) {
         if (campusIds == null) {
             return List.of();
         }
         List<String> result = new ArrayList<>();
         for (String campusId : campusIds) {
-            if (campusId != null && !campusId.isBlank() && CampusIds.ALL.contains(campusId.trim())) {
+            if (campusId != null && !campusId.isBlank() && campusCatalogService.contains(campusId.trim())) {
                 result.add(campusId.trim());
             }
         }

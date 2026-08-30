@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -112,6 +113,12 @@ public class AppUserController {
         }
         String filename = body.get("filename");
         return ApiResponse.ok(storageService.saveFileBytes(bytes, filename));
+    }
+
+    @PostMapping("/upload-media")
+    public ApiResponse<?> uploadMedia(@RequestParam("file") MultipartFile file) {
+        AuthContext.requireApp();
+        return ApiResponse.ok(storageService.saveMedia(file));
     }
 
     @GetMapping("/mine")

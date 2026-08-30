@@ -19,12 +19,10 @@ public class CampusContentService {
     private final BannerRepo bannerRepo;
     private final BrandPhotoRepo brandPhotoRepo;
     private final GrowthTrackRepo growthTrackRepo;
+    private final CampusCatalogService campusCatalogService;
 
     public String normalizeCampusId(String campusId) {
-        if (campusId != null && !campusId.isBlank() && CampusIds.ALL.contains(campusId.trim())) {
-            return campusId.trim();
-        }
-        return CampusIds.DEFAULT;
+        return campusCatalogService.normalize(campusId);
     }
 
     @Transactional
@@ -70,7 +68,7 @@ public class CampusContentService {
         if (template.isEmpty()) {
             return;
         }
-        for (String campusId : CampusIds.ALL) {
+        for (String campusId : campusCatalogService.allKeys()) {
             if (growthTrackRepo.countByCampusId(campusId) > 0) {
                 continue;
             }
@@ -85,7 +83,7 @@ public class CampusContentService {
         if (template.isEmpty()) {
             return;
         }
-        for (String campusId : CampusIds.ALL) {
+        for (String campusId : campusCatalogService.allKeys()) {
             if (bannerRepo.countByCampusId(campusId) > 0) {
                 continue;
             }
@@ -100,7 +98,7 @@ public class CampusContentService {
         if (template.isEmpty()) {
             return;
         }
-        for (String campusId : CampusIds.ALL) {
+        for (String campusId : campusCatalogService.allKeys()) {
             if (brandPhotoRepo.countByCampusId(campusId) > 0) {
                 continue;
             }

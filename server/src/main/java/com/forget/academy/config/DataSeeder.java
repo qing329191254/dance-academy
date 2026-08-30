@@ -27,6 +27,7 @@ import com.forget.academy.repo.PracticeRecordRepo;
 import com.forget.academy.repo.ScheduleRepo;
 import com.forget.academy.repo.SchoolRepo;
 import com.forget.academy.repo.StudioRepo;
+import com.forget.academy.service.CampusCatalogService;
 import com.forget.academy.service.CampusContentService;
 import com.forget.academy.service.StudioService;
 import com.forget.academy.repo.TeacherRepo;
@@ -65,6 +66,7 @@ public class DataSeeder implements ApplicationRunner {
     private final PracticeRecordRepo practiceRecordRepo;
     private final OpportunityApplyRepo opportunityApplyRepo;
     private final SchoolRepo schoolRepo;
+    private final CampusCatalogService campusCatalogService;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
     @Value("${app.admin-username}")
@@ -77,6 +79,7 @@ public class DataSeeder implements ApplicationRunner {
     public void run(ApplicationArguments args) {
         seedAdmin();
         seedSchools();
+        campusCatalogService.migrateLegacyCampusIds();
         seedCourseIntroModules();
         seedCustomerServiceQr();
         seedGrowthTracks();

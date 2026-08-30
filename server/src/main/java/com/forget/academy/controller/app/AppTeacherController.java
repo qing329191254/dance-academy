@@ -3,6 +3,7 @@ package com.forget.academy.controller.app;
 import com.forget.academy.common.ApiResponse;
 import com.forget.academy.security.AuthContext;
 import com.forget.academy.service.AttendanceService;
+import com.forget.academy.service.TeacherResumeService;
 import com.forget.academy.service.TeacherReviewService;
 import com.forget.academy.service.TeacherService;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -24,6 +26,17 @@ public class AppTeacherController {
     private final TeacherService teacherService;
     private final TeacherReviewService teacherReviewService;
     private final AttendanceService attendanceService;
+    private final TeacherResumeService teacherResumeService;
+
+    @GetMapping("/resume")
+    public ApiResponse<?> resume() {
+        return ApiResponse.ok(teacherResumeService.myResume(AuthContext.requireApp().id()));
+    }
+
+    @PutMapping("/resume")
+    public ApiResponse<?> saveResume(@RequestBody Map<String, Object> body) {
+        return ApiResponse.ok(teacherResumeService.saveMyResume(AuthContext.requireApp().id(), body));
+    }
 
     @GetMapping("/schedules")
     public ApiResponse<?> schedules(@RequestParam(required = false) String date) {

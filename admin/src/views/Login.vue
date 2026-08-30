@@ -14,6 +14,12 @@
         <el-button type="primary" size="large" :loading="loading" class="submit" @click="onSubmit">登录</el-button>
       </el-form>
     </div>
+    <a
+      class="icp"
+      href="https://beian.miit.gov.cn/"
+      target="_blank"
+      rel="noopener noreferrer"
+    >蜀ICP备2026050020号-1</a>
   </div>
 </template>
 
@@ -43,8 +49,10 @@ async function onSubmit() {
 .login-page {
   min-height: 100%;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 28px;
   background: radial-gradient(circle at top, #2a2344, #111118 55%);
 }
 .card {
@@ -73,5 +81,14 @@ async function onSubmit() {
 }
 .submit {
   width: 100%;
+}
+.icp {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 13px;
+  text-decoration: none;
+  letter-spacing: 0.02em;
+}
+.icp:hover {
+  color: rgba(255, 255, 255, 0.85);
 }
 </style>

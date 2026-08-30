@@ -21,7 +21,7 @@ import { CAMPUSES } from '@/common/campus.js'
 const profile = ref(null)
 
 function campusName(id) {
-  return CAMPUSES.find((item) => item.id === id)?.name || id || '-'
+  return CAMPUSES.value.find((item) => item.id === id)?.name || id || '-'
 }
 
 async function load() {

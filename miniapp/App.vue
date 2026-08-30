@@ -2,6 +2,7 @@
 import { applyPageBackground, SPLASH_BG } from '@/common/pageTheme.js'
 import { preloadTabPagesAsync } from '@/common/preloadTabs.js'
 import { USE_CLOUD } from '@/common/config.js'
+import { loadCampuses } from '@/common/campus.js'
 
 const HOME_TAB = '/pages/home/home'
 
@@ -24,6 +25,7 @@ export default {
       })
     }
     // #endif
+    loadCampuses()
     preloadTabPagesAsync()
     const path = options?.path || ''
     if (path.includes('splash/splash')) {

@@ -6,9 +6,10 @@ export function isSuperAdmin(profile) {
 
 export function allowedCampuses(profile) {
   if (!profile) return []
-  if (profile.superAdmin) return CAMPUSES
+  const all = CAMPUSES.value || []
+  if (profile.superAdmin) return all
   const ids = profile.campusIds || []
-  return CAMPUSES.filter((item) => ids.includes(item.id))
+  return all.filter((item) => ids.includes(item.id))
 }
 
 export function defaultCampusId(profile) {

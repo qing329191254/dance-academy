@@ -23,6 +23,7 @@
           <template #title>门店运营</template>
           <el-menu-item index="/studio">门店信息</el-menu-item>
           <el-menu-item index="/media">轮播与相册</el-menu-item>
+          <el-menu-item index="/classrooms">教室管理</el-menu-item>
         </el-sub-menu>
 
         <el-sub-menu index="group-course">
@@ -55,6 +56,7 @@
           <template #title>反馈评价</template>
           <el-menu-item index="/teacher-reviews">评价教师</el-menu-item>
           <el-menu-item index="/feedback">意见反馈</el-menu-item>
+          <el-menu-item index="/surveys">问卷调查</el-menu-item>
         </el-sub-menu>
 
         <el-sub-menu v-if="auth.isSuperAdmin" index="group-system">
@@ -100,6 +102,7 @@ import { storeToRefs } from 'pinia'
 import { useAuthStore } from '../stores/auth'
 import { useCampusStore } from '../stores/campus'
 import { allowedCampuses, roleLabel } from '../common/adminAccess'
+import { loadCampuses } from '../common/campuses'
 
 const route = useRoute()
 const router = useRouter()
@@ -114,7 +117,7 @@ function onCampusChange(value) {
 
 const defaultOpeneds = computed(() => {
   const path = route.path
-  if (path.startsWith('/studio') || path.startsWith('/media')) return ['group-store']
+  if (path.startsWith('/studio') || path.startsWith('/media') || path.startsWith('/classrooms')) return ['group-store']
   if (
     path.startsWith('/teachers') ||
     path.startsWith('/courses') ||
@@ -141,7 +144,7 @@ const defaultOpeneds = computed(() => {
   ) {
     return ['group-attendance']
   }
-  if (path.startsWith('/teacher-reviews') || path.startsWith('/feedback')) {
+  if (path.startsWith('/teacher-reviews') || path.startsWith('/feedback') || path.startsWith('/surveys')) {
     return ['group-feedback']
   }
   if (path.startsWith('/schools') || path.startsWith('/admins')) {
@@ -153,6 +156,7 @@ const defaultOpeneds = computed(() => {
 onMounted(async () => {
   if (auth.token) {
     try {
+      await loadCampuses()
       await auth.fetchMe()
       campusStore.syncWithProfile(auth.profile)
     } catch {

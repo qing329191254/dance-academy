@@ -113,7 +113,7 @@ public class AdminAuthService {
 
     private void applyPrincipalCampuses(AdminUser admin, Object campusIdsRaw) {
         admin.setRole(AdminRoles.PRINCIPAL);
-        List<String> campuses = AdminAccessService.normalizeCampusIds(parseCampusIds(campusIdsRaw));
+        List<String> campuses = adminAccessService.normalizeCampusIds(parseCampusIds(campusIdsRaw));
         if (campuses.isEmpty()) {
             throw new BizException("请为管理员分配至少一个校区");
         }
