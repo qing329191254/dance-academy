@@ -257,7 +257,8 @@
         "navigationBarBackgroundColor": "#111111",
         "navigationBarTextStyle": "white",
         "backgroundColor": "#111111",
-        "backgroundColorContent": "#111111"
+        "backgroundColorContent": "#111111",
+        "onReachBottomDistance": 80
       }
     },
     {

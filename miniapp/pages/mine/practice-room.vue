@@ -63,7 +63,7 @@
       <view class="section-head">
         <text class="section-title">我的预约</text>
       </view>
-      <view v-if="!bookings.length" class="empty muted">暂无练舞预约</view>
+      <view v-if="!bookings.length && !loadingBookings" class="empty muted">暂无练舞预约</view>
       <view v-for="item in bookings" :key="item.id" class="card item">
         <view class="head">
           <text class="name">{{ item.classroomName || '教室' }}</text>
@@ -83,6 +83,9 @@
           取消预约
         </view>
       </view>
+      <view v-if="bookings.length" class="list-footer muted">
+        {{ loadingBookings ? '加载中...' : hasMore ? '上拉加载更多' : '没有更多了' }}
+      </view>
     </view>
     <app-toast />
   </view>
@@ -90,7 +93,7 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { onShow } from '@dcloudio/uni-app'
+import { onReachBottom, onShow } from '@dcloudio/uni-app'
 import {
   cancelPracticeRoomBooking,
   createPracticeRoomBooking,
@@ -112,6 +115,12 @@ const name = ref('')
 const bookings = ref([])
 const submitting = ref(false)
 const loadingSlots = ref(false)
+const loadingBookings = ref(false)
+const bookingPage = ref(1)
+const bookingTotal = ref(0)
+const bookingSize = 20
+
+const hasMore = computed(() => bookings.value.length < bookingTotal.value)
 
 const selectedClassroom = computed(() => classrooms.value[classroomIndex.value] || null)
 const classroomNames = computed(() => classrooms.value.map((item) => item.name))
@@ -170,11 +179,26 @@ async function loadSlots() {
   }
 }
 
-async function loadBookings() {
-  try {
-    bookings.value = (await getPracticeRoomBookings()) || []
-  } catch (e) {
+async function loadBookings(reset = false) {
+  if (loadingBookings.value) return
+  if (reset) {
+    bookingPage.value = 1
     bookings.value = []
+    bookingTotal.value = 0
+  }
+  loadingBookings.value = true
+  try {
+    const data = await getPracticeRoomBookings(bookingPage.value, bookingSize)
+    const rows = data.list || []
+    bookingTotal.value = data.total || 0
+    bookings.value = reset ? rows : bookings.value.concat(rows)
+  } catch (e) {
+    if (reset) {
+      bookings.value = []
+      bookingTotal.value = 0
+    }
+  } finally {
+    loadingBookings.value = false
   }
 }
 
@@ -214,7 +238,7 @@ async function submit() {
       classDate: classDate.value,
     })
     showSuccess('已提交，等待审核')
-    await Promise.all([loadBookings(), loadSlots()])
+    await Promise.all([loadBookings(true), loadSlots()])
   } catch (e) {
     showError(e.message || '提交失败')
   } finally {
@@ -226,7 +250,7 @@ async function cancelItem(item) {
   try {
     await cancelPracticeRoomBooking(item.id)
     showToast('已取消')
-    await Promise.all([loadBookings(), loadSlots()])
+    await Promise.all([loadBookings(true), loadSlots()])
   } catch (e) {
     showError(e.message || '取消失败')
   }
@@ -244,7 +268,13 @@ onShow(async () => {
   }
   await loadClassrooms()
   await loadSlots()
-  await loadBookings()
+  await loadBookings(true)
+})
+
+onReachBottom(() => {
+  if (!hasMore.value || loadingBookings.value) return
+  bookingPage.value += 1
+  loadBookings(false)
 })
 </script>
 
@@ -359,6 +389,12 @@ onShow(async () => {
   text-align: center;
   padding: 40rpx 0 80rpx;
   font-size: 28rpx;
+}
+
+.list-footer {
+  text-align: center;
+  padding: 12rpx 0 40rpx;
+  font-size: 24rpx;
 }
 
 .cancel-btn {

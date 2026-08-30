@@ -9,7 +9,10 @@
         <view v-if="survey.submitted" class="done-box">
           <text class="done-title">你已提交过该问卷</text>
           <view v-for="(answer, index) in myAnswers" :key="index" class="answer-block">
-            <text class="q">{{ index + 1 }}. {{ answer.questionTitle }}</text>
+            <view class="label-row">
+              <text class="q">{{ index + 1 }}. {{ answer.questionTitle }}</text>
+              <text class="type-tag">{{ typeLabel(answer.type) }}</text>
+            </view>
             <text class="a muted">
               {{ answer.type === 'text' ? (answer.textValue || '-') : ((answer.optionLabels || []).join('、') || '-') }}
             </text>
@@ -18,20 +21,30 @@
 
         <view v-else>
           <view v-for="(question, index) in questions" :key="question.id" class="field">
-            <text class="label">
-              {{ index + 1 }}. {{ question.title }}
-              <text v-if="question.required" class="required">*</text>
-            </text>
+            <view class="label-row">
+              <text class="label">{{ index + 1 }}. {{ question.title }}</text>
+              <view class="meta-tags">
+                <text class="type-tag">{{ typeLabel(question.type) }}</text>
+                <text class="req-tag" :class="question.required ? 'required-tag' : 'optional-tag'">
+                  {{ question.required ? '必填' : '选填' }}
+                </text>
+              </view>
+            </view>
+            <text v-if="question.type === 'single'" class="hint muted">请选择一项</text>
+            <text v-else-if="question.type === 'multi'" class="hint muted">可多选</text>
+            <text v-else class="hint muted">最多 500 字</text>
 
-            <textarea
-              v-if="question.type === 'text'"
-              class="input"
-              :value="answers[question.id]?.textValue || ''"
-              maxlength="500"
-              placeholder="请填写"
-              placeholder-class="placeholder"
-              @input="onTextInput(question.id, $event)"
-            />
+            <view v-if="question.type === 'text'" class="text-wrap">
+              <textarea
+                class="input"
+                :value="answers[question.id]?.textValue || ''"
+                maxlength="500"
+                placeholder="请填写"
+                placeholder-class="placeholder"
+                @input="onTextInput(question.id, $event)"
+              />
+              <text class="count muted">{{ textLength(question.id) }}/500</text>
+            </view>
 
             <view v-else-if="question.type === 'single'" class="options">
               <view
@@ -41,7 +54,10 @@
                 :class="{ active: isSelected(question.id, option.id) }"
                 @click="selectSingle(question.id, option.id)"
               >
-                {{ option.label }}
+                <view class="mark radio" :class="{ on: isSelected(question.id, option.id) }">
+                  <view v-if="isSelected(question.id, option.id)" class="radio-dot" />
+                </view>
+                <text class="option-text">{{ option.label }}</text>
               </view>
             </view>
 
@@ -53,7 +69,10 @@
                 :class="{ active: isSelected(question.id, option.id) }"
                 @click="toggleMulti(question.id, option.id)"
               >
-                {{ option.label }}
+                <view class="mark check" :class="{ on: isSelected(question.id, option.id) }">
+                  <text v-if="isSelected(question.id, option.id)" class="check-icon">✓</text>
+                </view>
+                <text class="option-text">{{ option.label }}</text>
               </view>
             </view>
           </view>
@@ -82,6 +101,16 @@ const submitting = ref(false)
 
 const questions = computed(() => survey.value?.questions || [])
 const myAnswers = computed(() => survey.value?.myResponse?.answers || [])
+
+function typeLabel(type) {
+  if (type === 'single') return '单选'
+  if (type === 'multi') return '多选'
+  return '简答'
+}
+
+function textLength(questionId) {
+  return String(answers[questionId]?.textValue || '').length
+}
 
 function ensureAnswer(questionId) {
   if (!answers[questionId]) {
@@ -181,32 +210,83 @@ onLoad((query) => {
 }
 
 .field {
-  margin-bottom: 32rpx;
+  margin-bottom: 36rpx;
 }
 
-.label {
-  display: block;
+.label-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16rpx;
+  margin-bottom: 8rpx;
+}
+
+.label,
+.q {
+  flex: 1;
   font-size: 28rpx;
   font-weight: 600;
-  margin-bottom: 16rpx;
   line-height: 1.5;
 }
 
-.required {
-  color: #e57373;
-  margin-left: 4rpx;
+.meta-tags {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8rpx;
+  padding-top: 4rpx;
+}
+
+.type-tag,
+.req-tag {
+  padding: 4rpx 12rpx;
+  border-radius: 8rpx;
+  font-size: 20rpx;
+  line-height: 1.4;
+}
+
+.type-tag {
+  background: rgba(138, 116, 229, 0.18);
+  color: #cbbdff;
+}
+
+.required-tag {
+  background: rgba(229, 115, 115, 0.18);
+  color: #ef9a9a;
+}
+
+.optional-tag {
+  background: rgba(255, 255, 255, 0.08);
+  color: #8a8a8a;
+}
+
+.hint {
+  display: block;
+  font-size: 22rpx;
+  margin-bottom: 14rpx;
+}
+
+.text-wrap {
+  position: relative;
 }
 
 .input {
   width: 100%;
   min-height: 160rpx;
-  padding: 20rpx;
+  padding: 20rpx 20rpx 48rpx;
   border-radius: 16rpx;
   background: #242424;
   color: #ffffff;
   font-size: 28rpx;
   line-height: 1.6;
   box-sizing: border-box;
+}
+
+.count {
+  position: absolute;
+  right: 20rpx;
+  bottom: 14rpx;
+  font-size: 22rpx;
 }
 
 .placeholder {
@@ -220,6 +300,9 @@ onLoad((query) => {
 }
 
 .option {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
   padding: 22rpx 24rpx;
   border-radius: 16rpx;
   background: #242424;
@@ -232,6 +315,48 @@ onLoad((query) => {
   border-color: #8a74e5;
   background: rgba(138, 116, 229, 0.16);
   color: #cbbdff;
+}
+
+.option-text {
+  flex: 1;
+  line-height: 1.4;
+}
+
+.mark {
+  width: 32rpx;
+  height: 32rpx;
+  flex-shrink: 0;
+  border: 2rpx solid #6a6a6a;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mark.radio {
+  border-radius: 50%;
+}
+
+.mark.check {
+  border-radius: 6rpx;
+}
+
+.mark.on {
+  border-color: #8a74e5;
+  background: #8a74e5;
+}
+
+.radio-dot {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 50%;
+  background: #ffffff;
+}
+
+.check-icon {
+  font-size: 20rpx;
+  color: #ffffff;
+  line-height: 1;
 }
 
 .submit {
@@ -259,16 +384,10 @@ onLoad((query) => {
   margin-bottom: 24rpx;
 }
 
-.q {
-  display: block;
-  font-size: 28rpx;
-  font-weight: 600;
-  margin-bottom: 8rpx;
-}
-
 .a {
   display: block;
   font-size: 26rpx;
   line-height: 1.5;
+  margin-top: 8rpx;
 }
 </style>

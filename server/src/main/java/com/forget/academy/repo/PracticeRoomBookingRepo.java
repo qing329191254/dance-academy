@@ -13,6 +13,8 @@ import java.util.List;
 public interface PracticeRoomBookingRepo extends JpaRepository<PracticeRoomBooking, Long> {
     List<PracticeRoomBooking> findByUserIdOrderByClassDateDescIdDesc(Long userId);
 
+    Page<PracticeRoomBooking> findByUserIdOrderByClassDateDescIdDesc(Long userId, Pageable pageable);
+
     List<PracticeRoomBooking> findByClassroomIdAndClassDateAndStatusIn(
             Long classroomId, String classDate, Collection<String> statuses);
 

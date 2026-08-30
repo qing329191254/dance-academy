@@ -169,7 +169,8 @@ function uploadErrorMessage(statusCode, body) {
   return '上传失败'
 }
 
-export function uploadMediaFile(filePath, filename) {
+export function uploadMediaFile(filePath, filename, options = {}) {
+  const { onProgress } = options
   return new Promise((resolve, reject) => {
     const token = (() => {
       try {
@@ -178,7 +179,7 @@ export function uploadMediaFile(filePath, filename) {
         return ''
       }
     })()
-    uni.uploadFile({
+    const uploadTask = uni.uploadFile({
       url: `${API_BASE}/upload-media`,
       filePath,
       name: 'file',
@@ -216,6 +217,11 @@ export function uploadMediaFile(filePath, filename) {
         reject(new Error('网络异常，上传失败'))
       },
     })
+    if (onProgress && uploadTask?.onProgressUpdate) {
+      uploadTask.onProgressUpdate((res) => {
+        onProgress(res.progress || 0)
+      })
+    }
   })
 }
 
@@ -322,15 +328,21 @@ export function getPracticeRoomSlots(classroomId, date) {
   })
 }
 
-export function getPracticeRoomBookings() {
-  return request({ url: '/practice-room-bookings' }).then((list) =>
-    (list || []).map((item) => ({
+export function getPracticeRoomBookings(page = 1, size = 20) {
+  return request({ url: `/practice-room-bookings?page=${page}&size=${size}` }).then((data) => {
+    const list = (data?.list || []).map((item) => ({
       ...item,
       classDate: formatDate(item.classDate),
       timeText: item.timeText || `${item.startTime || ''}-${item.endTime || ''}`,
       statusLabel: item.statusLabel || item.status,
-    })),
-  )
+    }))
+    return {
+      list,
+      total: data?.total || 0,
+      page: data?.page || page,
+      size: data?.size || size,
+    }
+  })
 }
 
 export function createPracticeRoomBooking(payload) {

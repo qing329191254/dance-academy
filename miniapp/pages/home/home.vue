@@ -375,6 +375,8 @@ function callStudio() {
 
 .page-content {
   width: 100%;
+  position: relative;
+  z-index: 0;
 }
 
 .custom-navbar {
@@ -382,11 +384,12 @@ function callStudio() {
   top: 0;
   left: 0;
   right: 0;
+  width: 100%;
   z-index: 5000;
   pointer-events: none;
   background: transparent;
   transition: background 0.25s ease;
-  overflow: visible;
+  overflow: hidden;
 }
 
 .custom-navbar.navbar-visible {
@@ -395,12 +398,14 @@ function callStudio() {
 }
 
 .navbar-inner {
+  width: 100%;
   height: 44px;
   display: flex;
   align-items: center;
   justify-content: flex-start;
   padding: 0 96px 0 16rpx;
   position: relative;
+  box-sizing: border-box;
 }
 
 .navbar-title {

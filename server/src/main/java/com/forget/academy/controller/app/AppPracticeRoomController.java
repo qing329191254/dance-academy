@@ -31,8 +31,9 @@ public class AppPracticeRoomController {
     }
 
     @GetMapping("/practice-room-bookings")
-    public ApiResponse<?> mine() {
-        return ApiResponse.ok(practiceRoomBookingService.myBookings(AuthContext.requireApp().id()));
+    public ApiResponse<?> mine(@RequestParam(defaultValue = "1") int page,
+                               @RequestParam(defaultValue = "20") int size) {
+        return ApiResponse.ok(practiceRoomBookingService.myBookings(AuthContext.requireApp().id(), page, size));
     }
 
     @PostMapping("/practice-room-bookings")

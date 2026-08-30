@@ -24,6 +24,14 @@
 </template>
 
 <script setup>
+// #ifdef MP-WEIXIN
+defineOptions({
+  options: {
+    styleIsolation: 'isolated',
+  },
+})
+// #endif
+
 import { ref } from 'vue'
 import { CAMPUSES, currentCampus, selectCampus } from '@/common/campus.js'
 
@@ -44,26 +52,27 @@ function pick(item) {
   position: relative;
   z-index: 2;
   pointer-events: auto;
-  max-width: 280rpx;
+  flex-shrink: 0;
+  align-self: flex-start;
 }
 
 .trigger {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 8rpx;
-  max-width: 280rpx;
-  padding: 10rpx 6rpx;
+  gap: 6rpx;
+  max-width: 240rpx;
+  padding: 8rpx 4rpx;
 }
 
 .pin {
-  width: 34rpx;
-  height: 34rpx;
+  width: 28rpx;
+  height: 28rpx;
   flex-shrink: 0;
 }
 
 .name {
   min-width: 0;
-  font-size: 28rpx;
+  font-size: 24rpx;
   font-weight: 600;
   color: #ffffff;
   overflow: hidden;
@@ -73,11 +82,11 @@ function pick(item) {
 }
 
 .chevron {
-  width: 12rpx;
-  height: 12rpx;
-  margin-top: -4rpx;
-  border-right: 2.5rpx solid #ffffff;
-  border-bottom: 2.5rpx solid #ffffff;
+  width: 10rpx;
+  height: 10rpx;
+  margin-top: -3rpx;
+  border-right: 2rpx solid #ffffff;
+  border-bottom: 2rpx solid #ffffff;
   transform: rotate(45deg);
   flex-shrink: 0;
   opacity: 0.9;

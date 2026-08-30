@@ -28,8 +28,13 @@ public interface AppUserRepo extends JpaRepository<AppUser, Long> {
                 or u.nickname like concat('%', :keyword, '%')
                 or u.openid like concat('%', :keyword, '%'))
               and (u.role is null or u.role = '' or lower(u.role) = 'student')
+              and (:memberTag = '' or exists (
+                    select 1 from UserMemberTag t
+                    where t.userId = u.id and t.tag = :memberTag))
             """)
-    Page<AppUser> searchStudents(@Param("keyword") String keyword, Pageable pageable);
+    Page<AppUser> searchStudents(@Param("keyword") String keyword,
+                                 @Param("memberTag") String memberTag,
+                                 Pageable pageable);
 
     @Query("""
             select u from AppUser u
@@ -37,9 +42,13 @@ public interface AppUserRepo extends JpaRepository<AppUser, Long> {
                 or u.nickname like concat('%', :keyword, '%')
                 or u.openid like concat('%', :keyword, '%'))
               and lower(u.role) = lower(:role)
+              and (:memberTag = '' or exists (
+                    select 1 from UserMemberTag t
+                    where t.userId = u.id and t.tag = :memberTag))
             """)
     Page<AppUser> searchByRole(@Param("keyword") String keyword,
                                @Param("role") String role,
+                               @Param("memberTag") String memberTag,
                                Pageable pageable);
 
     @Query("""
@@ -47,8 +56,13 @@ public interface AppUserRepo extends JpaRepository<AppUser, Long> {
             where (:keyword = ''
                 or u.nickname like concat('%', :keyword, '%')
                 or u.openid like concat('%', :keyword, '%'))
+              and (:memberTag = '' or exists (
+                    select 1 from UserMemberTag t
+                    where t.userId = u.id and t.tag = :memberTag))
             """)
-    Page<AppUser> searchAll(@Param("keyword") String keyword, Pageable pageable);
+    Page<AppUser> searchAll(@Param("keyword") String keyword,
+                            @Param("memberTag") String memberTag,
+                            Pageable pageable);
 
     @Query("""
             select u from AppUser u
@@ -71,12 +85,19 @@ public interface AppUserRepo extends JpaRepository<AppUser, Long> {
                         where b.userId = u.id and s.campusId in :campusIds)
                     or exists (
                         select 1 from PracticeRecord p
-                        where p.userId = u.id and p.campusId in :campusIds)))
+                        where p.userId = u.id and p.campusId in :campusIds)
+                    or exists (
+                        select 1 from UserMemberTag t
+                        where t.userId = u.id and t.campusId in :campusIds)))
               )
+              and (:memberTag = '' or exists (
+                    select 1 from UserMemberTag t
+                    where t.userId = u.id and t.tag = :memberTag and t.campusId in :campusIds))
             """)
     Page<AppUser> searchInCampuses(@Param("keyword") String keyword,
                                    @Param("roleFilter") String roleFilter,
                                    @Param("campusIds") List<String> campusIds,
+                                   @Param("memberTag") String memberTag,
                                    Pageable pageable);
 
     @Query("""

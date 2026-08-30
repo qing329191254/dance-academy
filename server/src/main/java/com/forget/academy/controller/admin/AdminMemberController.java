@@ -2,23 +2,27 @@ package com.forget.academy.controller.admin;
 
 import com.forget.academy.common.ApiResponse;
 import com.forget.academy.common.BizException;
+import com.forget.academy.common.MemberTags;
 import com.forget.academy.common.PageResult;
 import com.forget.academy.entity.AppUser;
 import com.forget.academy.entity.OpportunityApply;
 import com.forget.academy.entity.UserCard;
 import com.forget.academy.entity.UserCourse;
+import com.forget.academy.entity.UserMemberTag;
 import com.forget.academy.entity.EmployeeProfile;
 import com.forget.academy.repo.AppUserRepo;
 import com.forget.academy.repo.EmployeeProfileRepo;
 import com.forget.academy.repo.OpportunityApplyRepo;
 import com.forget.academy.repo.UserCardRepo;
 import com.forget.academy.repo.UserCourseRepo;
+import com.forget.academy.repo.UserMemberTagRepo;
 import com.forget.academy.service.AppAuthService;
 import com.forget.academy.service.AdminAccessService;
 import com.forget.academy.service.EmployeeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -49,26 +53,37 @@ public class AdminMemberController {
     private final EmployeeService employeeService;
     private final EmployeeProfileRepo employeeProfileRepo;
     private final AdminAccessService adminAccessService;
+    private final UserMemberTagRepo userMemberTagRepo;
+
+    @GetMapping("/member-tag-options")
+    public ApiResponse<?> memberTagOptions() {
+        return ApiResponse.ok(MemberTags.options());
+    }
 
     @GetMapping("/users")
     public ApiResponse<PageResult<Map<String, Object>>> users(@RequestParam(defaultValue = "") String keyword,
                                @RequestParam(defaultValue = "") String role,
                                @RequestParam(required = false) String campusId,
+                               @RequestParam(defaultValue = "") String memberTag,
                                @RequestParam(defaultValue = "1") int page,
                                @RequestParam(defaultValue = "20") int size) {
         var pageable = PageRequest.of(Math.max(page - 1, 0), size, Sort.by(Sort.Direction.DESC, "id"));
         String query = keyword == null ? "" : keyword.trim();
         String roleFilter = role == null ? "" : role.trim().toLowerCase();
+        String tagFilter = memberTag == null ? "" : memberTag.trim();
+        if (!tagFilter.isEmpty() && !MemberTags.isValid(tagFilter)) {
+            throw new BizException("业务标签无效");
+        }
         boolean campusFiltered = campusId != null && !campusId.isBlank();
         var campuses = adminAccessService.resolveCampusScope(campusId);
         var pageResult = campusFiltered
-                ? appUserRepo.searchInCampuses(query, roleFilter, campuses, pageable)
+                ? appUserRepo.searchInCampuses(query, roleFilter, campuses, tagFilter, pageable)
                 : switch (roleFilter) {
-            case "" -> appUserRepo.searchAll(query, pageable);
-            case "student" -> appUserRepo.searchStudents(query, pageable);
-            default -> appUserRepo.searchByRole(query, roleFilter, pageable);
+            case "" -> appUserRepo.searchAll(query, tagFilter, pageable);
+            case "student" -> appUserRepo.searchStudents(query, tagFilter, pageable);
+            default -> appUserRepo.searchByRole(query, roleFilter, tagFilter, pageable);
         };
-        List<Map<String, Object>> list = enrichUsers(pageResult.getContent());
+        List<Map<String, Object>> list = enrichUsers(pageResult.getContent(), campuses, campusFiltered ? campusId.trim() : null);
         return ApiResponse.ok(new PageResult<>(list, pageResult.getTotalElements(), pageResult.getNumber() + 1, pageResult.getSize()));
     }
 
@@ -156,6 +171,46 @@ public class AdminMemberController {
                     body.get("jobDescription") == null ? null : String.valueOf(body.get("jobDescription")));
         }
         return ApiResponse.ok(saved);
+    }
+
+    @PutMapping("/users/{id}/member-tags")
+    @Transactional
+    public ApiResponse<?> saveMemberTags(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        AppUser user = appUserRepo.findById(id).orElseThrow(() -> new BizException("学员不存在"));
+        String role = user.getRole() == null ? "student" : user.getRole().trim().toLowerCase();
+        if (!"student".equals(role) && !role.isEmpty()) {
+            throw new BizException("仅学员可设置业务标签");
+        }
+        String campus = body.get("campusId") == null ? "" : String.valueOf(body.get("campusId")).trim();
+        if (campus.isBlank()) {
+            throw new BizException("请先选择校区再设置业务标签");
+        }
+        adminAccessService.assertCanAccessCampus(campus);
+        @SuppressWarnings("unchecked")
+        List<Object> rawTags = body.get("tags") instanceof List<?> list ? (List<Object>) list : List.of();
+        LinkedHashSet<String> tags = new LinkedHashSet<>();
+        for (Object item : rawTags) {
+            if (item == null) continue;
+            String tag = String.valueOf(item).trim();
+            if (tag.isEmpty()) continue;
+            if (!MemberTags.isValid(tag)) {
+                throw new BizException("业务标签无效：" + tag);
+            }
+            tags.add(tag);
+        }
+        userMemberTagRepo.deleteByUserIdAndCampusId(id, campus);
+        for (String tag : tags) {
+            UserMemberTag row = new UserMemberTag();
+            row.setUserId(id);
+            row.setCampusId(campus);
+            row.setTag(tag);
+            userMemberTagRepo.save(row);
+        }
+        Map<String, Object> result = new HashMap<>();
+        result.put("campusId", campus);
+        result.put("memberTags", List.copyOf(tags));
+        result.put("memberTagLabels", tags.stream().map(MemberTags::label).toList());
+        return ApiResponse.ok(result);
     }
 
     @GetMapping("/cards")
@@ -258,7 +313,7 @@ public class AdminMemberController {
         throw new BizException("请选择学员");
     }
 
-    private List<Map<String, Object>> enrichUsers(List<AppUser> users) {
+    private List<Map<String, Object>> enrichUsers(List<AppUser> users, List<String> campusIds, String focusCampusId) {
         if (users == null || users.isEmpty()) {
             return List.of();
         }
@@ -299,6 +354,18 @@ public class AdminMemberController {
                 }
             }
         }
+        Map<Long, LinkedHashSet<String>> tagsByUser = new HashMap<>();
+        List<String> tagCampuses = campusIds == null || campusIds.isEmpty()
+                ? List.of()
+                : campusIds;
+        if (!userIds.isEmpty() && !tagCampuses.isEmpty()) {
+            for (UserMemberTag tag : userMemberTagRepo.findByUserIdInAndCampusIdIn(userIds, tagCampuses)) {
+                if (focusCampusId != null && !focusCampusId.equals(tag.getCampusId())) {
+                    continue;
+                }
+                tagsByUser.computeIfAbsent(tag.getUserId(), ignored -> new LinkedHashSet<>()).add(tag.getTag());
+            }
+        }
         List<Map<String, Object>> rows = new ArrayList<>(users.size());
         for (AppUser user : users) {
             Map<String, Object> row = AppAuthService.toUserMap(user);
@@ -309,6 +376,9 @@ public class AdminMemberController {
             row.put("resumeName", apply == null ? null : apply.getResumeName());
             row.put("closedClassGroup", user.getClosedClassGroup());
             row.put("closedClassGroupLabel", com.forget.academy.common.ClosedClassGroup.label(user.getClosedClassGroup()));
+            LinkedHashSet<String> tags = tagsByUser.getOrDefault(user.getId(), new LinkedHashSet<>());
+            row.put("memberTags", List.copyOf(tags));
+            row.put("memberTagLabels", tags.stream().map(MemberTags::label).toList());
             EmployeeProfile employeeProfile = employeeProfiles.get(user.getId());
             if (employeeProfile != null) {
                 row.put("jobTitle", employeeProfile.getJobTitle());

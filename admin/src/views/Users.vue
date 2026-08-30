@@ -2,11 +2,20 @@
   <div class="page-card">
     <div class="toolbar">
       <div class="filters">
-        <el-input v-model="keyword" placeholder="搜索姓名/微信ID" style="width: 260px" clearable @keyup.enter="search" />
-        <el-select v-model="roleFilter" placeholder="全部角色" clearable style="width: 140px" @change="onRoleChange">
+        <el-input v-model="keyword" placeholder="搜索姓名/微信ID" style="width: 240px" clearable @keyup.enter="search" />
+        <el-select v-model="roleFilter" placeholder="全部角色" clearable style="width: 130px" @change="onFilterChange">
           <el-option label="学员" value="student" />
           <el-option label="教师" value="teacher" />
           <el-option label="员工" value="employee" />
+        </el-select>
+        <el-select
+          v-model="memberTagFilter"
+          placeholder="全部业务标签"
+          clearable
+          style="width: 160px"
+          @change="onFilterChange"
+        >
+          <el-option v-for="item in memberTagOptions" :key="item.value" :label="item.label" :value="item.value" />
         </el-select>
         <el-button @click="search">查询</el-button>
       </div>
@@ -27,14 +36,24 @@
         </template>
       </el-table-column>
       <el-table-column prop="school" label="学校" width="130" align="left" header-align="left" show-overflow-tooltip />
-      <el-table-column prop="collegeGrade" label="学院年级" width="130" align="left" header-align="left" show-overflow-tooltip />
+      <el-table-column prop="collegeGrade" label="学院年级" width="120" align="left" header-align="left" show-overflow-tooltip />
       <el-table-column prop="cardTypes" label="卡类" width="110" align="left" header-align="left" show-overflow-tooltip>
         <template #default="{ row }">{{ row.cardTypes || '-' }}</template>
       </el-table-column>
-      <el-table-column label="闭门分组" width="110" align="left" header-align="left">
+      <el-table-column label="业务标签" min-width="180" align="left" header-align="left">
+        <template #default="{ row }">
+          <div v-if="(row.memberTagLabels || []).length" class="tag-list">
+            <el-tag v-for="label in row.memberTagLabels" :key="label" size="small" type="info" effect="plain">
+              {{ label }}
+            </el-tag>
+          </div>
+          <span v-else class="muted">-</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="闭门分组" width="100" align="left" header-align="left">
         <template #default="{ row }">{{ row.closedClassGroupLabel || '普通' }}</template>
       </el-table-column>
-      <el-table-column label="微信ID" min-width="200" align="left" header-align="left">
+      <el-table-column label="微信ID" min-width="180" align="left" header-align="left">
         <template #default="{ row }">
           <div class="openid-cell">
             <span class="openid-text" :title="row.openid">{{ row.openid || '-' }}</span>
@@ -61,7 +80,7 @@
     />
   </div>
 
-  <el-dialog v-model="visible" :title="dialogTitle" width="520px">
+  <el-dialog v-model="visible" :title="dialogTitle" width="560px">
     <el-form :model="form" label-width="100px">
       <el-form-item label="姓名"><el-input v-model="form.nickname" /></el-form-item>
       <el-form-item label="角色">
@@ -135,6 +154,25 @@
             <el-option label="零基础闭门" value="foundation" />
           </el-select>
         </el-form-item>
+        <el-form-item label="业务标签">
+          <div class="member-tags">
+            <el-alert
+              v-if="!campusId"
+              type="warning"
+              :closable="false"
+              show-icon
+              title="请先在顶部选择校区，再为学员标记业务标签"
+            />
+            <template v-else>
+              <div class="campus-hint muted">作用于当前校区：{{ campusName(campusId) }}（可多选）</div>
+              <el-checkbox-group v-model="form.memberTags">
+                <el-checkbox v-for="item in memberTagOptions" :key="item.value" :label="item.value">
+                  {{ item.label }}
+                </el-checkbox>
+              </el-checkbox-group>
+            </template>
+          </div>
+        </el-form-item>
       </template>
     </el-form>
     <template #footer>
@@ -159,6 +197,8 @@ const page = ref(1)
 const size = 15
 const keyword = ref(route.query.keyword ? String(route.query.keyword) : '')
 const roleFilter = ref(route.query.role ? String(route.query.role) : '')
+const memberTagFilter = ref('')
+const memberTagOptions = ref([])
 const visible = ref(false)
 const teachers = ref([])
 const schools = ref([])
@@ -201,10 +241,16 @@ async function loadTeachers() {
   teachers.value = res.data || []
 }
 
+async function loadMemberTagOptions() {
+  const res = await http.get('/admin/member-tag-options')
+  memberTagOptions.value = res.data || []
+}
+
 async function load() {
   const params = {
     keyword: keyword.value,
     role: roleFilter.value || '',
+    memberTag: memberTagFilter.value || '',
     page: page.value,
     size,
     ...campusParams(),
@@ -214,9 +260,9 @@ async function load() {
   total.value = res.data.total || 0
 }
 
-const { campusParams } = useCampusScope(load)
+const { campusId, campusParams } = useCampusScope(load)
 
-function onRoleChange() {
+function onFilterChange() {
   page.value = 1
   load()
 }
@@ -230,6 +276,7 @@ function edit(row) {
   Object.assign(form, row)
   if (!form.role) form.role = 'student'
   if (!form.closedClassGroup) form.closedClassGroup = null
+  form.memberTags = Array.isArray(row.memberTags) ? [...row.memberTags] : []
   visible.value = true
 }
 
@@ -251,6 +298,10 @@ async function save() {
     ElMessage.warning('请为员工选择所属校区')
     return
   }
+  if (form.role === 'student' && Array.isArray(form.memberTags) && form.memberTags.length && !campusId.value) {
+    ElMessage.warning('请先在顶部选择校区，再保存业务标签')
+    return
+  }
   if (form.role !== 'teacher') {
     form.teacherId = null
   }
@@ -263,14 +314,19 @@ async function save() {
     ...form,
     closedClassGroup: form.role === 'student' ? form.closedClassGroup || null : null,
   })
+  if (form.role === 'student' && campusId.value) {
+    await http.put(`/admin/users/${form.id}/member-tags`, {
+      campusId: campusId.value,
+      tags: form.memberTags || [],
+    })
+  }
   visible.value = false
   ElMessage.success('已保存')
   await load()
 }
 
 onMounted(async () => {
-  await loadSchools()
-  await loadTeachers()
+  await Promise.all([loadSchools(), loadTeachers(), loadMemberTagOptions()])
 })
 </script>
 
@@ -297,5 +353,25 @@ onMounted(async () => {
 
 .muted {
   color: #8a8a96;
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.member-tags {
+  width: 100%;
+}
+
+.campus-hint {
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+
+.member-tags :deep(.el-checkbox) {
+  margin-right: 16px;
+  margin-bottom: 8px;
 }
 </style>

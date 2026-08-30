@@ -133,12 +133,12 @@ public class PracticeRoomBookingService {
         return toAppMap(bookingRepo.save(booking));
     }
 
-    public List<Map<String, Object>> myBookings(Long userId) {
-        List<Map<String, Object>> result = new ArrayList<>();
-        for (PracticeRoomBooking booking : bookingRepo.findByUserIdOrderByClassDateDescIdDesc(userId)) {
-            result.add(toAppMap(booking));
-        }
-        return result;
+    public PageResult<Map<String, Object>> myBookings(Long userId, int page, int size) {
+        int safeSize = Math.min(Math.max(size, 1), 50);
+        var pageable = PageRequest.of(Math.max(page - 1, 0), safeSize);
+        var result = bookingRepo.findByUserIdOrderByClassDateDescIdDesc(userId, pageable);
+        List<Map<String, Object>> list = result.getContent().stream().map(this::toAppMap).toList();
+        return new PageResult<>(list, result.getTotalElements(), result.getNumber() + 1, result.getSize());
     }
 
     @Transactional

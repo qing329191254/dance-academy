@@ -14,6 +14,7 @@
             maxlength="2000"
             placeholder="介绍你的教学风格、经历与擅长方向"
             placeholder-class="placeholder"
+            :disabled="busy"
           />
           <text class="count muted">{{ resumeIntro.length }}/2000</text>
         </view>
@@ -23,9 +24,9 @@
           <view class="photo-grid">
             <view v-for="(item, index) in photos" :key="item.url + index" class="photo-item">
               <image class="photo" :src="item.displayUrl" mode="aspectFill" @click="previewPhoto(index)" />
-              <view class="remove" @click="photos.splice(index, 1)">×</view>
+              <view v-if="!busy" class="remove" @click="photos.splice(index, 1)">×</view>
             </view>
-            <view v-if="photos.length < 12" class="add-box" @click="addPhoto">
+            <view v-if="photos.length < 12 && !busy" class="add-box" @click="addPhoto">
               <text class="add-plus">+</text>
               <text class="add-text">添加照片</text>
             </view>
@@ -36,39 +37,80 @@
           <text class="label">视频（最多 6 个）</text>
           <view v-for="(item, index) in videos" :key="item.url + index" class="video-card">
             <video class="video" :src="item.displayUrl" controls />
-            <view class="video-remove" @click="videos.splice(index, 1)">删除视频</view>
+            <view v-if="!busy" class="video-remove" @click="videos.splice(index, 1)">删除视频</view>
           </view>
-          <view v-if="videos.length < 6" class="btn-ghost add-video" @click="addVideo">添加视频</view>
+          <view v-if="videos.length < 6 && !busy" class="btn-ghost add-video" @click="addVideo">添加视频</view>
           <text class="muted tip-sm">建议上传压缩后的 mp4，单文件不超过 35MB</text>
         </view>
 
-        <view class="btn-primary submit" :class="{ disabled: saving }" @click="save">
-          {{ saving ? '保存中...' : '保存简历' }}
+        <view class="btn-primary submit" :class="{ disabled: busy }" @click="save">
+          {{ saveButtonText }}
         </view>
       </view>
     </view>
+
+    <view v-if="busy" class="busy-mask" @touchmove.stop.prevent>
+      <view class="busy-card">
+        <text class="busy-title">{{ busyTitle }}</text>
+        <view v-if="showProgressBar" class="progress-track">
+          <view class="progress-bar" :style="{ width: progress + '%' }" />
+        </view>
+        <text v-if="showProgressBar" class="busy-percent">{{ progress }}%</text>
+      </view>
+    </view>
+
     <app-toast />
   </view>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { getTeacherResume, saveTeacherResume, uploadMediaFile } from '@/common/api.js'
 import { ensureLogin } from '@/common/auth.js'
 import { mediaUrl } from '@/common/config.js'
-import { showError, showSuccess, showToast } from '@/common/toast.js'
+import { showError, showSuccess } from '@/common/toast.js'
 
 const resumeIntro = ref('')
 const photos = ref([])
 const videos = ref([])
-const saving = ref(false)
+const busy = ref(false)
+const busyTitle = ref('')
+const progress = ref(0)
+const showProgressBar = ref(false)
+
+const saveButtonText = computed(() => {
+  if (busy.value && busyTitle.value.includes('保存')) return '保存中...'
+  if (busy.value) return '处理中...'
+  return '保存简历'
+})
 
 function mapMedia(list) {
   return (list || []).map((item) => ({
     url: item.url,
     displayUrl: mediaUrl(item.url),
   }))
+}
+
+function startBusy(title, withProgress = false) {
+  busy.value = true
+  busyTitle.value = title
+  showProgressBar.value = withProgress
+  progress.value = 0
+}
+
+function updateBusy(title, percent) {
+  busyTitle.value = title
+  if (showProgressBar.value) {
+    progress.value = Math.max(0, Math.min(100, Math.round(percent || 0)))
+  }
+}
+
+function endBusy() {
+  busy.value = false
+  busyTitle.value = ''
+  progress.value = 0
+  showProgressBar.value = false
 }
 
 async function load() {
@@ -83,6 +125,7 @@ async function load() {
 }
 
 function previewPhoto(index) {
+  if (busy.value) return
   uni.previewImage({
     current: index,
     urls: photos.value.map((item) => item.displayUrl),
@@ -90,28 +133,36 @@ function previewPhoto(index) {
 }
 
 function addPhoto() {
+  if (busy.value) return
   uni.chooseImage({
     count: Math.min(9, 12 - photos.value.length),
     sizeType: ['compressed'],
     success: async (res) => {
       const paths = res.tempFilePaths || []
-      for (const path of paths) {
-        try {
-          showToast('上传中...')
-          const uploaded = await uploadMediaFile(path, `photo-${Date.now()}.jpg`)
+      if (!paths.length) return
+      startBusy('照片上传中...')
+      try {
+        for (let i = 0; i < paths.length; i += 1) {
+          if (paths.length > 1) {
+            updateBusy(`照片上传中 ${i + 1}/${paths.length}`)
+          }
+          const uploaded = await uploadMediaFile(paths[i], `photo-${Date.now()}-${i}.jpg`)
           const url = uploaded?.url
           if (url) {
             photos.value.push({ url, displayUrl: mediaUrl(url) })
           }
-        } catch (e) {
-          showError(e.message || '照片上传失败', { duration: 3500 })
         }
+      } catch (e) {
+        showError(e.message || '照片上传失败', { duration: 3500 })
+      } finally {
+        endBusy()
       }
     },
   })
 }
 
 function addVideo() {
+  if (busy.value) return
   uni.chooseVideo({
     sourceType: ['album', 'camera'],
     compressed: true,
@@ -119,16 +170,22 @@ function addVideo() {
     success: async (res) => {
       const path = res.tempFilePath
       if (!path) return
+      startBusy('视频上传中 0%', true)
       try {
-        showToast('视频上传中...')
         const name = `video-${Date.now()}.mp4`
-        const uploaded = await uploadMediaFile(path, name)
+        const uploaded = await uploadMediaFile(path, name, {
+          onProgress(percent) {
+            updateBusy(`视频上传中 ${percent}%`, percent)
+          },
+        })
         const url = uploaded?.url
         if (url) {
           videos.value.push({ url, displayUrl: mediaUrl(url) })
         }
       } catch (e) {
         showError(e.message || '视频上传失败', { duration: 3500 })
+      } finally {
+        endBusy()
       }
     },
   })
@@ -136,8 +193,8 @@ function addVideo() {
 
 async function save() {
   if (!ensureLogin()) return
-  if (saving.value) return
-  saving.value = true
+  if (busy.value) return
+  startBusy('保存中...')
   try {
     await saveTeacherResume({
       resumeIntro: resumeIntro.value.trim(),
@@ -149,7 +206,7 @@ async function save() {
   } catch (e) {
     showError(e.message || '保存失败')
   } finally {
-    saving.value = false
+    endBusy()
   }
 }
 
@@ -304,5 +361,55 @@ onLoad(() => {
 
 .submit.disabled {
   opacity: 0.6;
+}
+
+.busy-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48rpx;
+}
+
+.busy-card {
+  width: 100%;
+  max-width: 520rpx;
+  padding: 48rpx 40rpx;
+  border-radius: 24rpx;
+  background: #1c1c1c;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.busy-title {
+  font-size: 28rpx;
+  color: #ffffff;
+  text-align: center;
+}
+
+.progress-track {
+  width: 100%;
+  height: 12rpx;
+  margin-top: 28rpx;
+  border-radius: 999rpx;
+  background: #333;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  border-radius: 999rpx;
+  background: linear-gradient(90deg, #8a74e5, #b39cff);
+  transition: width 0.2s ease;
+}
+
+.busy-percent {
+  margin-top: 16rpx;
+  font-size: 24rpx;
+  color: #cbbdff;
 }
 </style>

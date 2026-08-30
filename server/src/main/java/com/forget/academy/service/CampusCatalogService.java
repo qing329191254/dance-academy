@@ -19,6 +19,7 @@ import com.forget.academy.entity.Studio;
 import com.forget.academy.entity.Survey;
 import com.forget.academy.entity.SurveyResponse;
 import com.forget.academy.entity.TeacherAttendance;
+import com.forget.academy.entity.UserMemberTag;
 import com.forget.academy.repo.AdminUserRepo;
 import com.forget.academy.repo.AppUserRepo;
 import com.forget.academy.repo.BannerRepo;
@@ -37,6 +38,7 @@ import com.forget.academy.repo.StudioRepo;
 import com.forget.academy.repo.SurveyRepo;
 import com.forget.academy.repo.SurveyResponseRepo;
 import com.forget.academy.repo.TeacherAttendanceRepo;
+import com.forget.academy.repo.UserMemberTagRepo;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -87,6 +89,7 @@ public class CampusCatalogService {
     private final EmployeeProfileRepo employeeProfileRepo;
     private final AppUserRepo appUserRepo;
     private final AdminUserRepo adminUserRepo;
+    private final UserMemberTagRepo userMemberTagRepo;
 
     public List<School> listEnabled() {
         return schoolRepo.findByEnabledTrueOrderBySortOrderAscIdAsc();
@@ -227,6 +230,7 @@ public class CampusCatalogService {
         reassignAll(teacherAttendanceRepo.findAll(), from, to, TeacherAttendance::getCampusId, TeacherAttendance::setCampusId, teacherAttendanceRepo::save);
         reassignAll(employeeDutyRecordRepo.findAll(), from, to, EmployeeDutyRecord::getCampusId, EmployeeDutyRecord::setCampusId, employeeDutyRecordRepo::save);
         reassignAll(employeeProfileRepo.findAll(), from, to, EmployeeProfile::getCampusId, EmployeeProfile::setCampusId, employeeProfileRepo::save);
+        reassignAll(userMemberTagRepo.findAll(), from, to, UserMemberTag::getCampusId, UserMemberTag::setCampusId, userMemberTagRepo::save);
         for (AppUser user : appUserRepo.findAll()) {
             if (from.equals(user.getCampusId())) {
                 user.setCampusId(to);

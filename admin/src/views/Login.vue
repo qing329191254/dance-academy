@@ -49,11 +49,12 @@ async function onSubmit() {
 .login-page {
   min-height: 100%;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 28px;
   background: radial-gradient(circle at top, #2a2344, #111118 55%);
+  position: relative;
+  padding-bottom: 56px;
+  box-sizing: border-box;
 }
 .card {
   width: 380px;
@@ -83,10 +84,15 @@ async function onSubmit() {
   width: 100%;
 }
 .icp {
+  position: absolute;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
   color: rgba(255, 255, 255, 0.55);
   font-size: 13px;
   text-decoration: none;
   letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 .icp:hover {
   color: rgba(255, 255, 255, 0.85);
