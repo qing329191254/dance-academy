@@ -140,6 +140,35 @@ export function uploadResume(filePath, filename) {
     }))
 }
 
+const UPLOAD_TOO_LARGE_MSG = '文件过大，请压缩后再上传（视频建议 35MB 以内）'
+
+function parseUploadBody(raw) {
+  if (raw == null || raw === '') return {}
+  if (typeof raw !== 'string') return raw
+  try {
+    return JSON.parse(raw)
+  } catch {
+    return {}
+  }
+}
+
+function isOversizedMessage(text) {
+  if (!text) return false
+  return /too large|max upload|size exceeded|文件过大|超出|413|payload too large/i.test(String(text))
+}
+
+function uploadErrorMessage(statusCode, body) {
+  if (statusCode === 413) return UPLOAD_TOO_LARGE_MSG
+  const msg = body?.message || body?.msg || body?.error
+  if (msg && isOversizedMessage(msg)) return UPLOAD_TOO_LARGE_MSG
+  if (statusCode === 401 || body?.code === 401) return msg || '请先登录'
+  if (msg) return msg
+  if (statusCode === 502 || statusCode === 504) return '上传超时，请压缩视频后重试'
+  if (statusCode >= 500) return '服务器繁忙，请稍后重试'
+  if (statusCode >= 400) return '上传失败，请稍后重试'
+  return '上传失败'
+}
+
 export function uploadMediaFile(filePath, filename) {
   return new Promise((resolve, reject) => {
     const token = (() => {
@@ -162,22 +191,28 @@ export function uploadMediaFile(filePath, filename) {
         'X-Token': token,
       },
       success(res) {
-        try {
-          const body = typeof res.data === 'string' ? JSON.parse(res.data) : res.data
-          if (res.statusCode === 401 || body?.code === 401) {
-            reject(new Error(body?.message || '请先登录'))
-            return
-          }
-          if (res.statusCode >= 400 || (typeof body?.code === 'number' && body.code !== 0)) {
-            reject(new Error(body?.message || body?.msg || '上传失败'))
-            return
-          }
-          resolve(body?.data || body)
-        } catch (e) {
-          reject(new Error('上传失败'))
+        const body = parseUploadBody(res.data)
+        const statusCode = res.statusCode || 0
+        if (statusCode === 401 || body?.code === 401) {
+          reject(new Error(uploadErrorMessage(statusCode, body)))
+          return
         }
+        if (statusCode >= 400 || (typeof body?.code === 'number' && body.code !== 0)) {
+          reject(new Error(uploadErrorMessage(statusCode, body)))
+          return
+        }
+        if (!body || (typeof body?.code === 'number' && body.code !== 0)) {
+          reject(new Error('上传失败'))
+          return
+        }
+        resolve(body?.data ?? body)
       },
-      fail() {
+      fail(err) {
+        const msg = err?.errMsg || ''
+        if (/timeout|timed out/i.test(msg)) {
+          reject(new Error('上传超时，请压缩视频后重试'))
+          return
+        }
         reject(new Error('网络异常，上传失败'))
       },
     })

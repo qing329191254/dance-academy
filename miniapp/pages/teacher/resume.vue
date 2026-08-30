@@ -104,7 +104,7 @@ function addPhoto() {
             photos.value.push({ url, displayUrl: mediaUrl(url) })
           }
         } catch (e) {
-          showError(e.message || '照片上传失败')
+          showError(e.message || '照片上传失败', { duration: 3500 })
         }
       }
     },
@@ -128,7 +128,7 @@ function addVideo() {
           videos.value.push({ url, displayUrl: mediaUrl(url) })
         }
       } catch (e) {
-        showError(e.message || '视频上传失败')
+        showError(e.message || '视频上传失败', { duration: 3500 })
       }
     },
   })

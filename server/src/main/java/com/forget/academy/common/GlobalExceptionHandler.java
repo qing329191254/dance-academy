@@ -6,6 +6,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -16,6 +17,12 @@ public class GlobalExceptionHandler {
                 : e.getCode() == 403 ? HttpStatus.FORBIDDEN
                 : HttpStatus.BAD_REQUEST;
         return ResponseEntity.status(status).body(ApiResponse.fail(e.getCode(), e.getMessage()));
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMaxUpload(MaxUploadSizeExceededException e) {
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+                .body(ApiResponse.fail(413, "文件过大，请压缩后上传（建议 35MB 以内）"));
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
