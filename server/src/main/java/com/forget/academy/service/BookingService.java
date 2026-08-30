@@ -241,7 +241,12 @@ public class BookingService {
             return booking;
         }
         booking.setStatus(status);
-        return bookingRepo.save(booking);
+        Booking saved = bookingRepo.save(booking);
+        if (STATUS_PENDING.equals(status) && !STATUS_PENDING.equals(previous)) {
+            scheduleRepo.findById(booking.getScheduleId())
+                    .ifPresent(schedule -> linkCampus(booking.getUserId(), schedule));
+        }
+        return saved;
     }
 
     @Transactional
@@ -316,6 +321,7 @@ public class BookingService {
             booking.setStatus(STATUS_PENDING);
             booking.setRemindSent(false);
             bookingRepo.save(booking);
+            linkCampus(booking.getUserId(), schedule);
             bookingRemindService.scheduleGroupRemind(booking);
         }
     }

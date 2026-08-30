@@ -95,16 +95,9 @@ public interface AppUserRepo extends JpaRepository<AppUser, Long> {
                 or (lower(coalesce(u.role, '')) = 'teacher' and u.teacherId in (
                     select distinct s.teacherId from Schedule s
                     where s.campusId in :campusIds and s.teacherId is not null))
-                or ((u.role is null or u.role = '' or lower(u.role) = 'student') and (
-                    exists (
+                or ((u.role is null or u.role = '' or lower(u.role) = 'student') and exists (
                         select 1 from UserCampus uc
-                        where uc.userId = u.id and uc.campusId in :campusIds)
-                    or exists (
-                        select 1 from Booking b join Schedule s on b.scheduleId = s.id
-                        where b.userId = u.id and s.campusId in :campusIds)
-                    or exists (
-                        select 1 from PracticeRecord p
-                        where p.userId = u.id and p.campusId in :campusIds)))
+                        where uc.userId = u.id and uc.campusId in :campusIds))
               )
               and (:memberTag = '' or exists (
                     select 1 from UserMemberTag t
@@ -125,19 +118,9 @@ public interface AppUserRepo extends JpaRepository<AppUser, Long> {
     @Query("""
             select count(distinct u.id) from AppUser u
             where (u.role is null or u.role = '' or lower(u.role) = 'student')
-              and (
-                exists (
+              and exists (
                     select 1 from UserCampus uc
                     where uc.userId = u.id and uc.campusId in :campusIds
-                )
-                or exists (
-                    select 1 from Booking b join Schedule s on b.scheduleId = s.id
-                    where b.userId = u.id and s.campusId in :campusIds
-                )
-                or exists (
-                    select 1 from PracticeRecord p
-                    where p.userId = u.id and p.campusId in :campusIds
-                )
               )
             """)
     long countStudentsActiveInCampuses(@Param("campusIds") List<String> campusIds);

@@ -18,11 +18,14 @@
         {{ loading ? '登录中...' : '微信一键登录' }}
       </button>
 
-      <view class="agreement">
-        <text class="muted">登录即表示同意</text>
-        <text class="link" @tap="goLegal('user')">《用户协议》</text>
+      <view class="agreement" @tap="toggleAgree">
+        <view class="check" :class="{ on: agreed }">
+          <view v-if="agreed" class="check-dot" />
+        </view>
+        <text class="muted">我已阅读并同意</text>
+        <text class="link" @tap.stop="goLegal('user')">《用户协议》</text>
         <text class="muted">和</text>
-        <text class="link" @tap="goLegal('privacy')">《隐私政策》</text>
+        <text class="link" @tap.stop="goLegal('privacy')">《隐私政策》</text>
       </view>
     </view>
     <app-toast />
@@ -37,6 +40,7 @@ import { getBrand } from '@/common/api.js'
 
 const logo = ref('')
 const loading = ref(false)
+const agreed = ref(false)
 
 onMounted(async () => {
   try {
@@ -45,8 +49,16 @@ onMounted(async () => {
   } catch (e) {}
 })
 
+function toggleAgree() {
+  agreed.value = !agreed.value
+}
+
 async function onLogin() {
   if (loading.value) return
+  if (!agreed.value) {
+    showError('请先阅读并同意用户协议和隐私政策')
+    return
+  }
   loading.value = true
   try {
     await weixinOneTapLogin()
@@ -149,6 +161,31 @@ function goLegal(type) {
   line-height: 1.8;
   text-align: center;
   padding: 0 24rpx;
+  gap: 8rpx;
+}
+
+.check {
+  width: 28rpx;
+  height: 28rpx;
+  border-radius: 50%;
+  border: 2rpx solid rgba(255, 255, 255, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.check.on {
+  border-color: #8a74e5;
+  background: rgba(138, 116, 229, 0.25);
+}
+
+.check-dot {
+  width: 14rpx;
+  height: 14rpx;
+  border-radius: 50%;
+  background: #8a74e5;
 }
 
 .link {

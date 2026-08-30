@@ -2,8 +2,11 @@ package com.forget.academy.service;
 
 import com.forget.academy.common.BizException;
 import com.forget.academy.entity.UserCampus;
+import com.forget.academy.repo.BookingRepo;
+import com.forget.academy.repo.PracticeRecordRepo;
 import com.forget.academy.repo.UserCampusRepo;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,12 +16,15 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserCampusService {
     private final UserCampusRepo userCampusRepo;
     private final AdminAccessService adminAccessService;
     private final CampusCatalogService campusCatalogService;
+    private final BookingRepo bookingRepo;
+    private final PracticeRecordRepo practiceRecordRepo;
 
     public List<String> listCampusIds(Long userId) {
         if (userId == null) {
@@ -113,5 +119,49 @@ public class UserCampusService {
             }
         }
         return listCampusIds(userId);
+    }
+
+    /**
+     * 将历史约课 / 签到中的校区回填到 user_campus，避免列表改为仅按关联后丢人。
+     */
+    @Transactional
+    public int backfillFromActivity() {
+        int created = 0;
+        created += linkPairs(bookingRepo.findActiveUserCampusPairs());
+        created += linkPairs(practiceRecordRepo.findUserCampusPairs());
+        if (created > 0) {
+            log.info("user_campus backfill created {} links", created);
+        }
+        return created;
+    }
+
+    private int linkPairs(List<Object[]> pairs) {
+        int created = 0;
+        if (pairs == null) {
+            return 0;
+        }
+        for (Object[] pair : pairs) {
+            if (pair == null || pair.length < 2 || pair[0] == null || pair[1] == null) {
+                continue;
+            }
+            Long userId = pair[0] instanceof Number n ? n.longValue() : null;
+            String campusId = String.valueOf(pair[1]).trim();
+            if (userId == null || campusId.isBlank()) {
+                continue;
+            }
+            if (!campusCatalogService.contains(campusId)) {
+                continue;
+            }
+            String campus = campusCatalogService.normalize(campusId);
+            if (userCampusRepo.existsByUserIdAndCampusId(userId, campus)) {
+                continue;
+            }
+            UserCampus row = new UserCampus();
+            row.setUserId(userId);
+            row.setCampusId(campus);
+            userCampusRepo.save(row);
+            created++;
+        }
+        return created;
     }
 }

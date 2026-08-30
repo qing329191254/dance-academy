@@ -21,6 +21,8 @@ public interface ScheduleRepo extends JpaRepository<Schedule, Long> {
 
     List<Schedule> findByTeacherIdAndEnabledTrueOrderBySortOrderAscIdAsc(Long teacherId);
 
+    boolean existsByTeacherIdAndCampusIdIn(Long teacherId, java.util.Collection<String> campusIds);
+
     List<Schedule> findByCampusIdAndEnabledTrue(String campusId);
 
     List<Schedule> findAllByOrderByTypeAscSortOrderAscIdAsc();

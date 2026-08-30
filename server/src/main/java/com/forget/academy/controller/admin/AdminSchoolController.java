@@ -3,9 +3,12 @@ package com.forget.academy.controller.admin;
 import com.forget.academy.common.ApiResponse;
 import com.forget.academy.common.BizException;
 import com.forget.academy.entity.School;
-import com.forget.academy.repo.AppUserRepo;
+import com.forget.academy.repo.ScheduleRepo;
 import com.forget.academy.repo.SchoolRepo;
+import com.forget.academy.repo.UserCampusRepo;
 import com.forget.academy.service.AdminAccessService;
+import com.forget.academy.service.CampusContentService;
+import com.forget.academy.service.StudioService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,8 +25,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class AdminSchoolController {
     private final SchoolRepo schoolRepo;
-    private final AppUserRepo appUserRepo;
+    private final ScheduleRepo scheduleRepo;
+    private final UserCampusRepo userCampusRepo;
     private final AdminAccessService adminAccessService;
+    private final StudioService studioService;
+    private final CampusContentService campusContentService;
 
     @GetMapping("/schools")
     public ApiResponse<?> schools(@RequestParam(defaultValue = "false") boolean all) {
@@ -45,7 +51,10 @@ public class AdminSchoolController {
         school.setName(name);
         school.setSortOrder(body.getSortOrder() == null ? 0 : body.getSortOrder());
         school.setEnabled(body.getEnabled() == null || body.getEnabled());
-        return ApiResponse.ok(schoolRepo.save(school));
+        School saved = schoolRepo.save(school);
+        studioService.ensureCampusRecords();
+        campusContentService.ensureCampusRecords();
+        return ApiResponse.ok(saved);
     }
 
     @PutMapping("/schools/{id}")
@@ -72,9 +81,14 @@ public class AdminSchoolController {
     public ApiResponse<Void> delete(@PathVariable Long id) {
         adminAccessService.requireSuperAdmin();
         School school = schoolRepo.findById(id).orElseThrow(() -> new BizException("学校不存在"));
-        long used = appUserRepo.countBySchool(school.getName());
-        if (used > 0) {
-            throw new BizException("已有 " + used + " 名学员使用该学校，无法删除，可改为停用");
+        String campusId = String.valueOf(school.getId());
+        long linkedStudents = userCampusRepo.countByCampusId(campusId);
+        if (linkedStudents > 0) {
+            throw new BizException("该校区仍有 " + linkedStudents + " 名关联学员，无法删除，可改为停用");
+        }
+        long schedules = scheduleRepo.countByCampusId(campusId);
+        if (schedules > 0) {
+            throw new BizException("该校区仍有 " + schedules + " 条课表，无法删除，可改为停用");
         }
         schoolRepo.delete(school);
         return ApiResponse.ok();

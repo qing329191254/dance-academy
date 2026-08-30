@@ -332,7 +332,8 @@ function edit(row) {
   Object.assign(form, row)
   if (!form.role) form.role = 'student'
   if (!form.closedClassGroup) form.closedClassGroup = null
-  form.memberTags = Array.isArray(row.memberTags) ? [...row.memberTags] : []
+  // 业务标签按当前顶部校区生效；未选校区时不带入，避免把多校区标签合并保存到某一校区
+  form.memberTags = campusId.value && Array.isArray(row.memberTags) ? [...row.memberTags] : []
   const allCampusIds = Array.isArray(row.campusIds) ? [...row.campusIds] : []
   form.campusIdsAll = allCampusIds
   const allowedIds = new Set(editableCampuses.value.map((item) => item.id))

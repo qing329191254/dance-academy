@@ -81,5 +81,13 @@ public interface BookingRepo extends JpaRepository<Booking, Long> {
             """)
     List<Booking> findGroupPendingReminders();
 
+    @Query("""
+            select distinct b.userId, s.campusId from Booking b join Schedule s on b.scheduleId = s.id
+            where b.userId is not null
+              and s.campusId is not null and s.campusId <> ''
+              and b.status in ('待上课', '排队中', '已完成')
+            """)
+    List<Object[]> findActiveUserCampusPairs();
+
     void deleteByUserId(Long userId);
 }

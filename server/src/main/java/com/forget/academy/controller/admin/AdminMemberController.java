@@ -117,8 +117,9 @@ public class AdminMemberController {
 
     @PostMapping("/users/{id}/claim-campus")
     public ApiResponse<?> claimCampus(@PathVariable Long id, @RequestBody Map<String, Object> body) {
-        if (!appUserRepo.existsById(id)) {
-            throw new BizException("学员不存在");
+        AppUser user = appUserRepo.findById(id).orElseThrow(() -> new BizException("学员不存在"));
+        if (!isStudentRole(user.getRole())) {
+            throw new BizException("仅可添加学员到校区");
         }
         String campus = body.get("campusId") == null ? "" : String.valueOf(body.get("campusId")).trim();
         List<String> campusIds = userCampusService.claimCampus(id, campus);
@@ -130,12 +131,15 @@ public class AdminMemberController {
 
     @GetMapping("/users/{id}")
     public ApiResponse<AppUser> user(@PathVariable Long id) {
-        return ApiResponse.ok(appUserRepo.findById(id).orElseThrow(() -> new BizException("学员不存在")));
+        AppUser user = appUserRepo.findById(id).orElseThrow(() -> new BizException("学员不存在"));
+        adminAccessService.assertCanManageUser(user);
+        return ApiResponse.ok(user);
     }
 
     @PutMapping("/users/{id}")
     public ApiResponse<AppUser> updateUser(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         AppUser user = appUserRepo.findById(id).orElseThrow(() -> new BizException("学员不存在"));
+        adminAccessService.assertCanManageUser(user);
         if (body.get("nickname") != null) {
             user.setNickname(String.valueOf(body.get("nickname")));
         }
@@ -244,6 +248,10 @@ public class AdminMemberController {
             throw new BizException("请先选择校区再设置业务标签");
         }
         adminAccessService.assertCanAccessCampus(campus);
+        adminAccessService.assertCanManageUser(user);
+        if (!userCampusRepo.existsByUserIdAndCampusId(id, campus)) {
+            throw new BizException("请先将学员加入该校区，再设置业务标签");
+        }
         @SuppressWarnings("unchecked")
         List<Object> rawTags = body.get("tags") instanceof List<?> list ? (List<Object>) list : List.of();
         LinkedHashSet<String> tags = new LinkedHashSet<>();

@@ -44,6 +44,13 @@ public interface PracticeRecordRepo extends JpaRepository<PracticeRecord, Long> 
     long countByCheckedAtAfterAndCampusIdIn(@Param("after") Instant after,
                                             @Param("campusIds") List<String> campusIds);
 
+    @Query("""
+            select distinct p.userId, p.campusId from PracticeRecord p
+            where p.userId is not null
+              and p.campusId is not null and p.campusId <> ''
+            """)
+    List<Object[]> findUserCampusPairs();
+
     void deleteByUserId(Long userId);
 
     @Query("""

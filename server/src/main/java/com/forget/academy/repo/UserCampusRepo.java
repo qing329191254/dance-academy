@@ -15,6 +15,10 @@ public interface UserCampusRepo extends JpaRepository<UserCampus, Long> {
 
     boolean existsByUserIdAndCampusId(Long userId, String campusId);
 
+    boolean existsByUserIdAndCampusIdIn(Long userId, Collection<String> campusIds);
+
+    long countByCampusId(String campusId);
+
     void deleteByUserIdAndCampusId(Long userId, String campusId);
 
     void deleteByUserIdAndCampusIdIn(Long userId, Collection<String> campusIds);

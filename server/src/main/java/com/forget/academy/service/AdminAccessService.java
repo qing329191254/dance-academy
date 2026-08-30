@@ -3,7 +3,10 @@ package com.forget.academy.service;
 import com.forget.academy.common.AdminRoles;
 import com.forget.academy.common.BizException;
 import com.forget.academy.entity.AdminUser;
+import com.forget.academy.entity.AppUser;
 import com.forget.academy.repo.AdminUserRepo;
+import com.forget.academy.repo.ScheduleRepo;
+import com.forget.academy.repo.UserCampusRepo;
 import com.forget.academy.security.AdminContext;
 import com.forget.academy.security.AuthContext;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +24,8 @@ import java.util.stream.Collectors;
 public class AdminAccessService {
     private final AdminUserRepo adminUserRepo;
     private final CampusCatalogService campusCatalogService;
+    private final UserCampusRepo userCampusRepo;
+    private final ScheduleRepo scheduleRepo;
 
     public AdminUser currentAdmin() {
         AdminUser cached = AdminContext.get();
@@ -82,6 +87,38 @@ public class AdminAccessService {
             return;
         }
         resolveCampusScope(campusId);
+    }
+
+    /**
+     * 校区管理员只能管理：本校区员工、在本校区有课的教师、已关联本校区的学员。
+     * 超级管理员不受限。认领接口请单独放行，不要走本方法。
+     */
+    public void assertCanManageUser(AppUser user) {
+        if (user == null || user.getId() == null) {
+            throw new BizException("用户不存在");
+        }
+        AdminUser admin = currentAdmin();
+        if (isSuperAdmin(admin)) {
+            return;
+        }
+        List<String> allowed = allowedCampusIds(admin);
+        String role = user.getRole() == null ? "student" : user.getRole().trim().toLowerCase();
+        if ("employee".equals(role)) {
+            if (user.getCampusId() != null && allowed.contains(user.getCampusId().trim())) {
+                return;
+            }
+            throw new BizException(403, "无权管理该员工");
+        }
+        if ("teacher".equals(role)) {
+            if (user.getTeacherId() != null && scheduleRepo.existsByTeacherIdAndCampusIdIn(user.getTeacherId(), allowed)) {
+                return;
+            }
+            throw new BizException(403, "无权管理该教师账号");
+        }
+        if (userCampusRepo.existsByUserIdAndCampusIdIn(user.getId(), allowed)) {
+            return;
+        }
+        throw new BizException(403, "无权管理该学员，请先将其加入本校区");
     }
 
     public void requireSuperAdmin() {
