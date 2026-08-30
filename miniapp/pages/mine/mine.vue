@@ -40,14 +40,14 @@
       </view>
     </view>
 
-    <view v-else-if="loggedIn" class="section">
+    <view v-else-if="loggedIn && !profileReady" class="section">
       <view class="card login-tip" @click="goProfile">
         <text class="login-tip-title">请完善个人资料</text>
         <text class="muted login-tip-desc">完善后即可查看卡包、预约与已上课程</text>
       </view>
     </view>
 
-    <view v-else class="section">
+    <view v-else-if="!loggedIn" class="section">
       <view class="card login-tip" @click="goLogin">
         <text class="login-tip-title">登录后查看学习数据</text>
         <text class="muted login-tip-desc">卡包、预约与已上课程登录后同步展示</text>

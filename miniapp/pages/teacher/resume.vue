@@ -53,7 +53,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import { onShow } from '@dcloudio/uni-app'
+import { onLoad } from '@dcloudio/uni-app'
 import { getTeacherResume, saveTeacherResume, uploadMediaFile } from '@/common/api.js'
 import { ensureLogin } from '@/common/auth.js'
 import { mediaUrl } from '@/common/config.js'
@@ -153,7 +153,7 @@ async function save() {
   }
 }
 
-onShow(() => {
+onLoad(() => {
   if (!ensureLogin()) return
   load()
 })
