@@ -10,8 +10,16 @@
     </view>
 
     <view class="section">
-      <view v-if="!list.length" class="empty muted">暂无机会，敬请期待</view>
+      <view v-if="loading" class="skeleton-list">
+        <view v-for="n in 2" :key="n" class="card opp skeleton-card">
+          <view class="skeleton-line skeleton-title" />
+          <view class="skeleton-line skeleton-summary" />
+          <view class="skeleton-line skeleton-bottom" />
+        </view>
+      </view>
+      <view v-else-if="!list.length" class="empty muted">暂无机会，敬请期待</view>
       <view
+        v-else
         v-for="item in list"
         :key="item.id"
         class="card opp"
@@ -44,6 +52,7 @@ import { selectedCampusId } from '@/common/campus.js'
 
 const key = ref('parttime')
 const list = ref([])
+const loading = ref(true)
 const trackMetaMap = ref({ ...mockTrackMeta })
 const meta = computed(() => trackMetaMap.value[key.value] || { line: '成长', name: '路径', level: 'T1' })
 
@@ -59,10 +68,13 @@ async function loadMeta() {
 }
 
 async function loadList() {
+  loading.value = true
   try {
     list.value = (await getOpportunities(key.value, selectedCampusId.value)) || []
   } catch (e) {
     list.value = []
+  } finally {
+    loading.value = false
   }
 }
 
@@ -143,5 +155,47 @@ function open(id) {
 .empty {
   text-align: center;
   padding: 80rpx 0;
+}
+
+.skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.skeleton-card {
+  pointer-events: none;
+  gap: 20rpx;
+}
+
+.skeleton-line {
+  border-radius: 8rpx;
+  background: linear-gradient(90deg, #2a2a32 25%, #35353f 50%, #2a2a32 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.2s ease-in-out infinite;
+}
+
+.skeleton-title {
+  width: 55%;
+  height: 32rpx;
+}
+
+.skeleton-summary {
+  width: 100%;
+  height: 72rpx;
+}
+
+.skeleton-bottom {
+  width: 40%;
+  height: 24rpx;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 </style>

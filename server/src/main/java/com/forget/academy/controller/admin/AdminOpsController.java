@@ -25,6 +25,7 @@ import com.forget.academy.repo.EmployeeDutyRecordRepo;
 import com.forget.academy.repo.TeacherAttendanceRepo;
 import com.forget.academy.repo.TeacherRepo;
 import com.forget.academy.service.AdminAccessService;
+import com.forget.academy.service.CampusCatalogService;
 import com.forget.academy.service.EmployeeService;
 import com.forget.academy.service.BookingService;
 import com.forget.academy.service.CheckinService;
@@ -66,6 +67,7 @@ public class AdminOpsController {
     private final EmployeeService employeeService;
     private final AppUserRepo appUserRepo;
     private final AdminAccessService adminAccessService;
+    private final CampusCatalogService campusCatalogService;
     private final ScheduleRepo scheduleRepo;
     private final CheckinService checkinService;
     private final TeacherService teacherService;
@@ -153,24 +155,9 @@ public class AdminOpsController {
                 booking.getUserId(), sessionId, date));
         scheduleRepo.findById(booking.getScheduleId()).ifPresent(schedule -> {
             row.put("campusId", schedule.getCampusId());
-            row.put("campusName", campusDisplayName(schedule.getCampusId()));
+            row.put("campusName", campusCatalogService.displayName(schedule.getCampusId()));
         });
         return row;
-    }
-
-    private static String campusDisplayName(String campusId) {
-        if (campusId == null || campusId.isBlank()) {
-            return "-";
-        }
-        return switch (campusId) {
-            case "shizishan" -> "川师大狮子山校区";
-            case "chenglong" -> "川师大成龙校区";
-            case "bnu-zhuhai" -> "北京师范大学珠海校区";
-            case "uic" -> "北师香港浸会大学校区";
-            case "cdu" -> "成都大学校区";
-            case "swpu" -> "西南石油大学成都校区";
-            default -> campusId;
-        };
     }
 
     @DeleteMapping("/bookings/{id}")

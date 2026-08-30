@@ -385,9 +385,9 @@ export function getGrowth() {
 }
 
 export function getOpportunities(trackKey, campusId) {
-  const params = new URLSearchParams({ trackKey })
-  if (campusId) params.set('campusId', campusId)
-  return request({ url: `/opportunities?${params.toString()}` }).then((list) =>
+  const q = [`trackKey=${encodeURIComponent(trackKey || '')}`]
+  if (campusId) q.push(`campusId=${encodeURIComponent(campusId)}`)
+  return request({ url: `/opportunities?${q.join('&')}` }).then((list) =>
     (list || []).map((item) => ({
       ...item,
       deadline: formatDate(item.deadline),

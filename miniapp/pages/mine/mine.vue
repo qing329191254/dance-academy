@@ -220,7 +220,7 @@ const studentServices = [
   },
   {
     name: '已上课程',
-    icon: '/static/mine/feedback.svg',
+    icon: '/static/mine/attended.svg',
     key: 'practice',
     url: '/pages/mine/practice',
     needLogin: true,
