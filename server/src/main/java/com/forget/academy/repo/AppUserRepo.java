@@ -26,7 +26,8 @@ public interface AppUserRepo extends JpaRepository<AppUser, Long> {
             select u from AppUser u
             where (:keyword = ''
                 or u.nickname like concat('%', :keyword, '%')
-                or u.openid like concat('%', :keyword, '%'))
+                or u.openid like concat('%', :keyword, '%')
+                or u.phone like concat('%', :keyword, '%'))
               and (u.role is null or u.role = '' or lower(u.role) = 'student')
               and (:memberTag = '' or exists (
                     select 1 from UserMemberTag t
@@ -40,7 +41,8 @@ public interface AppUserRepo extends JpaRepository<AppUser, Long> {
             select u from AppUser u
             where (:keyword = ''
                 or u.nickname like concat('%', :keyword, '%')
-                or u.openid like concat('%', :keyword, '%'))
+                or u.openid like concat('%', :keyword, '%')
+                or u.phone like concat('%', :keyword, '%'))
               and lower(u.role) = lower(:role)
               and (:memberTag = '' or exists (
                     select 1 from UserMemberTag t
@@ -55,7 +57,8 @@ public interface AppUserRepo extends JpaRepository<AppUser, Long> {
             select u from AppUser u
             where (:keyword = ''
                 or u.nickname like concat('%', :keyword, '%')
-                or u.openid like concat('%', :keyword, '%'))
+                or u.openid like concat('%', :keyword, '%')
+                or u.phone like concat('%', :keyword, '%'))
               and (:memberTag = '' or exists (
                     select 1 from UserMemberTag t
                     where t.userId = u.id and t.tag = :memberTag))
@@ -64,11 +67,24 @@ public interface AppUserRepo extends JpaRepository<AppUser, Long> {
                             @Param("memberTag") String memberTag,
                             Pageable pageable);
 
+    /** 全国搜索（认领用），必须带关键词 */
+    @Query("""
+            select u from AppUser u
+            where (u.role is null or u.role = '' or lower(u.role) = 'student')
+              and (
+                u.nickname like concat('%', :keyword, '%')
+                or u.openid like concat('%', :keyword, '%')
+                or u.phone like concat('%', :keyword, '%')
+              )
+            """)
+    Page<AppUser> searchStudentsForClaim(@Param("keyword") String keyword, Pageable pageable);
+
     @Query("""
             select u from AppUser u
             where (:keyword = ''
                 or u.nickname like concat('%', :keyword, '%')
-                or u.openid like concat('%', :keyword, '%'))
+                or u.openid like concat('%', :keyword, '%')
+                or u.phone like concat('%', :keyword, '%'))
               and (
                 :roleFilter = ''
                 or (:roleFilter = 'student' and (u.role is null or u.role = '' or lower(u.role) = 'student'))
@@ -81,14 +97,14 @@ public interface AppUserRepo extends JpaRepository<AppUser, Long> {
                     where s.campusId in :campusIds and s.teacherId is not null))
                 or ((u.role is null or u.role = '' or lower(u.role) = 'student') and (
                     exists (
+                        select 1 from UserCampus uc
+                        where uc.userId = u.id and uc.campusId in :campusIds)
+                    or exists (
                         select 1 from Booking b join Schedule s on b.scheduleId = s.id
                         where b.userId = u.id and s.campusId in :campusIds)
                     or exists (
                         select 1 from PracticeRecord p
-                        where p.userId = u.id and p.campusId in :campusIds)
-                    or exists (
-                        select 1 from UserMemberTag t
-                        where t.userId = u.id and t.campusId in :campusIds)))
+                        where p.userId = u.id and p.campusId in :campusIds)))
               )
               and (:memberTag = '' or exists (
                     select 1 from UserMemberTag t
@@ -111,6 +127,10 @@ public interface AppUserRepo extends JpaRepository<AppUser, Long> {
             where (u.role is null or u.role = '' or lower(u.role) = 'student')
               and (
                 exists (
+                    select 1 from UserCampus uc
+                    where uc.userId = u.id and uc.campusId in :campusIds
+                )
+                or exists (
                     select 1 from Booking b join Schedule s on b.scheduleId = s.id
                     where b.userId = u.id and s.campusId in :campusIds
                 )

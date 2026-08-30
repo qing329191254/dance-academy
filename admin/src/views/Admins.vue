@@ -1,7 +1,7 @@
 <template>
   <div class="page-card">
     <div class="toolbar">
-      <div class="hint">超级管理员可创建管理员账号，并为管理员分配可管理的校区。</div>
+      <div class="hint">超级管理员可创建超级管理员或管理员，并为管理员分配可管理的校区。</div>
       <el-button type="primary" @click="edit()">新增管理员</el-button>
     </div>
     <el-table :data="list">
@@ -28,7 +28,7 @@
   </div>
 
   <el-dialog v-model="visible" :title="form.id ? '编辑管理员' : '新增管理员'" width="520px">
-    <el-form :model="form" label-width="90px">
+    <el-form :model="form" label-width="100px">
       <el-form-item label="账号">
         <el-input v-model="form.username" :disabled="!!form.id" />
       </el-form-item>
@@ -36,16 +36,19 @@
         <el-input v-model="form.password" type="password" show-password :placeholder="form.id ? '留空则不修改' : '请输入密码'" />
       </el-form-item>
       <el-form-item label="姓名"><el-input v-model="form.name" /></el-form-item>
-      <el-form-item v-if="form.id && form.superAdmin" label="角色">
-        <el-input model-value="超级管理员" disabled />
-      </el-form-item>
-      <el-form-item v-else-if="form.id" label="角色">
-        <el-input model-value="管理员" disabled />
+      <el-form-item label="角色">
+        <el-select v-model="form.superAdmin" style="width: 100%" :disabled="lockedAsSuper">
+          <el-option :value="true" label="超级管理员" />
+          <el-option :value="false" label="管理员" />
+        </el-select>
       </el-form-item>
       <el-form-item v-if="!form.superAdmin" label="校区">
         <el-select v-model="form.campusIds" multiple placeholder="选择可管理校区" style="width: 100%">
           <el-option v-for="item in CAMPUSES" :key="item.id" :label="item.name" :value="item.id" />
         </el-select>
+      </el-form-item>
+      <el-form-item v-else label="校区">
+        <el-input model-value="全部校区" disabled />
       </el-form-item>
     </el-form>
     <template #footer>
@@ -56,7 +59,7 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import http from '../api/http'
 import { CAMPUSES, campusName } from '../common/campuses'
@@ -72,8 +75,12 @@ const form = reactive({
   password: '',
   name: '',
   superAdmin: false,
+  wasSuperAdmin: false,
   campusIds: [],
 })
+
+/** 已是超管的账号不允许降级，避免误操作 */
+const lockedAsSuper = computed(() => !!form.id && form.wasSuperAdmin)
 
 async function load() {
   const res = await http.get('/admin/admins')
@@ -87,6 +94,7 @@ function edit(row) {
     password: '',
     name: '',
     superAdmin: false,
+    wasSuperAdmin: false,
     campusIds: [],
   }, row ? {
     id: row.id,
@@ -94,8 +102,12 @@ function edit(row) {
     password: '',
     name: row.name,
     superAdmin: !!row.superAdmin,
+    wasSuperAdmin: !!row.superAdmin,
     campusIds: [...(row.campusIds || [])],
-  } : {})
+  } : {
+    superAdmin: false,
+    wasSuperAdmin: false,
+  })
   visible.value = true
 }
 
@@ -108,6 +120,7 @@ async function save() {
     username: form.username,
     password: form.password,
     name: form.name,
+    superAdmin: !!form.superAdmin,
     campusIds: form.superAdmin ? [] : form.campusIds,
   }
   if (form.id) {

@@ -64,7 +64,11 @@ public class AdminAuthService {
         admin.setUsername(username);
         admin.setPasswordHash(encoder.encode(password));
         admin.setName(name.isBlank() ? username : name);
-        applyPrincipalCampuses(admin, body.get("campusIds"));
+        if (isSuperAdminRequest(body)) {
+            applySuperAdmin(admin);
+        } else {
+            applyPrincipalCampuses(admin, body.get("campusIds"));
+        }
         return adminAccessService.toProfile(adminUserRepo.save(admin));
     }
 
@@ -80,23 +84,23 @@ public class AdminAuthService {
         if (!password.isBlank()) {
             admin.setPasswordHash(encoder.encode(password));
         }
-        if (adminAccessService.isSuperAdmin(admin)) {
+        boolean currentlySuper = adminAccessService.isSuperAdmin(admin);
+        if (currentlySuper) {
+            // 已有超管不可降级
+            if (body.containsKey("superAdmin") && !isSuperAdminRequest(body)) {
+                throw new BizException("不能将超级管理员降级为普通管理员");
+            }
             if (body.get("role") != null) {
                 String role = str(body.get("role"));
                 if (!role.isBlank() && !AdminRoles.isSuperAdmin(role)) {
                     throw new BizException("不能修改超级管理员的角色");
                 }
             }
-        } else {
-            if (body.get("campusIds") != null) {
-                applyPrincipalCampuses(admin, body.get("campusIds"));
-            }
-            if (body.get("role") != null) {
-                String role = str(body.get("role"));
-                if (!role.isBlank() && AdminRoles.isSuperAdmin(role)) {
-                    throw new BizException("不能设置为超级管理员");
-                }
-            }
+            applySuperAdmin(admin);
+        } else if (isSuperAdminRequest(body)) {
+            applySuperAdmin(admin);
+        } else if (body.get("campusIds") != null || body.containsKey("superAdmin")) {
+            applyPrincipalCampuses(admin, body.get("campusIds"));
         }
         return adminAccessService.toProfile(adminUserRepo.save(admin));
     }
@@ -111,6 +115,11 @@ public class AdminAuthService {
         adminUserRepo.deleteById(id);
     }
 
+    private void applySuperAdmin(AdminUser admin) {
+        admin.setRole(AdminRoles.SUPER_ADMIN);
+        admin.setCampusIds("");
+    }
+
     private void applyPrincipalCampuses(AdminUser admin, Object campusIdsRaw) {
         admin.setRole(AdminRoles.PRINCIPAL);
         List<String> campuses = adminAccessService.normalizeCampusIds(parseCampusIds(campusIdsRaw));
@@ -118,6 +127,27 @@ public class AdminAuthService {
             throw new BizException("请为管理员分配至少一个校区");
         }
         admin.setCampusIds(AdminAccessService.joinCampusIds(campuses));
+    }
+
+    private boolean isSuperAdminRequest(Map<String, Object> body) {
+        if (body == null) {
+            return false;
+        }
+        Object flag = body.get("superAdmin");
+        if (flag instanceof Boolean bool) {
+            return bool;
+        }
+        if (flag != null) {
+            String text = String.valueOf(flag).trim();
+            if ("true".equalsIgnoreCase(text) || "1".equals(text)) {
+                return true;
+            }
+            if ("false".equalsIgnoreCase(text) || "0".equals(text)) {
+                return false;
+            }
+        }
+        String role = str(body.get("role"));
+        return AdminRoles.SUPER_ADMIN.equals(role);
     }
 
     @SuppressWarnings("unchecked")

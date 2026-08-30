@@ -9,16 +9,20 @@ import com.forget.academy.entity.OpportunityApply;
 import com.forget.academy.entity.UserCard;
 import com.forget.academy.entity.UserCourse;
 import com.forget.academy.entity.UserMemberTag;
+import com.forget.academy.entity.UserCampus;
 import com.forget.academy.entity.EmployeeProfile;
 import com.forget.academy.repo.AppUserRepo;
 import com.forget.academy.repo.EmployeeProfileRepo;
 import com.forget.academy.repo.OpportunityApplyRepo;
 import com.forget.academy.repo.UserCardRepo;
+import com.forget.academy.repo.UserCampusRepo;
 import com.forget.academy.repo.UserCourseRepo;
 import com.forget.academy.repo.UserMemberTagRepo;
 import com.forget.academy.service.AppAuthService;
 import com.forget.academy.service.AdminAccessService;
+import com.forget.academy.service.CampusCatalogService;
 import com.forget.academy.service.EmployeeService;
+import com.forget.academy.service.UserCampusService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -54,6 +58,9 @@ public class AdminMemberController {
     private final EmployeeProfileRepo employeeProfileRepo;
     private final AdminAccessService adminAccessService;
     private final UserMemberTagRepo userMemberTagRepo;
+    private final UserCampusRepo userCampusRepo;
+    private final UserCampusService userCampusService;
+    private final CampusCatalogService campusCatalogService;
 
     @GetMapping("/member-tag-options")
     public ApiResponse<?> memberTagOptions() {
@@ -74,17 +81,51 @@ public class AdminMemberController {
         if (!tagFilter.isEmpty() && !MemberTags.isValid(tagFilter)) {
             throw new BizException("业务标签无效");
         }
+        var admin = adminAccessService.currentAdmin();
+        boolean superAdmin = adminAccessService.isSuperAdmin(admin);
         boolean campusFiltered = campusId != null && !campusId.isBlank();
         var campuses = adminAccessService.resolveCampusScope(campusId);
-        var pageResult = campusFiltered
+        // 管理员未选具体校区时，仍限制在自己可管校区范围内；超管才看全国
+        boolean scopeByCampus = campusFiltered || !superAdmin;
+        var pageResult = scopeByCampus
                 ? appUserRepo.searchInCampuses(query, roleFilter, campuses, tagFilter, pageable)
                 : switch (roleFilter) {
             case "" -> appUserRepo.searchAll(query, tagFilter, pageable);
             case "student" -> appUserRepo.searchStudents(query, tagFilter, pageable);
             default -> appUserRepo.searchByRole(query, roleFilter, tagFilter, pageable);
         };
-        List<Map<String, Object>> list = enrichUsers(pageResult.getContent(), campuses, campusFiltered ? campusId.trim() : null);
+        String focusCampus = campusFiltered ? campusId.trim() : null;
+        List<Map<String, Object>> list = enrichUsers(pageResult.getContent(), campuses, focusCampus);
         return ApiResponse.ok(new PageResult<>(list, pageResult.getTotalElements(), pageResult.getNumber() + 1, pageResult.getSize()));
+    }
+
+    /** 认领搜索：可搜全国学员，必须带关键词 */
+    @GetMapping("/users/search-for-claim")
+    public ApiResponse<?> searchForClaim(@RequestParam String keyword,
+                                         @RequestParam(defaultValue = "1") int page,
+                                         @RequestParam(defaultValue = "20") int size) {
+        String query = keyword == null ? "" : keyword.trim();
+        if (query.length() < 2) {
+            throw new BizException("请输入至少 2 个字符的姓名 / 手机号 / 微信 ID");
+        }
+        var pageable = PageRequest.of(Math.max(page - 1, 0), size, Sort.by(Sort.Direction.DESC, "id"));
+        var pageResult = appUserRepo.searchStudentsForClaim(query, pageable);
+        var campuses = adminAccessService.resolveCampusScope(null);
+        List<Map<String, Object>> list = enrichUsers(pageResult.getContent(), campuses, null);
+        return ApiResponse.ok(new PageResult<>(list, pageResult.getTotalElements(), pageResult.getNumber() + 1, pageResult.getSize()));
+    }
+
+    @PostMapping("/users/{id}/claim-campus")
+    public ApiResponse<?> claimCampus(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        if (!appUserRepo.existsById(id)) {
+            throw new BizException("学员不存在");
+        }
+        String campus = body.get("campusId") == null ? "" : String.valueOf(body.get("campusId")).trim();
+        List<String> campusIds = userCampusService.claimCampus(id, campus);
+        Map<String, Object> result = new HashMap<>();
+        result.put("campusIds", campusIds);
+        result.put("campusLabels", campusIds.stream().map(campusCatalogService::displayName).toList());
+        return ApiResponse.ok(result);
     }
 
     @GetMapping("/users/{id}")
@@ -170,7 +211,24 @@ public class AdminMemberController {
                     body.get("jobTitle") == null ? null : String.valueOf(body.get("jobTitle")),
                     body.get("jobDescription") == null ? null : String.valueOf(body.get("jobDescription")));
         }
+        if (isStudentRole(saved.getRole()) && body.containsKey("campusIds")) {
+            @SuppressWarnings("unchecked")
+            List<Object> raw = body.get("campusIds") instanceof List<?> list ? (List<Object>) list : List.of();
+            List<String> campusIds = raw.stream()
+                    .filter(Objects::nonNull)
+                    .map(item -> String.valueOf(item).trim())
+                    .filter(s -> !s.isBlank())
+                    .toList();
+            userCampusService.saveCampusLinks(saved.getId(), campusIds);
+        }
         return ApiResponse.ok(saved);
+    }
+
+    private static boolean isStudentRole(String role) {
+        if (role == null || role.isBlank()) {
+            return true;
+        }
+        return "student".equalsIgnoreCase(role.trim());
     }
 
     @PutMapping("/users/{id}/member-tags")
@@ -220,6 +278,7 @@ public class AdminMemberController {
                                 @RequestParam(defaultValue = "") String keyword,
                                 @RequestParam(defaultValue = "") String type,
                                 @RequestParam(required = false) String campusId) {
+        adminAccessService.requireSuperAdmin();
         if (page == null) {
             List<UserCard> cards = userId != null
                     ? userCardRepo.findByUserIdOrderByIdDesc(userId)
@@ -242,6 +301,7 @@ public class AdminMemberController {
 
     @PostMapping("/cards")
     public ApiResponse<UserCard> createCard(@RequestBody UserCard body) {
+        adminAccessService.requireSuperAdmin();
         body.setUserId(resolveUserId(body));
         body.setId(null);
         return ApiResponse.ok(userCardRepo.save(body));
@@ -249,6 +309,7 @@ public class AdminMemberController {
 
     @PutMapping("/cards/{id}")
     public ApiResponse<UserCard> updateCard(@PathVariable Long id, @RequestBody UserCard body) {
+        adminAccessService.requireSuperAdmin();
         UserCard card = userCardRepo.findById(id).orElseThrow(() -> new BizException("卡包不存在"));
         card.setUserId(resolveUserId(body));
         card.setName(body.getName());
@@ -262,6 +323,7 @@ public class AdminMemberController {
 
     @DeleteMapping("/cards/{id}")
     public ApiResponse<Void> deleteCard(@PathVariable Long id) {
+        adminAccessService.requireSuperAdmin();
         userCardRepo.deleteById(id);
         return ApiResponse.ok();
     }
@@ -355,9 +417,18 @@ public class AdminMemberController {
             }
         }
         Map<Long, LinkedHashSet<String>> tagsByUser = new HashMap<>();
+        Map<Long, LinkedHashSet<String>> campusesByUser = new HashMap<>();
         List<String> tagCampuses = campusIds == null || campusIds.isEmpty()
                 ? List.of()
                 : campusIds;
+        if (!userIds.isEmpty()) {
+            for (UserCampus link : userCampusRepo.findByUserIdIn(userIds)) {
+                if (link.getUserId() == null || link.getCampusId() == null || link.getCampusId().isBlank()) {
+                    continue;
+                }
+                campusesByUser.computeIfAbsent(link.getUserId(), ignored -> new LinkedHashSet<>()).add(link.getCampusId());
+            }
+        }
         if (!userIds.isEmpty() && !tagCampuses.isEmpty()) {
             for (UserMemberTag tag : userMemberTagRepo.findByUserIdInAndCampusIdIn(userIds, tagCampuses)) {
                 if (focusCampusId != null && !focusCampusId.equals(tag.getCampusId())) {
@@ -376,6 +447,9 @@ public class AdminMemberController {
             row.put("resumeName", apply == null ? null : apply.getResumeName());
             row.put("closedClassGroup", user.getClosedClassGroup());
             row.put("closedClassGroupLabel", com.forget.academy.common.ClosedClassGroup.label(user.getClosedClassGroup()));
+            LinkedHashSet<String> linkedCampuses = campusesByUser.getOrDefault(user.getId(), new LinkedHashSet<>());
+            row.put("campusIds", List.copyOf(linkedCampuses));
+            row.put("campusLabels", linkedCampuses.stream().map(campusCatalogService::displayName).toList());
             LinkedHashSet<String> tags = tagsByUser.getOrDefault(user.getId(), new LinkedHashSet<>());
             row.put("memberTags", List.copyOf(tags));
             row.put("memberTagLabels", tags.stream().map(MemberTags::label).toList());

@@ -41,6 +41,7 @@ public class PracticeRoomBookingService {
     private final ClassroomAdminService classroomAdminService;
     private final AdminAccessService adminAccessService;
     private final CampusCatalogService campusCatalogService;
+    private final UserCampusService userCampusService;
 
     public List<Map<String, Object>> listPracticeClassrooms(String campusId) {
         String campus = campusCatalogService.normalize(campusId);
@@ -130,7 +131,9 @@ public class PracticeRoomBookingService {
         booking.setEndTime(slot.getEndTime());
         booking.setName(name);
         booking.setStatus(PENDING);
-        return toAppMap(bookingRepo.save(booking));
+        PracticeRoomBooking saved = bookingRepo.save(booking);
+        userCampusService.ensureLinked(userId, classroom.getCampusId());
+        return toAppMap(saved);
     }
 
     public PageResult<Map<String, Object>> myBookings(Long userId, int page, int size) {

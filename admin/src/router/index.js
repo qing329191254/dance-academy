@@ -17,7 +17,7 @@ const routes = [
       { path: '/schedules', component: () => import('../views/Schedules.vue'), meta: { title: '课表管理' } },
       { path: '/bookings', component: () => import('../views/Bookings.vue'), meta: { title: '预约管理' } },
       { path: '/users', component: () => import('../views/Users.vue'), meta: { title: '小程序用户' } },
-      { path: '/cards', component: () => import('../views/Cards.vue'), meta: { title: '卡包发放' } },
+      { path: '/cards', component: () => import('../views/Cards.vue'), meta: { title: '卡包发放', superOnly: true } },
       { path: '/opportunities', component: () => import('../views/Opportunities.vue'), meta: { title: '成长机会' } },
       { path: '/growth', component: () => import('../views/Growth.vue'), meta: { title: '成长文案' } },
       { path: '/applies', component: () => import('../views/Applies.vue'), meta: { title: '报名审核' } },
@@ -28,7 +28,7 @@ const routes = [
       { path: '/class-archives', component: () => import('../views/ClassArchives.vue'), meta: { title: '课堂档案' } },
       { path: '/feedback', component: () => import('../views/Feedback.vue'), meta: { title: '意见反馈' } },
       { path: '/surveys', component: () => import('../views/Surveys.vue'), meta: { title: '问卷调查' } },
-      { path: '/schools', component: () => import('../views/Schools.vue'), meta: { title: '校区管理员', superOnly: true } },
+      { path: '/schools', component: () => import('../views/Schools.vue'), meta: { title: '校区管理', superOnly: true } },
       { path: '/admins', component: () => import('../views/Admins.vue'), meta: { title: '管理员', superOnly: true } },
     ],
   },
@@ -47,7 +47,7 @@ router.beforeEach((to) => {
   if (to.path === '/login' && token) {
     return '/'
   }
-  if (to.meta.superOnly || to.path.startsWith('/admins') || to.path.startsWith('/schools')) {
+  if (to.meta.superOnly || to.path.startsWith('/admins') || to.path.startsWith('/schools') || to.path.startsWith('/cards')) {
     const profile = JSON.parse(localStorage.getItem('admin_profile') || 'null')
     if (profile && !profile.superAdmin) {
       return '/dashboard'

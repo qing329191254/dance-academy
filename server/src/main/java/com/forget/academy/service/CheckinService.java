@@ -29,6 +29,7 @@ public class CheckinService {
     private final PracticeRecordRepo practiceRecordRepo;
     private final ScheduleRepo scheduleRepo;
     private final ObjectMapper mapper;
+    private final UserCampusService userCampusService;
 
     @Transactional
     public Map<String, Object> checkin(Long userId, String raw) {
@@ -128,6 +129,7 @@ public class CheckinService {
     private void saveRecord(PracticeRecord record, String duplicateMessage) {
         try {
             practiceRecordRepo.save(record);
+            userCampusService.ensureLinked(record.getUserId(), record.getCampusId());
         } catch (DataIntegrityViolationException e) {
             throw new BizException(duplicateMessage);
         }

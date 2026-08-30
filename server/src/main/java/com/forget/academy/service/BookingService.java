@@ -36,6 +36,7 @@ public class BookingService {
     private final AppUserRepo appUserRepo;
     private final BookingRemindService bookingRemindService;
     private final UserCardService userCardService;
+    private final UserCampusService userCampusService;
 
     public List<Map<String, Object>> listSchedules(String type, String date, String campusId, Long userId) {
         String tab = type == null || type.isBlank() ? "group" : type;
@@ -115,6 +116,7 @@ public class BookingService {
             if (full) {
                 return queuedResult(booking);
             }
+            linkCampus(userId, schedule);
             bookingRemindService.scheduleGroupRemind(booking);
             return result(true, false, "预约成功", booking);
         }
@@ -145,6 +147,7 @@ public class BookingService {
         if (waitlist) {
             return queuedResult(booking);
         }
+        linkCampus(userId, schedule);
         bookingRemindService.scheduleGroupRemind(booking);
         return result(true, false, "预约成功", booking);
     }
@@ -180,6 +183,7 @@ public class BookingService {
             }
             bookingRepo.save(booking);
             if (!full) {
+                linkCampus(userId, schedule);
                 bookingRemindService.scheduleGroupRemind(booking);
             }
             return booking;
@@ -209,6 +213,7 @@ public class BookingService {
             throw new BizException(waitlist ? "请勿重复排队" : "请勿重复预约");
         }
         if (!waitlist) {
+            linkCampus(userId, schedule);
             bookingRemindService.scheduleGroupRemind(booking);
         }
         return booking;
@@ -387,6 +392,13 @@ public class BookingService {
         UserCard card = userCardService.requireUsableGroupCard(user.getId());
         userCardService.deduct(card);
         booking.setCardId(card.getId());
+    }
+
+    private void linkCampus(Long userId, Schedule schedule) {
+        if (userId == null || schedule == null) {
+            return;
+        }
+        userCampusService.ensureLinked(userId, schedule.getCampusId());
     }
 
     private void releaseGroupCard(Booking booking) {

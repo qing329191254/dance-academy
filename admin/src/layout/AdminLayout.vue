@@ -38,7 +38,7 @@
         <el-sub-menu index="group-user">
           <template #title>用户与会员</template>
           <el-menu-item index="/users">小程序用户</el-menu-item>
-          <el-menu-item index="/cards">卡包发放</el-menu-item>
+          <el-menu-item v-if="auth.isSuperAdmin" index="/cards">卡包发放</el-menu-item>
           <el-menu-item index="/opportunities">成长机会</el-menu-item>
           <el-menu-item index="/growth">成长文案</el-menu-item>
           <el-menu-item index="/applies">报名审核</el-menu-item>
@@ -61,7 +61,7 @@
 
         <el-sub-menu v-if="auth.isSuperAdmin" index="group-system">
           <template #title>系统设置</template>
-          <el-menu-item index="/schools">校区管理员</el-menu-item>
+          <el-menu-item index="/schools">校区管理</el-menu-item>
           <el-menu-item index="/admins">管理员</el-menu-item>
         </el-sub-menu>
       </el-menu>

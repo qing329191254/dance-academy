@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 import http from '../api/http'
 
-/** 与小程序左上角切换同源：后台「校区管理员」配置 */
+/** 与小程序左上角切换同源：后台「校区管理」配置 */
 export const CAMPUSES = ref([])
 
 let loading = null

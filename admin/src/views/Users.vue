@@ -2,7 +2,7 @@
   <div class="page-card">
     <div class="toolbar">
       <div class="filters">
-        <el-input v-model="keyword" placeholder="搜索姓名/微信ID" style="width: 240px" clearable @keyup.enter="search" />
+        <el-input v-model="keyword" placeholder="搜索姓名/微信ID/手机号" style="width: 240px" clearable @keyup.enter="search" />
         <el-select v-model="roleFilter" placeholder="全部角色" clearable style="width: 130px" @change="onFilterChange">
           <el-option label="学员" value="student" />
           <el-option label="教师" value="teacher" />
@@ -18,6 +18,7 @@
           <el-option v-for="item in memberTagOptions" :key="item.value" :label="item.label" :value="item.value" />
         </el-select>
         <el-button @click="search">查询</el-button>
+        <el-button type="primary" plain @click="openClaim">添加学员到本校区</el-button>
       </div>
     </div>
     <el-table :data="list">
@@ -28,19 +29,22 @@
         </template>
       </el-table-column>
       <el-table-column prop="phone" label="电话" width="120" align="left" header-align="left" />
-      <el-table-column label="校区/档案" width="140" align="left" header-align="left" show-overflow-tooltip>
+      <el-table-column label="关联校区" min-width="160" align="left" header-align="left">
         <template #default="{ row }">
-          <span v-if="row.role === 'employee'">{{ campusName(row.campusId) }}</span>
+          <div v-if="(row.campusLabels || []).length" class="tag-list">
+            <el-tag v-for="label in row.campusLabels" :key="label" size="small" effect="plain">{{ label }}</el-tag>
+          </div>
+          <span v-else-if="row.role === 'employee'">{{ campusName(row.campusId) }}</span>
           <span v-else-if="row.role === 'teacher'">{{ teacherName(row.teacherId) }}</span>
           <span v-else class="muted">-</span>
         </template>
       </el-table-column>
-      <el-table-column prop="school" label="学校" width="130" align="left" header-align="left" show-overflow-tooltip />
+      <el-table-column prop="school" label="就读学校" width="140" align="left" header-align="left" show-overflow-tooltip />
       <el-table-column prop="collegeGrade" label="学院年级" width="120" align="left" header-align="left" show-overflow-tooltip />
-      <el-table-column prop="cardTypes" label="卡类" width="110" align="left" header-align="left" show-overflow-tooltip>
+      <el-table-column prop="cardTypes" label="卡类" width="100" align="left" header-align="left" show-overflow-tooltip>
         <template #default="{ row }">{{ row.cardTypes || '-' }}</template>
       </el-table-column>
-      <el-table-column label="业务标签" min-width="180" align="left" header-align="left">
+      <el-table-column label="业务标签" min-width="160" align="left" header-align="left">
         <template #default="{ row }">
           <div v-if="(row.memberTagLabels || []).length" class="tag-list">
             <el-tag v-for="label in row.memberTagLabels" :key="label" size="small" type="info" effect="plain">
@@ -53,7 +57,7 @@
       <el-table-column label="闭门分组" width="100" align="left" header-align="left">
         <template #default="{ row }">{{ row.closedClassGroupLabel || '普通' }}</template>
       </el-table-column>
-      <el-table-column label="微信ID" min-width="180" align="left" header-align="left">
+      <el-table-column label="微信ID" min-width="160" align="left" header-align="left">
         <template #default="{ row }">
           <div class="openid-cell">
             <span class="openid-text" :title="row.openid">{{ row.openid || '-' }}</span>
@@ -80,7 +84,7 @@
     />
   </div>
 
-  <el-dialog v-model="visible" :title="dialogTitle" width="560px">
+  <el-dialog v-model="visible" :title="dialogTitle" width="580px">
     <el-form :model="form" label-width="100px">
       <el-form-item label="姓名"><el-input v-model="form.nickname" /></el-form-item>
       <el-form-item label="角色">
@@ -97,7 +101,7 @@
       </el-form-item>
       <el-form-item v-if="form.role === 'employee'" label="所属校区">
         <el-select v-model="form.campusId" placeholder="选择舞室校区">
-          <el-option v-for="item in CAMPUSES" :key="item.id" :label="item.name" :value="item.id" />
+          <el-option v-for="item in editableCampuses" :key="item.id" :label="item.name" :value="item.id" />
         </el-select>
       </el-form-item>
       <el-form-item v-if="form.role === 'employee'" label="岗位名称"><el-input v-model="form.jobTitle" /></el-form-item>
@@ -105,25 +109,8 @@
         <el-input v-model="form.jobDescription" type="textarea" :rows="4" />
       </el-form-item>
       <el-form-item label="电话"><el-input v-model="form.phone" maxlength="11" /></el-form-item>
-      <el-form-item v-if="form.role === 'student'" label="学校">
-        <el-select v-model="form.school" filterable clearable placeholder="选择学校" style="width: 100%">
-          <el-option
-            v-if="form.school && !schoolNames.includes(form.school)"
-            :label="`${form.school}（历史）`"
-            :value="form.school"
-          />
-          <el-option v-for="item in schools" :key="item.id" :label="item.name" :value="item.name" />
-        </el-select>
-      </el-form-item>
-      <el-form-item v-else-if="form.role === 'employee'" label="就读学校">
-        <el-select v-model="form.school" filterable clearable placeholder="选填" style="width: 100%">
-          <el-option
-            v-if="form.school && !schoolNames.includes(form.school)"
-            :label="`${form.school}（历史）`"
-            :value="form.school"
-          />
-          <el-option v-for="item in schools" :key="item.id" :label="item.name" :value="item.name" />
-        </el-select>
+      <el-form-item v-if="form.role === 'student' || form.role === 'employee'" label="就读学校">
+        <el-input v-model="form.school" maxlength="80" placeholder="学员自填，可后台修改" />
       </el-form-item>
       <el-form-item v-if="form.role === 'student'" label="学院年级"><el-input v-model="form.collegeGrade" /></el-form-item>
       <el-form-item label="性别">
@@ -136,6 +123,19 @@
         <el-date-picker v-model="form.birthday" type="date" value-format="YYYY-MM-DD" placeholder="选择生日" />
       </el-form-item>
       <template v-if="form.role === 'student'">
+        <el-form-item label="关联校区">
+          <div class="member-tags">
+            <div class="campus-hint muted">可多选，加入后与其他校区并存。管理员仅能调整自己可管校区。</div>
+            <el-checkbox-group v-model="form.campusIds">
+              <el-checkbox v-for="item in editableCampuses" :key="item.id" :label="item.id">
+                {{ item.name }}
+              </el-checkbox>
+            </el-checkbox-group>
+            <div v-if="otherCampusLabels.length" class="campus-hint muted" style="margin-top: 8px">
+              其他校区（只读）：{{ otherCampusLabels.join('、') }}
+            </div>
+          </div>
+        </el-form-item>
         <el-form-item label="勤工等级">
           <el-select v-model="form.workLevel">
             <el-option label="T1" value="T1" /><el-option label="T2" value="T2" /><el-option label="T3" value="T3" />
@@ -180,6 +180,51 @@
       <el-button type="primary" @click="save">确定</el-button>
     </template>
   </el-dialog>
+
+  <el-dialog v-model="claimVisible" title="添加学员到本校区" width="720px">
+    <el-alert
+      v-if="!campusId"
+      type="warning"
+      :closable="false"
+      show-icon
+      title="请先在顶部选择校区，再搜索并加入本校区"
+      style="margin-bottom: 12px"
+    />
+    <div v-else class="claim-bar">
+      <el-input
+        v-model="claimKeyword"
+        placeholder="输入姓名 / 手机号 / 微信 ID（至少 2 字）"
+        clearable
+        style="width: 360px"
+        @keyup.enter="searchClaim"
+      />
+      <el-button type="primary" :loading="claimLoading" @click="searchClaim">搜索</el-button>
+      <span class="muted">将加入：{{ campusName(campusId) }}（与其他校区并存）</span>
+    </div>
+    <el-table :data="claimList" style="margin-top: 12px" max-height="420">
+      <el-table-column prop="nickname" label="姓名" width="110" />
+      <el-table-column prop="phone" label="电话" width="120" />
+      <el-table-column prop="school" label="就读学校" min-width="120" show-overflow-tooltip />
+      <el-table-column label="已关联校区" min-width="160">
+        <template #default="{ row }">
+          {{ (row.campusLabels || []).join('、') || '-' }}
+        </template>
+      </el-table-column>
+      <el-table-column prop="openid" label="微信ID" min-width="160" show-overflow-tooltip />
+      <el-table-column label="操作" width="120" fixed="right">
+        <template #default="{ row }">
+          <el-button
+            link
+            type="primary"
+            :disabled="!campusId || (row.campusIds || []).includes(campusId)"
+            @click="claimUser(row)"
+          >
+            {{ (row.campusIds || []).includes(campusId) ? '已在本校区' : '加入本校区' }}
+          </el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+  </el-dialog>
 </template>
 
 <script setup>
@@ -187,10 +232,13 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import http from '../api/http'
-import { CAMPUSES, campusName } from '../common/campuses'
+import { campusName } from '../common/campuses'
+import { allowedCampuses } from '../common/adminAccess'
 import { useCampusScope } from '../composables/useCampusScope'
+import { useAuthStore } from '../stores/auth'
 
 const route = useRoute()
+const auth = useAuthStore()
 const list = ref([])
 const total = ref(0)
 const page = ref(1)
@@ -201,10 +249,23 @@ const memberTagFilter = ref('')
 const memberTagOptions = ref([])
 const visible = ref(false)
 const teachers = ref([])
-const schools = ref([])
 const form = reactive({})
 
-const schoolNames = computed(() => schools.value.map((item) => item.name))
+const claimVisible = ref(false)
+const claimKeyword = ref('')
+const claimList = ref([])
+const claimLoading = ref(false)
+
+const editableCampuses = computed(() => allowedCampuses(auth.profile))
+
+const otherCampusLabels = computed(() => {
+  const allowedIds = new Set(editableCampuses.value.map((item) => item.id))
+  const allIds = form.campusIdsAll || []
+  return allIds
+    .filter((id) => !allowedIds.has(id))
+    .map((id) => campusName(id))
+    .filter(Boolean)
+})
 
 const dialogTitle = computed(() => {
   const map = {
@@ -229,11 +290,6 @@ function roleTagType(role) {
 function teacherName(teacherId) {
   if (!teacherId) return '未绑定'
   return teachers.value.find((item) => item.id === teacherId)?.name || `档案#${teacherId}`
-}
-
-async function loadSchools() {
-  const res = await http.get('/admin/schools')
-  schools.value = res.data || []
 }
 
 async function loadTeachers() {
@@ -277,7 +333,54 @@ function edit(row) {
   if (!form.role) form.role = 'student'
   if (!form.closedClassGroup) form.closedClassGroup = null
   form.memberTags = Array.isArray(row.memberTags) ? [...row.memberTags] : []
+  const allCampusIds = Array.isArray(row.campusIds) ? [...row.campusIds] : []
+  form.campusIdsAll = allCampusIds
+  const allowedIds = new Set(editableCampuses.value.map((item) => item.id))
+  form.campusIds = allCampusIds.filter((id) => allowedIds.has(id))
   visible.value = true
+}
+
+function openClaim() {
+  claimKeyword.value = ''
+  claimList.value = []
+  claimVisible.value = true
+  if (!campusId.value) {
+    ElMessage.warning('请先在顶部选择校区')
+  }
+}
+
+async function searchClaim() {
+  if (!campusId.value) {
+    ElMessage.warning('请先在顶部选择校区')
+    return
+  }
+  const q = claimKeyword.value.trim()
+  if (q.length < 2) {
+    ElMessage.warning('请输入至少 2 个字符')
+    return
+  }
+  claimLoading.value = true
+  try {
+    const res = await http.get('/admin/users/search-for-claim', {
+      params: { keyword: q, page: 1, size: 50 },
+    })
+    claimList.value = res.data?.list || []
+  } finally {
+    claimLoading.value = false
+  }
+}
+
+async function claimUser(row) {
+  if (!campusId.value) {
+    ElMessage.warning('请先在顶部选择校区')
+    return
+  }
+  await http.post(`/admin/users/${row.id}/claim-campus`, { campusId: campusId.value })
+  ElMessage.success('已加入本校区')
+  row.campusIds = [...(row.campusIds || []), campusId.value]
+  const label = campusName(campusId.value)
+  row.campusLabels = [...new Set([...(row.campusLabels || []), label])]
+  await load()
 }
 
 async function copyText(text) {
@@ -305,13 +408,15 @@ async function save() {
   if (form.role !== 'teacher') {
     form.teacherId = null
   }
+  const employeeCampusId = form.role === 'employee' ? form.campusId : null
   if (form.role !== 'employee') {
-    form.campusId = null
     form.jobTitle = ''
     form.jobDescription = ''
   }
   await http.put(`/admin/users/${form.id}`, {
     ...form,
+    campusId: employeeCampusId,
+    campusIds: form.role === 'student' ? (form.campusIds || []) : undefined,
     closedClassGroup: form.role === 'student' ? form.closedClassGroup || null : null,
   })
   if (form.role === 'student' && campusId.value) {
@@ -326,7 +431,7 @@ async function save() {
 }
 
 onMounted(async () => {
-  await Promise.all([loadSchools(), loadTeachers(), loadMemberTagOptions()])
+  await Promise.all([loadTeachers(), loadMemberTagOptions()])
 })
 </script>
 
@@ -373,5 +478,12 @@ onMounted(async () => {
 .member-tags :deep(.el-checkbox) {
   margin-right: 16px;
   margin-bottom: 8px;
+}
+
+.claim-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 </style>

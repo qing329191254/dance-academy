@@ -88,22 +88,18 @@
           />
         </view>
 
-        <picker
-          mode="selector"
-          :range="schoolOptions"
-          :value="schoolIndex"
-          @change="onSchoolChange"
-        >
-          <view class="form-row">
-            <text class="label">学校</text>
-            <view class="picker-value">
-              <text :class="school ? '' : 'placeholder'">
-                {{ school || '请选择学校' }}
-              </text>
-              <text class="arrow">›</text>
-            </view>
-          </view>
-        </picker>
+        <view class="form-row">
+          <text class="label">就读学校</text>
+          <input
+            v-model="school"
+            class="input"
+            type="text"
+            maxlength="80"
+            placeholder="请输入就读学校"
+            placeholder-class="placeholder"
+            :adjust-position="false"
+          />
+        </view>
 
         <view class="form-row">
           <text class="label">学院年级</text>
@@ -129,7 +125,6 @@
 import { nextTick, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { completeProfile, getUser, isLoggedIn } from '@/common/auth.js'
-import { getSchools } from '@/common/api.js'
 import { showToast, showSuccess as showSuccessToast } from '@/common/toast.js'
 
 const avatar = ref('')
@@ -138,8 +133,6 @@ const gender = ref('')
 const birthday = ref('')
 const phone = ref('')
 const school = ref('')
-const schoolOptions = ref([])
-const schoolIndex = ref(0)
 const collegeGrade = ref('')
 const today = ref('')
 const defaultBirthday = '2000-01-01'
@@ -166,29 +159,7 @@ onLoad(() => {
   today.value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
   pageTitle.value = user?.profileComplete ? '个人资料' : '完善资料'
   uni.setNavigationBarTitle({ title: pageTitle.value })
-  loadSchools()
 })
-
-async function loadSchools() {
-  try {
-    const list = await getSchools()
-    schoolOptions.value = (list || []).map((item) => item.name).filter(Boolean)
-    syncSchoolIndex()
-  } catch {
-    schoolOptions.value = []
-  }
-}
-
-function syncSchoolIndex() {
-  const idx = schoolOptions.value.indexOf(school.value)
-  schoolIndex.value = idx >= 0 ? idx : 0
-}
-
-function onSchoolChange(e) {
-  const index = Number(e.detail.value)
-  schoolIndex.value = Number.isFinite(index) ? index : 0
-  school.value = schoolOptions.value[schoolIndex.value] || ''
-}
 
 function onChooseAvatar(e) {
   const url = e.detail?.avatarUrl
@@ -254,7 +225,7 @@ async function submit() {
     return
   }
   if (!schoolText) {
-    showToast('请输入学校')
+    showToast('请输入就读学校')
     return
   }
   if (!gradeText) {
