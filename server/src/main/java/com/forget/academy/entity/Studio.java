@@ -27,6 +27,11 @@ public class Studio extends BaseEntity {
     private String phoneDisplay;
     private String logo;
     private String splashImage;
+    /** 小程序全局分享标题（好友转发 / 朋友圈共用） */
+    @Column(length = 64)
+    private String shareTitle;
+    /** 小程序全局分享封面，建议 5:4 */
+    private String shareImage;
     @Column(length = 2000)
     private String intro;
     private String business;

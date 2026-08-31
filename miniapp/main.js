@@ -1,6 +1,7 @@
 import { createSSRApp } from 'vue'
 import App from './App.vue'
 import { applyPageBackground } from '@/common/pageTheme.js'
+import { getShareMessage, getShareTimeline, syncShareMenu } from '@/common/share.js'
 
 export function createApp() {
   const app = createSSRApp(App)
@@ -11,6 +12,13 @@ export function createApp() {
     },
     onShow() {
       applyPageBackground()
+      syncShareMenu()
+    },
+    onShareAppMessage() {
+      return getShareMessage()
+    },
+    onShareTimeline() {
+      return getShareTimeline()
     },
   })
 

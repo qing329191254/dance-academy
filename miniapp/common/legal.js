@@ -4,5 +4,5 @@ export const legalInfo = {
   phone: '18200407710',
   email: 'lhno1111@163.com',
   address: '四川省成都市锦江区静逸路76号8栋2单元601',
-  updateDate: '2026年8月24日',
+  updateDate: '2026年8月31日',
 }

@@ -92,6 +92,7 @@ public class StudioService {
         studio.setIntro("深耕高校街舞文化的俱乐部品牌。课堂之外，用勤工俭学与舞蹈发展双线赋能大学生成长，增强机构黏性。");
         studio.setBusiness("团课 / 固定班 / 私教课 / 成长中心");
         studio.setSlogan("DANCE UP · BREAK FREE");
+        studio.setShareTitle("高校FOR-GET舞室");
         studio.setCourseSystemLead("按学习方式和目标选择：固定班、次通卡、私教，或定制赛事与商演。");
         studio.setCourseSystemHomeSummary("特色固定班、次卡、通卡\n私教、定制课、商演赛事");
         applyCampusDefaults(studio, campusId);
@@ -127,6 +128,12 @@ public class StudioService {
         target.setPhoneDisplay(body.getPhoneDisplay());
         target.setLogo(body.getLogo());
         target.setSplashImage(body.getSplashImage());
+        if (body.getShareTitle() != null) {
+            target.setShareTitle(body.getShareTitle());
+        }
+        if (body.getShareImage() != null) {
+            target.setShareImage(body.getShareImage());
+        }
         target.setIntro(body.getIntro());
         target.setBusiness(body.getBusiness());
         target.setSlogan(body.getSlogan());

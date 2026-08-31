@@ -31,6 +31,13 @@
         <el-form-item label="开屏图">
           <ImageField v-model="form.splashImage" auto-persist @uploaded="onSplashUploaded" />
         </el-form-item>
+        <el-form-item label="分享标题">
+          <el-input v-model="form.shareTitle" maxlength="32" show-word-limit placeholder="转发好友、朋友圈共用，如：高校FOR-GET舞室" />
+        </el-form-item>
+        <el-form-item label="分享封面">
+          <ImageField v-model="form.shareImage" auto-persist @uploaded="onShareImageUploaded" />
+          <div class="form-tip">建议 5:4（如 500×400），好友转发与朋友圈共用。不上传则使用微信默认截图。</div>
+        </el-form-item>
         <el-form-item label="品牌介绍"><el-input v-model="form.intro" type="textarea" :rows="4" /></el-form-item>
         <el-form-item label="业务"><el-input v-model="form.business" /></el-form-item>
         <el-form-item label="理念"><el-input v-model="form.slogan" /></el-form-item>
@@ -72,7 +79,7 @@ async function load() {
     return
   }
   const res = await http.get('/admin/studio', { params: { campusId: campusId.value } })
-  Object.assign(form, res.data || {})
+  Object.assign(form, { shareTitle: '', shareImage: '' }, res.data || {})
 }
 
 const { campusId } = useCampusScope(load)
@@ -100,10 +107,22 @@ async function onSplashUploaded(url) {
   form.splashImage = url
   await save()
 }
+
+async function onShareImageUploaded(url) {
+  form.shareImage = url
+  await save()
+}
 </script>
 
 <style scoped>
 .campus-hint {
   margin-bottom: 16px;
+}
+
+.form-tip {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  line-height: 1.5;
 }
 </style>

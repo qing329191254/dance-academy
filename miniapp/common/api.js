@@ -1,5 +1,6 @@
 import { API_BASE, USER_STORAGE_KEY, mediaUrl } from './config.js'
 import { request } from './request.js'
+import { applyShareFromStudio } from './share.js'
 
 function formatDate(value) {
   if (!value) return ''
@@ -38,24 +39,33 @@ function mapStudio(item) {
     ...item,
     logo: mediaUrl(item.logo),
     splashImage: mediaUrl(item.splashImage),
+    shareImage: mediaUrl(item.shareImage),
   }
 }
 
 export function getHome(campusId) {
   const query = campusId ? `?campusId=${encodeURIComponent(campusId)}` : ''
-  return request({ url: `/home${query}` }).then((data) => ({
-    studio: mapStudio(data.studio),
-    banners: (data.banners || []).map(mediaUrl),
-    teachers: (data.teachers || []).map(mapTeacher),
-  }))
+  return request({ url: `/home${query}` }).then((data) => {
+    const studio = mapStudio(data.studio)
+    applyShareFromStudio(studio)
+    return {
+      studio,
+      banners: (data.banners || []).map(mediaUrl),
+      teachers: (data.teachers || []).map(mapTeacher),
+    }
+  })
 }
 
 export function getBrand(campusId) {
   const query = campusId ? `?campusId=${encodeURIComponent(campusId)}` : ''
-  return request({ url: `/brand${query}` }).then((data) => ({
-    studio: mapStudio(data.studio),
-    photos: (data.photos || []).map(mediaUrl),
-  }))
+  return request({ url: `/brand${query}` }).then((data) => {
+    const studio = mapStudio(data.studio)
+    applyShareFromStudio(studio)
+    return {
+      studio,
+      photos: (data.photos || []).map(mediaUrl),
+    }
+  })
 }
 
 export function getTeachers() {
