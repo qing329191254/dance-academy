@@ -1,29 +1,60 @@
 <template>
-  <div class="page-card">
+  <div class="schedules-page page-card">
     <div class="toolbar">
       <div class="filters">
         <el-input
           v-model="keyword"
           placeholder="搜索名称 / 老师 / 教室 / 时间"
-          style="width: 260px"
           clearable
           @keyup.enter="search"
           @clear="search"
         />
-        <el-select v-model="type" placeholder="类型" clearable style="width: 130px" @change="search">
+        <el-select v-model="type" placeholder="类型" clearable @change="search">
           <el-option label="团课" value="group" />
           <el-option label="固定班" value="fixed" />
           <el-option label="私教" value="private" />
         </el-select>
-        <el-select v-model="enabled" placeholder="启用状态" clearable style="width: 140px" @change="search">
+        <el-select v-model="enabled" placeholder="启用状态" clearable @change="search">
           <el-option label="启用" :value="true" />
           <el-option label="停用" :value="false" />
         </el-select>
         <el-button @click="search">查询</el-button>
       </div>
-      <el-button type="primary" @click="edit()">新增课表</el-button>
+      <el-button type="primary" class="toolbar-add" @click="edit()">新增课表</el-button>
     </div>
-    <el-table :data="list">
+
+    <div v-if="isMobile" class="mobile-feed">
+      <div v-for="row in list" :key="row.id" class="mobile-feed-item">
+        <div class="mobile-feed-head">
+          <span class="mobile-feed-title">{{ row.name || '—' }}</span>
+          <span class="mobile-feed-status">{{ typeLabel[row.type] || row.type || '—' }}</span>
+        </div>
+        <div class="mobile-feed-main">{{ row.timeText || '—' }}</div>
+        <div class="mobile-feed-meta">
+          <span>{{ campusName(row.campusId) }}</span>
+          <span v-if="row.teacherName">{{ row.teacherName }}</span>
+          <span v-if="row.room">{{ row.room }}</span>
+        </div>
+        <div class="mobile-feed-meta">
+          <span v-if="row.weekday != null && row.weekday !== ''">{{ weekdayLabel[row.weekday] || '—' }}</span>
+          <span v-if="sectionName(row.sectionId) !== '-'">{{ sectionName(row.sectionId) }}</span>
+          <span v-if="styleName(row.styleId) !== '-'">{{ styleName(row.styleId) }}</span>
+          <span>名额 {{ row.capacity ?? '—' }}</span>
+          <span>{{ row.status || '—' }}</span>
+        </div>
+        <div v-if="row.closedDoor" class="mobile-feed-meta">
+          闭门 · {{ closedClassGroupLabel(row.audienceGroup) }}
+        </div>
+        <div class="table-actions">
+          <el-button link type="primary" @click="edit(row)">编辑</el-button>
+          <el-button link type="primary" @click="showQr(row)">签到码</el-button>
+          <el-button link type="danger" @click="remove(row)">删除</el-button>
+        </div>
+      </div>
+      <div v-if="!list.length" class="mobile-feed-empty">暂无课表</div>
+    </div>
+
+    <el-table v-else :data="list">
       <el-table-column prop="type" label="类型" width="90" align="left" header-align="left">
         <template #default="{ row }">{{ typeLabel[row.type] || row.type }}</template>
       </el-table-column>
@@ -159,8 +190,10 @@ import { closedClassGroupLabel } from '../common/closedClass'
 import { allowedCampuses } from '../common/adminAccess'
 import { useAuthStore } from '../stores/auth'
 import { useCampusScope } from '../composables/useCampusScope'
+import { useBreakpoint } from '../composables/useBreakpoint'
 
 const auth = useAuthStore()
+const { isMobile } = useBreakpoint()
 const campusOptions = computed(() => allowedCampuses(auth.profile))
 
 const typeLabel = { group: '团课', fixed: '固定班', private: '私教' }
@@ -386,6 +419,24 @@ onUnmounted(stopQrRefresh)
   gap: 12px;
   align-items: center;
 }
+
+.filters :deep(.el-input),
+.filters :deep(.el-select) {
+  width: 260px;
+}
+
+@media (max-width: 768px) {
+  .filters :deep(.el-input),
+  .filters :deep(.el-select) {
+    width: 100% !important;
+  }
+
+  .toolbar-add {
+    width: 100%;
+    margin-left: 0 !important;
+  }
+}
+
 .qr-panel {
   display: flex;
   flex-direction: column;
@@ -412,6 +463,13 @@ onUnmounted(stopQrRefresh)
   color: #8a8a96;
   font-size: 13px;
   line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+  .qr-image {
+    width: min(260px, 72vw);
+    height: min(260px, 72vw);
+  }
 }
 .muted {
   color: #8a8a96;

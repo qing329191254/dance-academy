@@ -1,25 +1,46 @@
 <template>
-  <div class="page-card">
+  <div class="cards-page page-card">
     <div class="toolbar">
       <div class="filters">
         <el-input
           v-model="keyword"
           placeholder="搜索卡名 / 学员ID / 昵称"
-          style="width: 260px"
           clearable
           @keyup.enter="search"
           @clear="search"
         />
-        <el-select v-model="type" placeholder="类型" clearable style="width: 130px" @change="search">
+        <el-select v-model="type" placeholder="类型" clearable @change="search">
           <el-option label="团课" value="团课" />
           <el-option label="私教" value="私教" />
           <el-option label="固定班" value="固定班" />
         </el-select>
         <el-button @click="search">查询</el-button>
       </div>
-      <el-button type="primary" @click="edit()">发卡</el-button>
+      <el-button type="primary" class="toolbar-add" @click="edit()">发卡</el-button>
     </div>
-    <el-table :data="list">
+
+    <div v-if="isMobile" class="mobile-feed">
+      <div v-for="row in list" :key="row.id" class="mobile-feed-item">
+        <div class="mobile-feed-head">
+          <span class="mobile-feed-title">{{ row.name || '—' }}</span>
+          <span class="mobile-feed-status">{{ row.type || '—' }}</span>
+        </div>
+        <div class="mobile-feed-main">学员 ID {{ row.userId ?? '—' }}</div>
+        <div class="mobile-feed-meta">
+          <span>{{ row.sectionName || '通用板块' }}</span>
+          <span>剩余 {{ row.remain ?? 0 }}/{{ row.total ?? 0 }}</span>
+          <span>{{ row.activatedAt ? '已开卡' : '未开卡' }}</span>
+        </div>
+        <div class="mobile-feed-meta">{{ expireLabel(row) }}</div>
+        <div class="table-actions">
+          <el-button link type="primary" @click="edit(row)">编辑</el-button>
+          <el-button link type="danger" @click="remove(row)">删除</el-button>
+        </div>
+      </div>
+      <div v-if="!list.length" class="mobile-feed-empty">暂无卡包记录</div>
+    </div>
+
+    <el-table v-else :data="list">
       <el-table-column prop="userId" label="学员ID" width="90" />
       <el-table-column prop="name" label="卡名" />
       <el-table-column prop="type" label="类型" width="90" />
@@ -101,8 +122,10 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import http from '../api/http'
 import ImageField from '../components/ImageField.vue'
 import { useCampusScope } from '../composables/useCampusScope'
+import { useBreakpoint } from '../composables/useBreakpoint'
 
 const list = ref([])
+const { isMobile } = useBreakpoint()
 const sections = ref([])
 const total = ref(0)
 const page = ref(1)
@@ -193,9 +216,28 @@ onMounted(loadSections)
 <style scoped>
 .filters {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   align-items: center;
 }
+
+.filters :deep(.el-input),
+.filters :deep(.el-select) {
+  width: 260px;
+}
+
+@media (max-width: 768px) {
+  .filters :deep(.el-input),
+  .filters :deep(.el-select) {
+    width: 100% !important;
+  }
+
+  .toolbar-add {
+    width: 100%;
+    margin-left: 0 !important;
+  }
+}
+
 .form-tip {
   margin-top: 4px;
   font-size: 12px;

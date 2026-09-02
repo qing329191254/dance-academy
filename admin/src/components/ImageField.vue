@@ -69,6 +69,14 @@ async function upload({ file }) {
   gap: 8px;
   align-items: center;
   width: 100%;
+  min-width: 0;
+}
+.image-field-row :deep(.el-input) {
+  flex: 1;
+  min-width: 0;
+}
+.image-field-row :deep(.el-upload) {
+  flex-shrink: 0;
 }
 .preview {
   width: 120px;

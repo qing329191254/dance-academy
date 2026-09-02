@@ -97,4 +97,21 @@ async function onSubmit() {
 .icp:hover {
   color: rgba(255, 255, 255, 0.85);
 }
+
+@media (max-width: 768px) {
+  .login-page {
+    padding: 24px 16px 64px;
+    align-items: flex-start;
+    padding-top: max(48px, 12vh);
+  }
+  .card {
+    width: 100%;
+    max-width: 400px;
+    padding: 28px 20px 24px;
+    box-sizing: border-box;
+  }
+  .icp {
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  }
+}
 </style>

@@ -1,12 +1,42 @@
 <template>
-  <div class="page-card">
+  <div class="practice-page page-card">
     <div class="toolbar">
       <div class="filters">
-        <el-input v-model="keyword" placeholder="搜索课程名" style="width: 240px" clearable @keyup.enter="load" />
-        <el-button @click="load">查询</el-button>
+        <el-input
+          v-model="keyword"
+          placeholder="搜索课程名"
+          clearable
+          @keyup.enter="search"
+          @clear="search"
+        />
+        <el-button @click="search">查询</el-button>
       </div>
     </div>
-    <el-table :data="list">
+
+    <div v-if="isMobile" class="mobile-feed">
+      <div v-for="row in list" :key="row.id" class="mobile-feed-item">
+        <div class="mobile-feed-head">
+          <span class="mobile-feed-title">{{ row.name || '—' }}</span>
+          <span class="mobile-feed-status">{{ checkinSourceLabel(row.checkinSource) }}</span>
+        </div>
+        <div class="mobile-feed-main">学员 ID {{ row.userId ?? '—' }}</div>
+        <div class="mobile-feed-meta">
+          <span v-if="row.classDate">{{ row.classDate }}</span>
+          <span v-if="row.timeText">{{ row.timeText }}</span>
+        </div>
+        <div class="mobile-feed-meta">
+          <span v-if="row.teacherName">{{ row.teacherName }}</span>
+          <span v-if="row.room">{{ row.room }}</span>
+        </div>
+        <div class="mobile-feed-meta">
+          <span v-if="row.duration">{{ row.duration }}</span>
+          <span v-if="row.operatorName">确认人 {{ row.operatorName }}</span>
+        </div>
+      </div>
+      <div v-if="!list.length" class="mobile-feed-empty">暂无签到记录</div>
+    </div>
+
+    <el-table v-else :data="list">
       <el-table-column prop="userId" label="学员ID" width="90" align="left" header-align="left" />
       <el-table-column prop="name" label="课程" align="left" header-align="left" />
       <el-table-column prop="classDate" label="日期" width="120" align="left" header-align="left" />
@@ -19,6 +49,7 @@
       <el-table-column prop="room" label="教室" width="130" align="left" header-align="left" />
       <el-table-column prop="duration" label="时长" width="100" align="left" header-align="left" />
     </el-table>
+
     <el-pagination
       style="margin-top: 16px"
       background
@@ -35,7 +66,9 @@
 import { ref } from 'vue'
 import http from '../api/http'
 import { useCampusScope } from '../composables/useCampusScope'
+import { useBreakpoint } from '../composables/useBreakpoint'
 
+const { isMobile } = useBreakpoint()
 const list = ref([])
 const total = ref(0)
 const page = ref(1)
@@ -62,3 +95,22 @@ async function load() {
 
 const { campusParams } = useCampusScope(load)
 </script>
+
+<style scoped>
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.filters :deep(.el-input) {
+  width: 240px;
+}
+
+@media (max-width: 768px) {
+  .filters :deep(.el-input) {
+    width: 100% !important;
+  }
+}
+</style>

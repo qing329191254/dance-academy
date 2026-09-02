@@ -1,10 +1,27 @@
 <template>
-  <div class="page-card">
+  <div class="admins-page page-card">
     <div class="toolbar">
-      <div class="hint">超级管理员可创建超级管理员或管理员，并为管理员分配可管理的校区。</div>
-      <el-button type="primary" @click="edit()">新增管理员</el-button>
+      <div v-if="!isMobile" class="hint">超级管理员可创建超级管理员或管理员，并为管理员分配可管理的校区。</div>
+      <el-button type="primary" class="toolbar-add" @click="edit()">新增管理员</el-button>
     </div>
-    <el-table :data="list">
+
+    <div v-if="isMobile" class="mobile-feed">
+      <div v-for="row in list" :key="row.id" class="mobile-feed-item">
+        <div class="mobile-feed-head">
+          <span class="mobile-feed-title">{{ row.name || row.username || '—' }}</span>
+          <span class="mobile-feed-status">{{ roleLabel(row.role) }}</span>
+        </div>
+        <div class="mobile-feed-main">{{ row.username || '—' }}</div>
+        <div class="mobile-feed-meta mobile-summary">{{ campusScopeLabel(row) }}</div>
+        <div class="table-actions">
+          <el-button link type="primary" @click="edit(row)">编辑</el-button>
+          <el-button link type="danger" :disabled="row.id === auth.profile?.id" @click="remove(row)">删除</el-button>
+        </div>
+      </div>
+      <div v-if="!list.length" class="mobile-feed-empty">暂无管理员</div>
+    </div>
+
+    <el-table v-else :data="list">
       <el-table-column prop="username" label="账号" width="140" />
       <el-table-column prop="name" label="姓名" width="140" />
       <el-table-column label="角色" width="120">
@@ -65,8 +82,10 @@ import http from '../api/http'
 import { CAMPUSES, campusName } from '../common/campuses'
 import { roleLabel } from '../common/adminAccess'
 import { useAuthStore } from '../stores/auth'
+import { useBreakpoint } from '../composables/useBreakpoint'
 
 const auth = useAuthStore()
+const { isMobile } = useBreakpoint()
 const list = ref([])
 const visible = ref(false)
 const form = reactive({
@@ -81,6 +100,11 @@ const form = reactive({
 
 /** 已是超管的账号不允许降级，避免误操作 */
 const lockedAsSuper = computed(() => !!form.id && form.wasSuperAdmin)
+
+function campusScopeLabel(row) {
+  if (row.superAdmin) return '全部校区'
+  return (row.campusIds || []).map(campusName).join('、') || '—'
+}
 
 async function load() {
   const res = await http.get('/admin/admins')
@@ -148,5 +172,26 @@ onMounted(load)
 .hint {
   color: #6b6b76;
   font-size: 13px;
+}
+
+.mobile-summary {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.45;
+}
+
+@media (max-width: 768px) {
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .toolbar-add {
+    width: 100%;
+    margin-left: 0 !important;
+  }
 }
 </style>

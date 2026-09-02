@@ -1,9 +1,9 @@
 <template>
-  <div class="page-card">
+  <div class="bookings-page page-card">
     <div class="toolbar">
       <div class="filters">
-        <el-input v-model="keyword" placeholder="搜索学员/课程" style="width: 240px" clearable @keyup.enter="search" />
-        <el-select v-model="status" placeholder="状态" clearable style="width: 140px" @change="search">
+        <el-input v-model="keyword" placeholder="搜索学员/课程" clearable @keyup.enter="search" @clear="search" />
+        <el-select v-model="status" placeholder="状态" clearable @change="search">
           <el-option label="待上课" value="待上课" />
           <el-option label="排队中" value="排队中" />
           <el-option label="已完成" value="已完成" />
@@ -11,9 +11,50 @@
         </el-select>
         <el-button @click="search">查询</el-button>
       </div>
-      <el-button type="primary" @click="openCreate">帮学员预约</el-button>
+      <el-button type="primary" class="toolbar-add" @click="openCreate">帮学员预约</el-button>
     </div>
-    <el-table :data="list">
+
+    <div v-if="isMobile" class="mobile-feed">
+      <div v-for="row in list" :key="row.id" class="mobile-feed-item">
+        <div class="mobile-feed-head">
+          <span class="mobile-feed-title">{{ row.nickname || '—' }}</span>
+          <el-tag :type="statusTagType(row.status)" size="small">{{ row.status }}</el-tag>
+        </div>
+        <div class="mobile-feed-main">{{ row.name || '—' }}</div>
+        <div class="mobile-feed-meta">
+          <span>{{ campusName(row.campusId) }}</span>
+          <span v-if="row.classDate">{{ row.classDate }}</span>
+          <span v-if="row.timeText">{{ row.timeText }}</span>
+        </div>
+        <div class="mobile-feed-meta">
+          <span v-if="row.teacherName">{{ row.teacherName }}</span>
+          <span v-if="row.room">{{ row.room }}</span>
+          <span :class="row.checkedIn ? 'checked' : 'muted'">{{ row.checkedIn ? '已签到' : '未签到' }}</span>
+        </div>
+        <div class="table-actions">
+          <el-button
+            v-if="row.status === '待上课' && !row.checkedIn"
+            link
+            type="primary"
+            @click="manualCheckin(row)"
+          >
+            手动签到
+          </el-button>
+          <el-button v-if="row.status === '待上课'" link type="primary" @click="completeBooking(row)">完成</el-button>
+          <el-button
+            v-if="row.status === '待上课' || row.status === '排队中'"
+            link
+            type="danger"
+            @click="cancelBooking(row)"
+          >
+            取消预约
+          </el-button>
+        </div>
+      </div>
+      <div v-if="!list.length" class="mobile-feed-empty">暂无预约</div>
+    </div>
+
+    <el-table v-else :data="list">
       <el-table-column prop="nickname" label="学员" width="120" align="left" header-align="left" />
       <el-table-column label="校区" width="120">
         <template #default="{ row }">{{ campusName(row.campusId) }}</template>
@@ -139,8 +180,10 @@ import { allowedCampuses } from '../common/adminAccess'
 import { campusName } from '../common/campuses'
 import { useAuthStore } from '../stores/auth'
 import { useCampusScope } from '../composables/useCampusScope'
+import { useBreakpoint } from '../composables/useBreakpoint'
 
 const auth = useAuthStore()
+const { isMobile } = useBreakpoint()
 const campusOptions = computed(() => allowedCampuses(auth.profile))
 const list = ref([])
 const total = ref(0)
@@ -295,6 +338,30 @@ async function manualCheckin(row) {
 </script>
 
 <style scoped>
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.filters :deep(.el-input),
+.filters :deep(.el-select) {
+  width: 240px;
+}
+
+@media (max-width: 768px) {
+  .filters :deep(.el-input),
+  .filters :deep(.el-select) {
+    width: 100% !important;
+  }
+
+  .toolbar-add {
+    width: 100%;
+    margin-left: 0 !important;
+  }
+}
+
 .checked {
   color: #67c23a;
 }

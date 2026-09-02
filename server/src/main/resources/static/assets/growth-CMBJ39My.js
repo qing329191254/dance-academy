@@ -1,0 +1,1 @@
+const n={parttime:"兼职",intern:"实习",manage:"管理",show:"演出",commercial:"商演",teacher:"教师"},r={pending:"待审核",approved:"已通过",rejected:"已拒绝",cancelled:"已取消"};function a(e){return n[e]||e||"—"}function t(e){return r[e]||e||"—"}function c(e){return e==="pending"?"warning":e==="approved"?"success":e==="rejected"?"danger":e==="cancelled"?"info":""}export{t as a,c as b,n as c,a as t};

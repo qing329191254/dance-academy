@@ -1,11 +1,51 @@
 <template>
-  <div class="page-card">
+  <div class="dance-categories-page page-card">
     <div class="toolbar">
       <div class="hint muted">板块用于发卡与约课匹配；舞种挂在板块下，排课可选填，仅作展示。</div>
-      <el-button type="primary" @click="editSection()">新增板块</el-button>
+      <el-button type="primary" class="toolbar-add" @click="editSection()">新增板块</el-button>
     </div>
 
-    <el-table :data="tree" row-key="id" default-expand-all>
+    <div v-if="isMobile" class="mobile-category-list">
+      <div v-for="section in tree" :key="section.id" class="category-section-card">
+        <div class="mobile-feed-item">
+          <div class="mobile-feed-head">
+            <span class="mobile-feed-title">{{ section.name }}</span>
+            <span class="mobile-feed-status">板块</span>
+          </div>
+          <div class="mobile-feed-meta">
+            <span v-if="section.code">标识 {{ section.code }}</span>
+            <span>排序 {{ section.sortOrder ?? 0 }}</span>
+            <span>{{ section.enabled ? '已启用' : '已停用' }}</span>
+          </div>
+          <div class="table-actions">
+            <el-button link type="primary" @click="editStyle(section)">加舞种</el-button>
+            <el-button link type="primary" @click="edit(section)">编辑</el-button>
+            <el-button link type="danger" @click="remove(section)">删除</el-button>
+          </div>
+        </div>
+
+        <div v-for="child in section.children || []" :key="child.id" class="mobile-feed-item category-style-item">
+          <div class="mobile-feed-head">
+            <span class="mobile-feed-title">{{ child.name }}</span>
+            <span class="mobile-feed-status is-style">舞种</span>
+          </div>
+          <div class="mobile-feed-meta">
+            <span v-if="child.code">标识 {{ child.code }}</span>
+            <span>排序 {{ child.sortOrder ?? 0 }}</span>
+            <span>{{ child.enabled ? '已启用' : '已停用' }}</span>
+          </div>
+          <div class="table-actions">
+            <el-button link type="primary" @click="edit(child)">编辑</el-button>
+            <el-button link type="danger" @click="remove(child)">删除</el-button>
+          </div>
+        </div>
+
+        <div v-if="!(section.children || []).length" class="category-empty">暂无舞种，可点「加舞种」</div>
+      </div>
+      <div v-if="!tree.length" class="mobile-feed-empty">暂无板块</div>
+    </div>
+
+    <el-table v-else :data="tree" row-key="id" default-expand-all>
       <el-table-column prop="name" label="名称" min-width="180" />
       <el-table-column prop="code" label="标识" width="140" />
       <el-table-column label="类型" width="100">
@@ -52,10 +92,12 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import http from '../api/http'
+import { useBreakpoint } from '../composables/useBreakpoint'
 
 const tree = ref([])
 const visible = ref(false)
 const form = reactive({})
+const { isMobile } = useBreakpoint()
 
 const sections = computed(() => tree.value.filter((item) => item.section))
 
@@ -137,7 +179,9 @@ onMounted(load)
 <style scoped>
 .hint {
   font-size: 13px;
+  line-height: 1.5;
 }
+
 .toolbar {
   display: flex;
   justify-content: space-between;
@@ -145,7 +189,57 @@ onMounted(load)
   gap: 12px;
   margin-bottom: 16px;
 }
+
 .muted {
   color: #999;
+}
+
+.mobile-category-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.category-section-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 10px;
+  background: #f8f8fa;
+  border: 1px solid #ececf0;
+}
+
+.category-style-item {
+  margin-left: 8px;
+  border-left: 3px solid #d8d8e0;
+}
+
+.mobile-feed-status.is-style {
+  color: #8a74e5;
+}
+
+.category-empty {
+  margin-left: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: #b0b0b8;
+}
+
+@media (max-width: 768px) {
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    margin-bottom: 12px;
+  }
+
+  .hint {
+    font-size: 12px;
+  }
+
+  .toolbar-add {
+    width: 100%;
+    margin-left: 0 !important;
+  }
 }
 </style>

@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="studio-page">
     <el-alert
       v-if="!campusId"
       type="warning"
@@ -9,7 +9,7 @@
       title="请先在顶部选择校区，再编辑该校区门店信息"
     />
     <el-alert
-      v-else
+      v-else-if="!isCompact"
       type="info"
       :closable="false"
       show-icon
@@ -17,7 +17,13 @@
       :title="`正在编辑：${campusLabel}`"
     />
     <div class="page-card">
-      <el-form :model="form" label-width="108px" style="max-width: 720px" :disabled="!campusId">
+      <el-form
+        :model="form"
+        :label-position="formLabelPosition"
+        label-width="108px"
+        class="studio-form"
+        :disabled="!campusId"
+      >
         <el-form-item label="机构名称"><el-input v-model="form.name" /></el-form-item>
         <el-form-item label="位置描述"><el-input v-model="form.location" /></el-form-item>
         <el-form-item label="城市"><el-input v-model="form.city" /></el-form-item>
@@ -65,7 +71,7 @@
           <el-input
             v-model="form.studentNotice"
             type="textarea"
-            :rows="14"
+            :rows="studentNoticeRows"
             maxlength="8000"
             show-word-limit
             placeholder="按校区配置全文，换行与空格按原文展示；**文字** 为加粗。留空则小程序显示「暂未配置」。"
@@ -74,10 +80,21 @@
             示例：第一行写标题，空一行后写正文；<code>**重点条款**</code> 会加粗。小程序「我的 → 学员须知」原样展示，不含固定页眉或联系方式。
           </div>
         </el-form-item>
-        <el-form-item>
+        <el-form-item v-if="!isMobile">
           <el-button type="primary" :loading="saving" :disabled="!campusId" @click="save">保存</el-button>
         </el-form-item>
       </el-form>
+    </div>
+    <div v-if="isMobile" class="studio-save-bar">
+      <el-button
+        type="primary"
+        class="studio-save-btn"
+        :loading="saving"
+        :disabled="!campusId"
+        @click="save"
+      >
+        保存
+      </el-button>
     </div>
   </div>
 </template>
@@ -89,9 +106,13 @@ import http from '../api/http'
 import ImageField from '../components/ImageField.vue'
 import { campusName } from '../common/campuses'
 import { useCampusScope } from '../composables/useCampusScope'
+import { useBreakpoint } from '../composables/useBreakpoint'
 
 const form = reactive({})
 const saving = ref(false)
+const { isCompact, isMobile } = useBreakpoint()
+const formLabelPosition = computed(() => (isCompact.value ? 'top' : 'right'))
+const studentNoticeRows = computed(() => (isMobile.value ? 8 : 14))
 
 const campusLabel = computed(() => campusName(campusId.value))
 
@@ -146,5 +167,36 @@ async function onShareImageUploaded(url) {
   font-size: 12px;
   color: var(--el-text-color-secondary);
   line-height: 1.5;
+}
+
+.studio-form {
+  max-width: 720px;
+}
+
+.studio-save-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+  background: rgba(255, 255, 255, 0.96);
+  border-top: 1px solid #ececf0;
+  box-shadow: 0 -4px 16px rgba(22, 22, 28, 0.06);
+  backdrop-filter: blur(8px);
+}
+
+.studio-save-btn {
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .studio-page {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .campus-hint {
+    margin-bottom: 10px;
+  }
 }
 </style>

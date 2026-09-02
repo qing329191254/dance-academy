@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="classrooms-page">
     <el-alert
       v-if="!campusId"
       type="warning"
@@ -9,7 +9,7 @@
       title="请先在顶部选择校区，再管理该校区教室"
     />
     <el-alert
-      v-else
+      v-else-if="!isMobile"
       type="info"
       :closable="false"
       show-icon
@@ -20,10 +20,30 @@
     <el-tabs v-model="tab" class="page-tabs">
       <el-tab-pane label="教室列表" name="rooms">
         <div class="page-card">
-          <div class="toolbar">
+          <div class="toolbar toolbar-single">
             <el-button type="primary" :disabled="!campusId" @click="editRoom()">新增教室</el-button>
           </div>
-          <el-table :data="rooms">
+          <div v-if="isMobile" class="mobile-feed">
+            <div v-for="row in rooms" :key="row.id" class="mobile-feed-item">
+              <div class="mobile-feed-head">
+                <span class="mobile-feed-title">{{ row.name }}</span>
+                <span class="mobile-feed-status">{{ row.enabled ? '已启用' : '未启用' }}</span>
+              </div>
+              <div v-if="row.shortName" class="mobile-feed-main">{{ row.shortName }}</div>
+              <div class="mobile-feed-meta">
+                <span>练舞 {{ row.allowPractice ? '是' : '否' }}</span>
+                <span>租赁 {{ row.allowRental ? '是' : '否' }}</span>
+                <span>排序 {{ row.sortOrder ?? 0 }}</span>
+              </div>
+              <div v-if="slotSummary(row) !== '-'" class="mobile-feed-meta">{{ slotSummary(row) }}</div>
+              <div class="table-actions">
+                <el-button link type="primary" @click="editRoom(row)">编辑</el-button>
+                <el-button link type="danger" @click="removeRoom(row)">删除</el-button>
+              </div>
+            </div>
+            <div v-if="!rooms.length" class="mobile-feed-empty">暂无教室</div>
+          </div>
+          <el-table v-else :data="rooms">
             <el-table-column prop="name" label="教室名称" min-width="140" />
             <el-table-column prop="shortName" label="简称" width="120" />
             <el-table-column label="练舞" width="80">
@@ -53,10 +73,29 @@
 
       <el-tab-pane label="租赁登记" name="rentals">
         <div class="page-card">
-          <div class="toolbar">
+          <div class="toolbar toolbar-single">
             <el-button type="primary" :disabled="!campusId" @click="editRental()">新增租赁占用</el-button>
           </div>
-          <el-table :data="rentals">
+          <div v-if="isMobile" class="mobile-feed">
+            <div v-for="row in rentals" :key="row.id" class="mobile-feed-item">
+              <div class="mobile-feed-head">
+                <span class="mobile-feed-title">{{ row.classroomName || '—' }}</span>
+                <span class="mobile-feed-status">{{ row.status === 'cancelled' ? '已取消' : '已确认' }}</span>
+              </div>
+              <div class="mobile-feed-main">{{ row.classDate }} {{ row.startTime }}-{{ row.endTime }}</div>
+              <div class="mobile-feed-meta">
+                <span v-if="row.contactName">{{ row.contactName }}</span>
+                <span v-if="row.phone">{{ row.phone }}</span>
+              </div>
+              <div v-if="row.remark" class="mobile-feed-meta">{{ row.remark }}</div>
+              <div class="table-actions">
+                <el-button link type="primary" @click="editRental(row)">编辑</el-button>
+                <el-button v-if="row.status !== 'cancelled'" link type="danger" @click="cancelRental(row)">取消</el-button>
+              </div>
+            </div>
+            <div v-if="!rentals.length" class="mobile-feed-empty">暂无租赁记录</div>
+          </div>
+          <el-table v-else :data="rentals">
             <el-table-column prop="classDate" label="日期" width="120" />
             <el-table-column prop="classroomName" label="教室" width="140" />
             <el-table-column label="时段" width="140">
@@ -94,7 +133,29 @@
               <el-button @click="searchBookings">查询</el-button>
             </div>
           </div>
-          <el-table :data="bookings">
+          <div v-if="isMobile" class="mobile-feed">
+            <div v-for="row in bookings" :key="row.id" class="mobile-feed-item">
+              <div class="mobile-feed-head">
+                <span class="mobile-feed-title">{{ row.name || '—' }}</span>
+                <span class="mobile-feed-status">{{ bookingStatusLabel(row.status) }}</span>
+              </div>
+              <div class="mobile-feed-main">{{ row.classroomName || '—' }}</div>
+              <div class="mobile-feed-meta">
+                <span>{{ row.classDate || '—' }}</span>
+                <span v-if="row.timeText">{{ row.timeText }}</span>
+              </div>
+              <div v-if="row.rejectReason" class="mobile-feed-meta">{{ row.rejectReason }}</div>
+              <div class="table-actions">
+                <template v-if="row.status === 'pending'">
+                  <el-button link type="primary" @click="approveBooking(row)">同意</el-button>
+                  <el-button link type="danger" @click="rejectBooking(row)">拒绝</el-button>
+                </template>
+                <span v-else class="muted">—</span>
+              </div>
+            </div>
+            <div v-if="!bookings.length" class="mobile-feed-empty">暂无预约</div>
+          </div>
+          <el-table v-else :data="bookings">
             <el-table-column prop="name" label="姓名" width="110" />
             <el-table-column prop="classroomName" label="教室" width="140" />
             <el-table-column prop="classDate" label="日期" width="120" />
@@ -189,8 +250,10 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import http from '../api/http'
 import { campusName } from '../common/campuses'
 import { useCampusScope } from '../composables/useCampusScope'
+import { useBreakpoint } from '../composables/useBreakpoint'
 
 const tab = ref('rooms')
+const { isMobile } = useBreakpoint()
 const rooms = ref([])
 const rentals = ref([])
 const bookings = ref([])
@@ -381,6 +444,25 @@ const { campusId } = useCampusScope(load)
 .campus-hint {
   margin-bottom: 16px;
 }
+
+.toolbar-single :deep(.el-button) {
+  margin-left: 0;
+}
+
+@media (max-width: 768px) {
+  .campus-hint {
+    margin-bottom: 10px;
+  }
+
+  .toolbar-single {
+    margin-bottom: 10px;
+  }
+
+  .toolbar-single :deep(.el-button) {
+    width: 100%;
+  }
+}
+
 .slot-list {
   display: flex;
   flex-direction: column;

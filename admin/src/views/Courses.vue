@@ -1,29 +1,55 @@
 <template>
-  <div>
+  <div class="courses-page">
     <OrgWideNotice />
     <div class="page-card">
-    <div class="toolbar">
-      <div class="filters">
-        <el-input
-          v-model="keyword"
-          placeholder="搜索名称 / 介绍"
-          style="width: 240px"
-          clearable
-          @keyup.enter="search"
-          @clear="search"
-        />
-        <el-select v-model="moduleType" placeholder="模块类型" clearable style="width: 140px" @change="search">
-          <el-option v-for="opt in moduleTypeOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
-        </el-select>
-        <el-select v-model="enabled" placeholder="启用状态" clearable style="width: 140px" @change="search">
-          <el-option label="启用" :value="true" />
-          <el-option label="停用" :value="false" />
-        </el-select>
-        <el-button @click="search">查询</el-button>
+      <div class="toolbar">
+        <div class="filters">
+          <el-input
+            v-model="keyword"
+            placeholder="搜索名称 / 介绍"
+            clearable
+            @keyup.enter="search"
+            @clear="search"
+          />
+          <el-select v-model="moduleType" placeholder="模块类型" clearable @change="search">
+            <el-option v-for="opt in moduleTypeOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
+          </el-select>
+          <el-select v-model="enabled" placeholder="启用状态" clearable @change="search">
+            <el-option label="启用" :value="true" />
+            <el-option label="停用" :value="false" />
+          </el-select>
+          <el-button @click="search">查询</el-button>
+        </div>
+        <el-button type="primary" class="toolbar-add" @click="edit()">新增</el-button>
       </div>
-      <el-button type="primary" @click="edit()">新增</el-button>
-    </div>
-    <el-table :data="list">
+
+      <div v-if="isMobile" class="mobile-feed">
+        <div v-for="row in list" :key="row.id" class="mobile-media-item">
+          <img v-if="mediaSrc(row.cover)" class="mobile-media-thumb" :src="mediaSrc(row.cover)" alt="" />
+          <div class="mobile-media-body" :class="{ 'is-full': !mediaSrc(row.cover) }">
+            <div class="mobile-feed-head">
+              <span class="mobile-feed-title">{{ row.name || '—' }}</span>
+              <span class="mobile-feed-status">{{ row.enabled ? '已启用' : '已停用' }}</span>
+            </div>
+            <div class="mobile-feed-main">
+              {{ moduleTypeLabel(row.moduleType) }}
+              <template v-if="row.moduleKey"> · {{ row.moduleKey }}</template>
+            </div>
+            <div class="mobile-feed-meta">
+              <span>价格 {{ displayPrice(row) }}{{ row.priceUnit ? ` / ${row.priceUnit}` : '' }}</span>
+              <span>排序 {{ row.sortOrder ?? 0 }}</span>
+            </div>
+            <div v-if="row.summary" class="mobile-feed-meta mobile-summary">{{ row.summary }}</div>
+            <div class="table-actions">
+              <el-button link type="primary" @click="edit(row)">编辑</el-button>
+              <el-button link type="danger" @click="remove(row)">删除</el-button>
+            </div>
+          </div>
+        </div>
+        <div v-if="!list.length" class="mobile-feed-empty">暂无课程产品</div>
+      </div>
+
+      <el-table v-else :data="list">
       <el-table-column prop="name" label="名称" min-width="140" />
       <el-table-column label="类型" width="100">
         <template #default="{ row }">{{ moduleTypeLabel(row.moduleType) }}</template>
@@ -59,6 +85,7 @@
     />
     </div>
   </div>
+
   <el-dialog v-model="visible" :title="form.id ? '编辑' : '新增'" width="640px">
     <el-form :model="form" label-width="96px">
       <el-form-item label="模块类型" required>
@@ -71,8 +98,10 @@
       </el-form-item>
       <el-form-item label="名称"><el-input v-model="form.name" /></el-form-item>
       <el-form-item label="展示价格">
-        <el-input v-model="form.priceDisplay" placeholder="如 9.9，留空则不展示" style="width: 200px" />
-        <el-input v-model="form.priceUnit" placeholder="单位" style="width: 100px; margin-left: 12px" />
+        <div class="price-row">
+          <el-input v-model="form.priceDisplay" placeholder="如 9.9，留空则不展示" class="price-value" />
+          <el-input v-model="form.priceUnit" placeholder="单位" class="price-unit" />
+        </div>
       </el-form-item>
       <el-form-item v-if="form.moduleType === 'trial'" label="标签">
         <el-input v-model="form.tag" placeholder="如 新人专享" />
@@ -125,6 +154,8 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import http from '../api/http'
 import ImageField from '../components/ImageField.vue'
 import OrgWideNotice from '../components/OrgWideNotice.vue'
+import { useBreakpoint } from '../composables/useBreakpoint'
+import { mediaSrc } from '../utils/media'
 
 const moduleTypeOptions = [
   { value: 'trial', label: '体验课' },
@@ -140,6 +171,7 @@ const moduleType = ref()
 const enabled = ref()
 const visible = ref(false)
 const form = reactive({})
+const { isMobile } = useBreakpoint()
 
 function moduleTypeLabel(type) {
   return moduleTypeOptions.find((item) => item.value === type)?.label || type || '—'
@@ -231,13 +263,58 @@ onMounted(load)
 <style scoped>
 .filters {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   align-items: center;
 }
+
+.filters :deep(.el-input),
+.filters :deep(.el-select) {
+  width: 240px;
+}
+
+.mobile-media-body.is-full {
+  width: 100%;
+}
+
+.mobile-summary {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.45;
+}
+
+@media (max-width: 768px) {
+  .filters :deep(.el-input),
+  .filters :deep(.el-select) {
+    width: 100% !important;
+  }
+
+  .toolbar-add {
+    width: 100%;
+    margin-left: 0 !important;
+  }
+}
+
 .form-tip {
   margin-top: 8px;
   color: #909399;
   font-size: 12px;
   line-height: 1.5;
+}
+.price-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  width: 100%;
+}
+.price-value {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+.price-unit {
+  flex: 0 1 100px;
+  width: 100px;
 }
 </style>

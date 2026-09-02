@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="surveys-page">
     <el-alert
       v-if="!campusId"
       type="warning"
@@ -9,7 +9,7 @@
       title="请先在顶部选择校区，再管理该校区问卷"
     />
     <el-alert
-      v-else
+      v-else-if="!isCompact"
       type="info"
       :closable="false"
       show-icon
@@ -19,9 +19,31 @@
 
     <div class="page-card">
       <div class="toolbar">
-        <el-button type="primary" :disabled="!campusId" @click="editSurvey()">新建问卷</el-button>
+        <el-button type="primary" class="toolbar-add" :disabled="!campusId" @click="editSurvey()">新建问卷</el-button>
       </div>
-      <el-table :data="list">
+
+      <div v-if="isMobile" class="mobile-feed">
+        <div v-for="row in list" :key="row.id" class="mobile-feed-item">
+          <div class="mobile-feed-head">
+            <span class="mobile-feed-title">{{ row.title || '—' }}</span>
+            <span class="mobile-feed-status">{{ row.enabled ? '已启用' : '已停用' }}</span>
+          </div>
+          <div v-if="row.description" class="mobile-feed-main mobile-summary">{{ row.description }}</div>
+          <div class="mobile-feed-meta">
+            <span>{{ (row.questions || []).length }} 题</span>
+            <span>{{ row.responseCount ?? 0 }} 份答卷</span>
+            <span>排序 {{ row.sortOrder ?? 0 }}</span>
+          </div>
+          <div class="table-actions">
+            <el-button link type="primary" @click="editSurvey(row)">编辑</el-button>
+            <el-button link type="primary" @click="openResponses(row)">答卷</el-button>
+            <el-button link type="danger" @click="removeSurvey(row)">删除</el-button>
+          </div>
+        </div>
+        <div v-if="!list.length" class="mobile-feed-empty">暂无问卷</div>
+      </div>
+
+      <el-table v-else :data="list">
         <el-table-column prop="title" label="标题" min-width="180" />
         <el-table-column prop="description" label="说明" min-width="200" show-overflow-tooltip />
         <el-table-column label="题目数" width="90">
@@ -56,7 +78,7 @@
           <div v-for="(question, qIndex) in form.questions" :key="qIndex" class="question-card">
             <div class="question-head">
               <el-input v-model="question.title" placeholder="题目标题" />
-              <el-select v-model="question.type" style="width: 120px" @change="onTypeChange(question)">
+              <el-select v-model="question.type" class="question-type" @change="onTypeChange(question)">
                 <el-option label="填空" value="text" />
                 <el-option label="单选" value="single" />
                 <el-option label="多选" value="multi" />
@@ -82,12 +104,39 @@
     </template>
   </el-dialog>
 
-  <el-drawer v-model="responseVisible" size="640px" :title="responseTitle">
-    <div class="toolbar">
-      <el-input v-model="responseKeyword" placeholder="搜索学员昵称" style="width: 220px" clearable @keyup.enter="searchResponses" />
+  <el-drawer v-model="responseVisible" :size="responseDrawerSize" :title="responseTitle">
+    <div class="response-toolbar">
+      <el-input
+        v-model="responseKeyword"
+        placeholder="搜索学员昵称"
+        clearable
+        @keyup.enter="searchResponses"
+        @clear="searchResponses"
+      />
       <el-button @click="searchResponses">查询</el-button>
     </div>
-    <el-table :data="responses" @row-click="showResponseDetail">
+
+    <div v-if="isMobile" class="mobile-feed">
+      <div
+        v-for="row in responses"
+        :key="row.id"
+        class="mobile-feed-item mobile-feed-clickable"
+        @click="showResponseDetail(row)"
+      >
+        <div class="mobile-feed-head">
+          <span class="mobile-feed-title">{{ row.nickname || '—' }}</span>
+        </div>
+        <div class="mobile-feed-meta">
+          <span>{{ formatTime(row.createdAt) }}</span>
+        </div>
+        <div class="table-actions">
+          <el-button link type="primary" @click.stop="showResponseDetail(row)">查看</el-button>
+        </div>
+      </div>
+      <div v-if="!responses.length" class="mobile-feed-empty">暂无答卷</div>
+    </div>
+
+    <el-table v-else :data="responses" @row-click="showResponseDetail">
       <el-table-column prop="nickname" label="学员" width="120" />
       <el-table-column label="提交时间" min-width="160">
         <template #default="{ row }">{{ formatTime(row.createdAt) }}</template>
@@ -98,6 +147,7 @@
         </template>
       </el-table-column>
     </el-table>
+
     <el-pagination
       style="margin-top: 16px"
       background
@@ -129,7 +179,9 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import http from '../api/http'
 import { campusName } from '../common/campuses'
 import { useCampusScope } from '../composables/useCampusScope'
+import { useBreakpoint } from '../composables/useBreakpoint'
 
+const { isCompact, isMobile } = useBreakpoint()
 const list = ref([])
 const visible = ref(false)
 const responseVisible = ref(false)
@@ -145,6 +197,7 @@ const form = reactive(emptyForm())
 
 const campusLabel = computed(() => campusName(campusId.value))
 const responseTitle = computed(() => (currentSurvey.value ? `答卷 · ${currentSurvey.value.title}` : '答卷'))
+const responseDrawerSize = computed(() => (isMobile.value ? '100%' : '640px'))
 
 function emptyForm() {
   return {
@@ -294,45 +347,115 @@ const { campusId } = useCampusScope(load)
 .campus-hint {
   margin-bottom: 16px;
 }
+
+.mobile-summary {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.45;
+}
+
+.mobile-feed-clickable {
+  cursor: pointer;
+}
+
+.response-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.response-toolbar :deep(.el-input) {
+  width: 220px;
+}
+
 .question-list {
   display: flex;
   flex-direction: column;
   gap: 12px;
   width: 100%;
 }
+
 .question-card {
   padding: 12px;
   border: 1px solid #ebeef5;
   border-radius: 8px;
   background: #fafafa;
 }
+
 .question-head {
   display: flex;
   gap: 8px;
   align-items: center;
 }
+
+.question-type {
+  width: 120px;
+  flex-shrink: 0;
+}
+
 .option-list {
   margin-top: 10px;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
+
 .option-row {
   display: flex;
   gap: 8px;
   align-items: center;
 }
+
 .answer-block {
   margin: 14px 0;
   padding-bottom: 10px;
   border-bottom: 1px solid #f0f0f0;
 }
+
 .answer-q {
   font-weight: 600;
   margin-bottom: 6px;
 }
+
 .answer-a {
   color: #606266;
   line-height: 1.6;
+}
+
+@media (max-width: 768px) {
+  .campus-hint {
+    margin-bottom: 10px;
+  }
+
+  .toolbar-add {
+    width: 100%;
+    margin-left: 0 !important;
+  }
+
+  .response-toolbar :deep(.el-input) {
+    width: 100% !important;
+  }
+
+  .response-toolbar .el-button {
+    width: 100%;
+    margin-left: 0 !important;
+  }
+
+  .question-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .question-type {
+    width: 100% !important;
+  }
+
+  .option-row :deep(.el-input) {
+    flex: 1;
+  }
 }
 </style>

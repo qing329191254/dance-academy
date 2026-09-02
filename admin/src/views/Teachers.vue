@@ -1,24 +1,50 @@
 <template>
-  <div class="page-card">
+  <div class="teachers-page page-card">
     <div class="toolbar">
       <div class="filters">
         <el-input
           v-model="keyword"
           placeholder="搜索姓名 / 风格 / 介绍"
-          style="width: 240px"
           clearable
           @keyup.enter="search"
           @clear="search"
         />
-        <el-select v-model="enabled" placeholder="启用状态" clearable style="width: 140px" @change="search">
+        <el-select v-model="enabled" placeholder="启用状态" clearable @change="search">
           <el-option label="启用" :value="true" />
           <el-option label="停用" :value="false" />
         </el-select>
         <el-button @click="search">查询</el-button>
       </div>
-      <el-button type="primary" @click="edit()">新增老师</el-button>
+      <el-button type="primary" class="toolbar-add" @click="edit()">新增老师</el-button>
     </div>
-    <el-table :data="list">
+
+    <div v-if="isMobile" class="mobile-feed">
+      <div v-for="row in list" :key="row.id" class="mobile-media-item">
+        <img v-if="mediaSrc(row.avatar)" class="mobile-media-thumb mobile-avatar" :src="mediaSrc(row.avatar)" alt="" />
+        <div v-else class="mobile-avatar-placeholder">{{ (row.name || '?').slice(0, 1) }}</div>
+        <div class="mobile-media-body">
+          <div class="mobile-feed-head">
+            <span class="mobile-feed-title">{{ row.name || '—' }}</span>
+            <span class="mobile-feed-status">{{ row.enabled ? '已启用' : '已停用' }}</span>
+          </div>
+          <div v-if="row.style" class="mobile-feed-main">{{ row.style }}</div>
+          <div v-if="row.intro" class="mobile-feed-meta mobile-intro">{{ row.intro }}</div>
+          <div class="mobile-feed-meta">
+            <span>排序 {{ row.sortOrder ?? 0 }}</span>
+            <span v-if="row.boundAccountNickname">已绑定 {{ row.boundAccountNickname }}</span>
+            <el-button v-else link type="warning" class="inline-bind" @click="goBind(row)">待绑定</el-button>
+          </div>
+          <div class="table-actions">
+            <el-button v-if="row.hasResume" link type="primary" @click="viewResume(row)">简历</el-button>
+            <el-button link type="primary" @click="edit(row)">编辑</el-button>
+            <el-button link type="danger" @click="remove(row)">删除</el-button>
+          </div>
+        </div>
+      </div>
+      <div v-if="!list.length" class="mobile-feed-empty">暂无老师档案</div>
+    </div>
+
+    <el-table v-else :data="list">
       <el-table-column label="头像" width="80">
         <template #default="{ row }">
           <img v-if="mediaSrc(row.avatar)" class="thumb" :src="mediaSrc(row.avatar)" alt="" />
@@ -83,7 +109,7 @@
     </template>
   </el-dialog>
 
-  <el-drawer v-model="resumeVisible" size="680px" :title="resumeTitle">
+  <el-drawer v-model="resumeVisible" :size="resumeDrawerSize" :title="resumeTitle">
     <el-alert
       type="info"
       :closable="false"
@@ -129,8 +155,10 @@ import http from '../api/http'
 import ImageField from '../components/ImageField.vue'
 import { mediaSrc } from '../utils/media'
 import { useCampusScope } from '../composables/useCampusScope'
+import { useBreakpoint } from '../composables/useBreakpoint'
 
 const router = useRouter()
+const { isMobile } = useBreakpoint()
 const list = ref([])
 const total = ref(0)
 const page = ref(1)
@@ -146,6 +174,8 @@ const resumeTeacher = ref(null)
 const resumeTitle = computed(() =>
   resumeTeacher.value ? `简历管理 · ${resumeTeacher.value.name || resumeTeacher.value.teacherName || ''}` : '简历管理',
 )
+
+const resumeDrawerSize = computed(() => (isMobile.value ? '100%' : '680px'))
 
 function queryParams() {
   const params = {
@@ -219,9 +249,63 @@ const { campusParams } = useCampusScope(load)
 <style scoped>
 .filters {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   align-items: center;
 }
+
+.filters :deep(.el-input),
+.filters :deep(.el-select) {
+  width: 240px;
+}
+
+.mobile-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.mobile-avatar-placeholder {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ebebef;
+  color: #6b6b76;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.mobile-intro {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.45;
+}
+
+.inline-bind {
+  padding: 0 !important;
+  height: auto !important;
+  min-height: unset !important;
+}
+
+@media (max-width: 768px) {
+  .filters :deep(.el-input),
+  .filters :deep(.el-select) {
+    width: 100% !important;
+  }
+
+  .toolbar-add {
+    width: 100%;
+    margin-left: 0 !important;
+  }
+}
+
 .muted {
   color: #999;
 }

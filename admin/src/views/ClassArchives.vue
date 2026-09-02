@@ -1,15 +1,40 @@
 <template>
-  <div class="page-card">
+  <div class="class-archives-page page-card">
     <div class="toolbar">
       <div class="filters">
-        <el-input v-model="keyword" placeholder="搜索课程/老师" style="width: 240px" clearable @keyup.enter="load" />
-        <el-select v-model="teacherId" placeholder="老师" clearable style="width: 180px" @change="load">
+        <el-input v-model="keyword" placeholder="搜索课程/老师" clearable @keyup.enter="search" @clear="search" />
+        <el-select v-model="teacherId" placeholder="老师" clearable @change="search">
           <el-option v-for="item in teachers" :key="item.id" :label="item.name" :value="item.id" />
         </el-select>
-        <el-button @click="load">查询</el-button>
+        <el-button @click="search">查询</el-button>
       </div>
     </div>
-    <el-table :data="list">
+
+    <div v-if="isMobile" class="mobile-feed">
+      <div v-for="row in list" :key="row.id" class="mobile-feed-item">
+        <div class="mobile-feed-head">
+          <span class="mobile-feed-title">{{ row.name || '—' }}</span>
+          <span v-if="row.renewalRate" class="mobile-feed-status">{{ row.renewalRate }}</span>
+        </div>
+        <div class="mobile-feed-main">{{ row.teacherName || '—' }}</div>
+        <div class="mobile-feed-meta">
+          <span>{{ campusName(row.campusId) }}</span>
+          <span v-if="row.classDate">{{ row.classDate }}</span>
+          <span v-if="row.timeText">{{ row.timeText }}</span>
+        </div>
+        <div class="mobile-feed-meta">
+          <span v-if="row.room">{{ row.room }}</span>
+          <span>预约 {{ row.bookedCount ?? 0 }}</span>
+          <span>到课 {{ row.checkedInCount ?? 0 }}</span>
+        </div>
+        <div class="table-actions">
+          <el-button link type="primary" @click="edit(row)">编辑</el-button>
+        </div>
+      </div>
+      <div v-if="!list.length" class="mobile-feed-empty">暂无课堂档案</div>
+    </div>
+
+    <el-table v-else :data="list">
       <el-table-column prop="teacherName" label="老师" width="120" align="left" header-align="left" />
       <el-table-column label="校区" width="180">
         <template #default="{ row }">{{ campusName(row.campusId) }}</template>
@@ -59,8 +84,10 @@ import { ElMessage } from 'element-plus'
 import http from '../api/http'
 import { campusName } from '../common/campuses'
 import { useCampusScope } from '../composables/useCampusScope'
+import { useBreakpoint } from '../composables/useBreakpoint'
 
 const list = ref([])
+const { isMobile } = useBreakpoint()
 const total = ref(0)
 const page = ref(1)
 const size = 15
@@ -125,3 +152,24 @@ const { campusParams } = useCampusScope(load)
 
 onMounted(loadTeachers)
 </script>
+
+<style scoped>
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.filters :deep(.el-input),
+.filters :deep(.el-select) {
+  width: 240px;
+}
+
+@media (max-width: 768px) {
+  .filters :deep(.el-input),
+  .filters :deep(.el-select) {
+    width: 100% !important;
+  }
+}
+</style>

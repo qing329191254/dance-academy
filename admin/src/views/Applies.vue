@@ -1,18 +1,55 @@
 <template>
-  <div class="page-card">
+  <div class="applies-page page-card">
     <div class="toolbar">
       <div class="filters">
-        <el-input v-model="keyword" placeholder="搜索学员/机会" style="width: 240px" clearable @keyup.enter="load" />
-        <el-select v-model="status" placeholder="状态" clearable style="width: 140px" @change="load">
+        <el-input
+          v-model="keyword"
+          placeholder="搜索学员/机会"
+          clearable
+          @keyup.enter="search"
+          @clear="search"
+        />
+        <el-select v-model="status" placeholder="状态" clearable @change="search">
           <el-option label="待审核" value="pending" />
           <el-option label="已通过" value="approved" />
           <el-option label="已拒绝" value="rejected" />
           <el-option label="已取消" value="cancelled" />
         </el-select>
-        <el-button @click="load">查询</el-button>
+        <el-button @click="search">查询</el-button>
       </div>
     </div>
-    <el-table :data="list">
+
+    <div v-if="isMobile" class="mobile-feed">
+      <div v-for="row in list" :key="row.id" class="mobile-feed-item">
+        <div class="mobile-feed-head">
+          <span class="mobile-feed-title">{{ row.nickname || '—' }}</span>
+          <el-tag size="small" :type="applyStatusTagType(row.status)">{{ applyStatusLabelOf(row.status) }}</el-tag>
+        </div>
+        <div class="mobile-feed-main">{{ row.title || '—' }}</div>
+        <div class="mobile-feed-meta">
+          <span>{{ trackLabelOf(row.trackKey) }}</span>
+        </div>
+        <div class="mobile-feed-meta">
+          <a
+            v-if="row.resumeUrl"
+            class="resume-link"
+            :href="mediaSrc(row.resumeUrl)"
+            target="_blank"
+            rel="noreferrer"
+          >
+            {{ row.resumeName || '查看简历' }}
+          </a>
+          <span v-else class="muted">暂无简历</span>
+        </div>
+        <div v-if="row.status === 'pending'" class="table-actions">
+          <el-button link type="primary" @click="setStatus(row, 'approved')">通过</el-button>
+          <el-button link type="danger" @click="setStatus(row, 'rejected')">拒绝</el-button>
+        </div>
+      </div>
+      <div v-if="!list.length" class="mobile-feed-empty">暂无报名记录</div>
+    </div>
+
+    <el-table v-else :data="list">
       <el-table-column prop="nickname" label="学员" width="120" align="left" header-align="left" />
       <el-table-column prop="title" label="机会" align="left" header-align="left" />
       <el-table-column label="机会类型" width="100" align="left" header-align="left">
@@ -40,6 +77,7 @@
         </template>
       </el-table-column>
     </el-table>
+
     <el-pagination
       style="margin-top: 16px"
       background
@@ -58,14 +96,21 @@ import { ElMessage } from 'element-plus'
 import http from '../api/http'
 import { mediaSrc } from '../utils/media'
 import { useCampusScope } from '../composables/useCampusScope'
+import { useBreakpoint } from '../composables/useBreakpoint'
 import { applyStatusLabelOf, applyStatusTagType, trackLabelOf } from '../common/growth'
 
+const { isMobile } = useBreakpoint()
 const list = ref([])
 const total = ref(0)
 const page = ref(1)
 const size = 15
 const keyword = ref('')
 const status = ref('')
+
+function search() {
+  page.value = 1
+  return load()
+}
 
 async function load() {
   const res = await http.get('/admin/applies', {
@@ -83,3 +128,37 @@ async function setStatus(row, next) {
   await load()
 }
 </script>
+
+<style scoped>
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.filters :deep(.el-input),
+.filters :deep(.el-select) {
+  width: 240px;
+}
+
+.resume-link {
+  color: var(--el-color-primary);
+  text-decoration: none;
+}
+
+.resume-link:hover {
+  text-decoration: underline;
+}
+
+.muted {
+  color: #909399;
+}
+
+@media (max-width: 768px) {
+  .filters :deep(.el-input),
+  .filters :deep(.el-select) {
+    width: 100% !important;
+  }
+}
+</style>
