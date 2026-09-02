@@ -12,13 +12,15 @@ import java.time.Instant;
 @Setter
 @Entity
 @Table(name = "checkin_pending", indexes = {
-        @Index(name = "uk_checkin_pending", columnList = "userId,scheduleId,classDate", unique = true),
+        @Index(name = "uk_checkin_pending", columnList = "userId,scheduleId,classDate,checkinType", unique = true),
         @Index(name = "idx_checkin_pending_status", columnList = "status,classDate,campusId")
 })
 public class CheckinPending extends BaseEntity {
     private Long userId;
     /** student / teacher / employee */
     private String role;
+    /** class=上课到课 duty=员工值班 teacher=教师考勤 */
+    private String checkinType = "class";
     private Long scheduleId;
     private String classDate;
     private String campusId;

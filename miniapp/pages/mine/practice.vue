@@ -47,7 +47,7 @@ function goScan() {
     onResult() {
       loadRecords()
     },
-  })
+  }, { mode: 'class' })
 }
 </script>
 

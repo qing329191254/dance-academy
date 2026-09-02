@@ -3,6 +3,7 @@ package com.forget.academy.service;
 import com.forget.academy.common.AppRoles;
 import com.forget.academy.common.BizException;
 import com.forget.academy.common.CampusIds;
+import com.forget.academy.common.CheckinTypes;
 import com.forget.academy.common.PageResult;
 import com.forget.academy.entity.AppUser;
 import com.forget.academy.entity.CheckinPending;
@@ -45,19 +46,21 @@ public class CheckinPendingService {
     private final EmployeeDutyRecordRepo employeeDutyRecordRepo;
 
     @Transactional
-    public Map<String, Object> submitScan(Long userId, String raw) {
+    public Map<String, Object> submitScan(Long userId, String raw, String mode) {
         ValidatedScan validated = checkinSessionService.validateScanPayload(raw);
         AppUser user = appUserRepo.findById(userId).orElseThrow(() -> new BizException("用户不存在"));
         String role = normalizeRole(user.getRole());
+        String checkinType = resolveCheckinType(user, mode);
         Schedule schedule = validated.schedule();
         String classDate = validated.classDate();
-        validateRoleForSchedule(user, role, schedule, classDate);
+        validateForCheckinType(user, checkinType, schedule, classDate);
 
-        if (alreadyCheckedIn(userId, role, schedule.getId(), classDate)) {
+        if (alreadyCheckedIn(userId, checkinType, schedule.getId(), classDate)) {
             throw new BizException("本节课已签到，请勿重复扫描");
         }
 
-        var existing = checkinPendingRepo.findByUserIdAndScheduleIdAndClassDate(userId, schedule.getId(), classDate);
+        var existing = checkinPendingRepo.findByUserIdAndScheduleIdAndClassDateAndCheckinType(
+                userId, schedule.getId(), classDate, checkinType);
         if (existing.isPresent()) {
             CheckinPending pending = existing.get();
             if (STATUS_PENDING.equals(pending.getStatus())) {
@@ -71,6 +74,7 @@ public class CheckinPendingService {
         CheckinPending pending = existing.orElseGet(CheckinPending::new);
         pending.setUserId(userId);
         pending.setRole(role);
+        pending.setCheckinType(checkinType);
         pending.setScheduleId(schedule.getId());
         pending.setClassDate(classDate);
         pending.setCampusId(resolveCampus(schedule));
@@ -124,7 +128,7 @@ public class CheckinPendingService {
                 throw new BizException("无权确认其他校区的签到");
             }
         });
-        if (alreadyCheckedIn(pending.getUserId(), pending.getRole(), pending.getScheduleId(), pending.getClassDate())) {
+        if (alreadyCheckedIn(pending.getUserId(), pending.getCheckinType(), pending.getScheduleId(), pending.getClassDate())) {
             pending.setStatus(STATUS_CONFIRMED);
             pending.setConfirmedAt(Instant.now());
             pending.setConfirmedByUserId(operatorUserId);
@@ -135,7 +139,7 @@ public class CheckinPendingService {
         String operator = operatorName == null || operatorName.isBlank() ? "工作人员" : operatorName.trim();
         Map<String, Object> result = attendanceService.finalizeAfterConfirm(
                 pending.getUserId(),
-                pending.getRole(),
+                pending.getCheckinType(),
                 pending.getScheduleId(),
                 pending.getClassDate(),
                 operator);
@@ -163,29 +167,56 @@ public class CheckinPendingService {
     }
 
     public boolean isPending(Long userId, Long scheduleId, String classDate) {
-        return checkinPendingRepo.findByUserIdAndScheduleIdAndClassDate(userId, scheduleId, normalizeDate(classDate))
+        return isPending(userId, scheduleId, classDate, CheckinTypes.CLASS);
+    }
+
+    public boolean isPending(Long userId, Long scheduleId, String classDate, String checkinType) {
+        return checkinPendingRepo.findByUserIdAndScheduleIdAndClassDateAndCheckinType(
+                        userId, scheduleId, normalizeDate(classDate), CheckinTypes.normalize(checkinType))
                 .map(item -> STATUS_PENDING.equals(item.getStatus()))
                 .orElse(false);
     }
 
-    private boolean alreadyCheckedIn(Long userId, String role, Long scheduleId, String classDate) {
-        String date = normalizeDate(classDate);
+    private String resolveCheckinType(AppUser user, String mode) {
+        String normalizedMode = mode == null ? "" : mode.trim().toLowerCase();
+        if (CheckinTypes.DUTY.equals(normalizedMode)) {
+            if (!AppRoles.EMPLOYEE.equalsIgnoreCase(user.getRole())) {
+                throw new BizException("仅员工可使用值班签到");
+            }
+            return CheckinTypes.DUTY;
+        }
+        if (CheckinTypes.CLASS.equals(normalizedMode)) {
+            return CheckinTypes.CLASS;
+        }
+        String role = normalizeRole(user.getRole());
         return switch (role) {
-            case AppRoles.TEACHER -> teacherAttendanceRepo.existsByUserIdAndScheduleIdAndClassDate(userId, scheduleId, date);
-            case AppRoles.EMPLOYEE -> employeeDutyRecordRepo.existsByUserIdAndScheduleIdAndClassDate(userId, scheduleId, date);
+            case AppRoles.TEACHER -> CheckinTypes.TEACHER;
+            case AppRoles.EMPLOYEE -> CheckinTypes.DUTY;
+            default -> CheckinTypes.CLASS;
+        };
+    }
+
+    private boolean alreadyCheckedIn(Long userId, String checkinType, Long scheduleId, String classDate) {
+        String date = normalizeDate(classDate);
+        return switch (CheckinTypes.normalize(checkinType)) {
+            case CheckinTypes.TEACHER -> teacherAttendanceRepo.existsByUserIdAndScheduleIdAndClassDate(userId, scheduleId, date);
+            case CheckinTypes.DUTY -> employeeDutyRecordRepo.existsByUserIdAndScheduleIdAndClassDate(userId, scheduleId, date);
             default -> practiceRecordRepo.existsByUserIdAndSessionIdAndClassDate(userId, String.valueOf(scheduleId), date);
         };
     }
 
-    private void validateRoleForSchedule(AppUser user, String role, Schedule schedule, String classDate) {
+    private void validateForCheckinType(AppUser user, String checkinType, Schedule schedule, String classDate) {
         String date = normalizeDate(classDate);
-        switch (role) {
-            case AppRoles.TEACHER -> {
+        switch (CheckinTypes.normalize(checkinType)) {
+            case CheckinTypes.TEACHER -> {
                 if (user.getTeacherId() == null || !user.getTeacherId().equals(schedule.getTeacherId())) {
                     throw new BizException("这不是你的课程，无法签到");
                 }
             }
-            case AppRoles.EMPLOYEE -> {
+            case CheckinTypes.DUTY -> {
+                if (!AppRoles.EMPLOYEE.equalsIgnoreCase(user.getRole())) {
+                    throw new BizException("仅员工可使用值班签到");
+                }
                 if (user.getCampusId() == null || user.getCampusId().isBlank()) {
                     throw new BizException("员工账号未绑定校区");
                 }
@@ -215,6 +246,8 @@ public class CheckinPendingService {
         map.put("userId", pending.getUserId());
         map.put("role", pending.getRole());
         map.put("roleLabel", roleLabel(pending.getRole()));
+        map.put("checkinType", CheckinTypes.normalize(pending.getCheckinType()));
+        map.put("checkinTypeLabel", CheckinTypes.label(pending.getCheckinType()));
         map.put("nickname", pending.getNickname());
         map.put("scheduleId", pending.getScheduleId());
         map.put("classDate", pending.getClassDate());

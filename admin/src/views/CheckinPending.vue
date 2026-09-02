@@ -14,6 +14,7 @@
     </div>
     <el-table :data="list">
       <el-table-column prop="nickname" label="姓名" width="120" />
+      <el-table-column prop="checkinTypeLabel" label="签到类型" width="100" />
       <el-table-column prop="roleLabel" label="身份" width="90" />
       <el-table-column prop="className" label="课程" />
       <el-table-column prop="classDate" label="日期" width="120" />

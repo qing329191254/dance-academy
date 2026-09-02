@@ -197,7 +197,7 @@ async function searchUsers(query) {
   userLoading.value = true
   try {
     const res = await http.get('/admin/users', { params: { keyword: query, page: 1, size: 20 } })
-    userOptions.value = (res.data.list || []).filter((item) => item.role !== 'employee')
+    userOptions.value = res.data.list || []
   } finally {
     userLoading.value = false
   }

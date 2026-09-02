@@ -261,7 +261,8 @@ public class TeacherService {
                 .findByUserIdAndSessionIdAndClassDate(booking.getUserId(), sessionId, classDate)
                 .orElse(null);
         map.put("checkedIn", record != null);
-        checkinPendingRepo.findByUserIdAndScheduleIdAndClassDate(booking.getUserId(), booking.getScheduleId(), classDate)
+        checkinPendingRepo.findByUserIdAndScheduleIdAndClassDateAndCheckinType(
+                        booking.getUserId(), booking.getScheduleId(), classDate, com.forget.academy.common.CheckinTypes.CLASS)
                 .ifPresent(pending -> {
                     map.put("checkinPending", CheckinPendingService.STATUS_PENDING.equals(pending.getStatus()));
                     map.put("checkinRejected", CheckinPendingService.STATUS_REJECTED.equals(pending.getStatus()));

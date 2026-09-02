@@ -133,9 +133,9 @@ export function handleCheckInScan(result) {
   }
 }
 
-async function handleCheckInScanRemote(result) {
+async function handleCheckInScanRemote(result, mode) {
   try {
-    const data = await checkin(result)
+    const data = await checkin(result, mode)
     return {
       ok: true,
       pending: !!data.pending,
@@ -147,12 +147,13 @@ async function handleCheckInScanRemote(result) {
   }
 }
 
-export function startCheckInScan(callbacks = {}) {
+export function startCheckInScan(callbacks = {}, options = {}) {
+  const mode = options.mode || ''
   uni.scanCode({
     onlyFromCamera: true,
     scanType: ['qrCode'],
     success(res) {
-      handleCheckInScanRemote(res.result).then((outcome) => {
+      handleCheckInScanRemote(res.result, mode).then((outcome) => {
         callbacks.onResult?.(outcome)
       })
     },

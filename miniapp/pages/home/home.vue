@@ -389,7 +389,7 @@ function callStudio() {
   pointer-events: none;
   background: transparent;
   transition: background 0.25s ease;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .custom-navbar.navbar-visible {

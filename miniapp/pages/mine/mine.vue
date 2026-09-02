@@ -11,7 +11,7 @@
       </view>
     </view>
 
-    <view v-if="profileReady && !isStaffUser" class="section">
+    <view v-if="profileReady && !isTeacherUser" class="section">
       <view class="card growth-card">
         <view class="growth-head">
           <text class="growth-title">成长等级</text>
@@ -56,20 +56,52 @@
 
     <view class="section">
       <view class="card">
-        <text class="section-title block">我的服务</text>
-        <view class="services">
-          <view
-            v-for="item in displayServices"
-            :key="item.name"
-            class="service"
-            @click="onServiceClick(item)"
-          >
-            <view class="s-icon">
-              <image class="s-icon-img" :src="item.icon" mode="aspectFit" />
+        <template v-if="isEmployeeUser">
+          <text class="section-title block">工作服务</text>
+          <view class="services">
+            <view
+              v-for="item in employeeWorkServices"
+              :key="item.key"
+              class="service"
+              @click="onServiceClick(item)"
+            >
+              <view class="s-icon">
+                <image class="s-icon-img" :src="item.icon" mode="aspectFit" />
+              </view>
+              <text>{{ item.name }}</text>
             </view>
-            <text>{{ item.name }}</text>
           </view>
-        </view>
+          <text class="section-title block section-title-sub">学习服务</text>
+          <view class="services">
+            <view
+              v-for="item in employeeLearnServices"
+              :key="item.key"
+              class="service"
+              @click="onServiceClick(item)"
+            >
+              <view class="s-icon">
+                <image class="s-icon-img" :src="item.icon" mode="aspectFit" />
+              </view>
+              <text>{{ item.name }}</text>
+            </view>
+          </view>
+        </template>
+        <template v-else>
+          <text class="section-title block">我的服务</text>
+          <view class="services">
+            <view
+              v-for="item in displayServices"
+              :key="item.key"
+              class="service"
+              @click="onServiceClick(item)"
+            >
+              <view class="s-icon">
+                <image class="s-icon-img" :src="item.icon" mode="aspectFit" />
+              </view>
+              <text>{{ item.name }}</text>
+            </view>
+          </view>
+        </template>
       </view>
     </view>
 
@@ -123,7 +155,6 @@ const loggedIn = ref(false)
 const profileReady = ref(false)
 const isTeacherUser = ref(false)
 const isEmployeeUser = ref(false)
-const isStaffUser = computed(() => isTeacherUser.value || isEmployeeUser.value)
 const userAvatar = ref('/static/avatars/guest.png')
 const userNickname = ref('点击登录')
 const userSubtitle = ref('微信一键登录')
@@ -145,7 +176,7 @@ function refreshUser() {
       userSubtitle.value = '已登录 · 教师'
     } else if (isEmployeeUser.value) {
       userNickname.value = user.nickname || '员工'
-      userSubtitle.value = '已登录 · 员工'
+      userSubtitle.value = '已登录 · 员工 · 学员'
     } else {
       userNickname.value = user.nickname || '学员'
       userSubtitle.value = '已登录 · 学员'
@@ -194,7 +225,7 @@ const studentServices = [
   {
     name: '扫码签到',
     icon: '/static/mine/scan.png',
-    key: 'scan',
+    key: 'scan-class',
     needLogin: true,
   },
   {
@@ -312,7 +343,7 @@ const teacherServices = [
   },
 ]
 
-const employeeServices = [
+const employeeWorkServices = [
   {
     name: '现场签到',
     icon: '/static/mine/scan.png',
@@ -323,7 +354,7 @@ const employeeServices = [
   {
     name: '值班签到',
     icon: '/static/mine/notice.svg',
-    key: 'scan',
+    key: 'scan-duty',
     needLogin: true,
   },
   {
@@ -349,9 +380,18 @@ const employeeServices = [
   },
 ]
 
+const employeeLearnServices = [
+  {
+    name: '上课签到',
+    icon: '/static/mine/scan.png',
+    key: 'scan-class',
+    needLogin: true,
+  },
+  ...studentServices.filter((item) => item.key !== 'scan-class'),
+]
+
 const displayServices = computed(() => {
   if (isTeacherUser.value) return teacherServices
-  if (isEmployeeUser.value) return employeeServices
   return studentServices
 })
 
@@ -406,6 +446,14 @@ function onServiceClick(item) {
     goLogin()
     return
   }
+  if (item.key === 'scan-class') {
+    startScan('class')
+    return
+  }
+  if (item.key === 'scan-duty') {
+    startScan('duty')
+    return
+  }
   if (item.key === 'scan') {
     startScan()
     return
@@ -423,7 +471,8 @@ function go(url) {
   openPage(url)
 }
 
-function startScan() {
+function startScan(mode) {
+  const options = mode ? { mode } : {}
   startCheckInScan({
     onResult(outcome) {
       if (outcome.ok) {
@@ -433,7 +482,7 @@ function startScan() {
       }
       showError(outcome.message || '签到失败')
     },
-  })
+  }, options)
 }
 
 function goGrowth() {
@@ -598,6 +647,12 @@ function goLegal(type) {
 .block {
   display: block;
   margin-bottom: 28rpx;
+}
+
+.section-title-sub {
+  margin-top: 12rpx;
+  padding-top: 8rpx;
+  border-top: 1rpx solid rgba(255, 255, 255, 0.06);
 }
 
 .services {

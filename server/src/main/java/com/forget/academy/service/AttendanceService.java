@@ -43,12 +43,11 @@ public class AttendanceService {
     private final TeacherService teacherService;
 
     @Transactional
-    public Map<String, Object> finalizeAfterConfirm(Long userId, String role, Long scheduleId,
+    public Map<String, Object> finalizeAfterConfirm(Long userId, String checkinType, Long scheduleId,
                                                     String classDate, String operatorName) {
-        String normalizedRole = role == null ? AppRoles.STUDENT : role.trim().toLowerCase();
-        return switch (normalizedRole) {
-            case AppRoles.TEACHER -> finalizeTeacherCheckin(userId, scheduleId, classDate);
-            case AppRoles.EMPLOYEE -> finalizeEmployeeCheckin(userId, scheduleId, classDate);
+        return switch (com.forget.academy.common.CheckinTypes.normalize(checkinType)) {
+            case com.forget.academy.common.CheckinTypes.TEACHER -> finalizeTeacherCheckin(userId, scheduleId, classDate);
+            case com.forget.academy.common.CheckinTypes.DUTY -> finalizeEmployeeCheckin(userId, scheduleId, classDate);
             default -> finalizeStudentCheckin(userId, scheduleId, classDate, operatorName);
         };
     }

@@ -59,7 +59,7 @@
         <view v-for="item in pendingList" :key="item.id" class="pending-row">
           <view class="left">
             <text class="name">{{ item.nickname || '用户' }}</text>
-            <text class="sub muted">{{ item.roleLabel }} · {{ formatTime(item.scannedAt) }}</text>
+            <text class="sub muted">{{ item.checkinTypeLabel || item.roleLabel }} · {{ formatTime(item.scannedAt) }}</text>
           </view>
           <view class="row-actions">
             <view class="btn-mini danger" @tap="rejectItem(item)">拒绝</view>

@@ -194,7 +194,10 @@ public class AppUserController {
 
     @PostMapping("/checkin")
     public ApiResponse<?> checkin(@RequestBody Map<String, String> body) {
-        return ApiResponse.ok(checkinPendingService.submitScan(AuthContext.requireApp().id(), body.get("payload")));
+        return ApiResponse.ok(checkinPendingService.submitScan(
+                AuthContext.requireApp().id(),
+                body.get("payload"),
+                body.get("mode")));
     }
 
     @GetMapping("/growth")

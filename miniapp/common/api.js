@@ -363,8 +363,10 @@ export function cancelPracticeRoomBooking(id) {
   return request({ url: `/practice-room-bookings/${id}/cancel`, method: 'POST' })
 }
 
-export function checkin(payload) {
-  return request({ url: '/checkin', method: 'POST', data: { payload } })
+export function checkin(payload, mode) {
+  const data = { payload }
+  if (mode) data.mode = mode
+  return request({ url: '/checkin', method: 'POST', data })
 }
 
 export function getGrowthContent(campusId) {

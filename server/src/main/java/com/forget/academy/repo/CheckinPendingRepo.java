@@ -13,6 +13,9 @@ import java.util.Optional;
 public interface CheckinPendingRepo extends JpaRepository<CheckinPending, Long> {
     Optional<CheckinPending> findByUserIdAndScheduleIdAndClassDate(Long userId, Long scheduleId, String classDate);
 
+    Optional<CheckinPending> findByUserIdAndScheduleIdAndClassDateAndCheckinType(
+            Long userId, Long scheduleId, String classDate, String checkinType);
+
     List<CheckinPending> findByScheduleIdAndClassDateAndStatusOrderByScannedAtAsc(
             Long scheduleId, String classDate, String status);
 
