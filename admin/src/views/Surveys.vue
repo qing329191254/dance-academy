@@ -9,7 +9,7 @@
       title="请先在顶部选择校区，再管理该校区问卷"
     />
     <el-alert
-      v-else-if="!isCompact"
+      v-else-if="!isMobile"
       type="info"
       :closable="false"
       show-icon
@@ -181,7 +181,7 @@ import { campusName } from '../common/campuses'
 import { useCampusScope } from '../composables/useCampusScope'
 import { useBreakpoint } from '../composables/useBreakpoint'
 
-const { isCompact, isMobile } = useBreakpoint()
+const { isMobile } = useBreakpoint()
 const list = ref([])
 const visible = ref(false)
 const responseVisible = ref(false)

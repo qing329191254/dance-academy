@@ -9,7 +9,7 @@
       title="请先在顶部选择校区，再编辑该校区门店信息"
     />
     <el-alert
-      v-else-if="!isCompact"
+      v-else-if="!isMobile"
       type="info"
       :closable="false"
       show-icon
@@ -110,8 +110,8 @@ import { useBreakpoint } from '../composables/useBreakpoint'
 
 const form = reactive({})
 const saving = ref(false)
-const { isCompact, isMobile } = useBreakpoint()
-const formLabelPosition = computed(() => (isCompact.value ? 'top' : 'right'))
+const { isMobile } = useBreakpoint()
+const formLabelPosition = computed(() => (isMobile.value ? 'top' : 'right'))
 const studentNoticeRows = computed(() => (isMobile.value ? 8 : 14))
 
 const campusLabel = computed(() => campusName(campusId.value))

@@ -1,27 +1,60 @@
 <template>
-  <div class="page-card">
+  <div class="users-page page-card">
     <div class="toolbar">
       <div class="filters">
-        <el-input v-model="keyword" placeholder="搜索姓名/微信ID/手机号" style="width: 240px" clearable @keyup.enter="search" />
-        <el-select v-model="roleFilter" placeholder="全部角色" clearable style="width: 130px" @change="onFilterChange">
+        <el-input
+          v-model="keyword"
+          placeholder="搜索姓名/微信ID/手机号"
+          clearable
+          @keyup.enter="search"
+          @clear="search"
+        />
+        <el-select v-model="roleFilter" placeholder="全部角色" clearable @change="onFilterChange">
           <el-option label="学员" value="student" />
           <el-option label="教师" value="teacher" />
           <el-option label="员工" value="employee" />
         </el-select>
-        <el-select
-          v-model="memberTagFilter"
-          placeholder="全部业务标签"
-          clearable
-          style="width: 160px"
-          @change="onFilterChange"
-        >
+        <el-select v-model="memberTagFilter" placeholder="全部业务标签" clearable @change="onFilterChange">
           <el-option v-for="item in memberTagOptions" :key="item.value" :label="item.label" :value="item.value" />
         </el-select>
         <el-button @click="search">查询</el-button>
-        <el-button type="primary" plain @click="openClaim">添加学员到本校区</el-button>
       </div>
+      <el-button type="primary" plain class="toolbar-add" @click="openClaim">添加学员到本校区</el-button>
     </div>
-    <el-table :data="list">
+
+    <div v-if="isMobile" class="mobile-feed">
+      <div v-for="row in list" :key="row.id" class="mobile-feed-item">
+        <div class="mobile-feed-head">
+          <span class="mobile-feed-title">{{ row.nickname || '—' }}</span>
+          <el-tag size="small" :type="roleTagType(row.role)">{{ roleLabel(row.role) }}</el-tag>
+        </div>
+        <div class="mobile-feed-main">{{ row.phone || '暂无电话' }}</div>
+        <div class="mobile-feed-meta">
+          <span>{{ campusDisplay(row) }}</span>
+        </div>
+        <div v-if="row.school || row.collegeGrade" class="mobile-feed-meta">
+          <span v-if="row.school">{{ row.school }}</span>
+          <span v-if="row.collegeGrade">{{ row.collegeGrade }}</span>
+        </div>
+        <div v-if="row.cardTypes || (row.memberTagLabels || []).length" class="mobile-feed-meta">
+          <span v-if="row.cardTypes">卡类 {{ row.cardTypes }}</span>
+          <span v-if="(row.memberTagLabels || []).length">{{ (row.memberTagLabels || []).join('、') }}</span>
+        </div>
+        <div v-if="row.role === 'student' && row.closedClassGroupLabel" class="mobile-feed-meta">
+          <span>{{ row.closedClassGroupLabel }}</span>
+        </div>
+        <div v-if="row.openid" class="mobile-feed-meta openid-row">
+          <span class="openid-text">{{ row.openid }}</span>
+          <el-button link type="primary" class="copy-btn" @click="copyText(row.openid)">复制</el-button>
+        </div>
+        <div class="table-actions">
+          <el-button link type="primary" @click="edit(row)">编辑</el-button>
+        </div>
+      </div>
+      <div v-if="!list.length" class="mobile-feed-empty">暂无用户</div>
+    </div>
+
+    <el-table v-else :data="list">
       <el-table-column prop="nickname" label="姓名" width="110" align="left" header-align="left" show-overflow-tooltip />
       <el-table-column label="角色" width="90" align="left" header-align="left">
         <template #default="{ row }">
@@ -181,7 +214,7 @@
     </template>
   </el-dialog>
 
-  <el-dialog v-model="claimVisible" title="添加学员到本校区" width="720px">
+  <el-dialog v-model="claimVisible" title="添加学员到本校区" width="720px" class="claim-dialog">
     <el-alert
       v-if="!campusId"
       type="warning"
@@ -195,13 +228,40 @@
         v-model="claimKeyword"
         placeholder="输入姓名 / 手机号 / 微信 ID（至少 2 字）"
         clearable
-        style="width: 360px"
         @keyup.enter="searchClaim"
       />
       <el-button type="primary" :loading="claimLoading" @click="searchClaim">搜索</el-button>
-      <span class="muted">将加入：{{ campusName(campusId) }}（与其他校区并存）</span>
+      <span class="muted claim-hint">将加入：{{ campusName(campusId) }}（与其他校区并存）</span>
     </div>
-    <el-table :data="claimList" style="margin-top: 12px" max-height="420">
+
+    <div v-if="isMobile" class="mobile-feed claim-list">
+      <div v-for="row in claimList" :key="row.id" class="mobile-feed-item">
+        <div class="mobile-feed-head">
+          <span class="mobile-feed-title">{{ row.nickname || '—' }}</span>
+        </div>
+        <div class="mobile-feed-main">{{ row.phone || '—' }}</div>
+        <div v-if="row.school" class="mobile-feed-meta">{{ row.school }}</div>
+        <div class="mobile-feed-meta">
+          <span>{{ (row.campusLabels || []).join('、') || '暂无关联校区' }}</span>
+        </div>
+        <div v-if="row.openid" class="mobile-feed-meta openid-row">
+          <span class="openid-text">{{ row.openid }}</span>
+        </div>
+        <div class="table-actions">
+          <el-button
+            link
+            type="primary"
+            :disabled="!campusId || (row.campusIds || []).includes(campusId)"
+            @click="claimUser(row)"
+          >
+            {{ (row.campusIds || []).includes(campusId) ? '已在本校区' : '加入本校区' }}
+          </el-button>
+        </div>
+      </div>
+      <div v-if="!claimList.length" class="mobile-feed-empty">搜索后可添加学员</div>
+    </div>
+
+    <el-table v-else :data="claimList" style="margin-top: 12px" max-height="420">
       <el-table-column prop="nickname" label="姓名" width="110" />
       <el-table-column prop="phone" label="电话" width="120" />
       <el-table-column prop="school" label="就读学校" min-width="120" show-overflow-tooltip />
@@ -235,10 +295,12 @@ import http from '../api/http'
 import { campusName } from '../common/campuses'
 import { allowedCampuses } from '../common/adminAccess'
 import { useCampusScope } from '../composables/useCampusScope'
+import { useBreakpoint } from '../composables/useBreakpoint'
 import { useAuthStore } from '../stores/auth'
 
 const route = useRoute()
 const auth = useAuthStore()
+const { isMobile } = useBreakpoint()
 const list = ref([])
 const total = ref(0)
 const page = ref(1)
@@ -290,6 +352,13 @@ function roleTagType(role) {
 function teacherName(teacherId) {
   if (!teacherId) return '未绑定'
   return teachers.value.find((item) => item.id === teacherId)?.name || `档案#${teacherId}`
+}
+
+function campusDisplay(row) {
+  if ((row.campusLabels || []).length) return row.campusLabels.join('、')
+  if (row.role === 'employee') return campusName(row.campusId) || '—'
+  if (row.role === 'teacher') return teacherName(row.teacherId)
+  return '—'
 }
 
 async function loadTeachers() {
@@ -437,11 +506,36 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.filters :deep(.el-input),
+.filters :deep(.el-select) {
+  width: 240px;
+}
+
 .openid-cell {
   display: flex;
   align-items: center;
   gap: 8px;
   min-width: 0;
+}
+
+.openid-row {
+  align-items: center;
+  gap: 8px;
+}
+
+.openid-row .openid-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .openid-text {
@@ -486,5 +580,40 @@ onMounted(async () => {
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+.claim-list {
+  margin-top: 12px;
+}
+
+@media (max-width: 768px) {
+  .filters :deep(.el-input),
+  .filters :deep(.el-select) {
+    width: 100% !important;
+  }
+
+  .toolbar-add {
+    width: 100%;
+    margin-left: 0 !important;
+  }
+
+  .claim-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .claim-bar :deep(.el-input) {
+    width: 100% !important;
+  }
+
+  .claim-bar .el-button {
+    width: 100%;
+    margin-left: 0 !important;
+  }
+
+  .claim-hint {
+    font-size: 13px;
+    line-height: 1.45;
+  }
 }
 </style>

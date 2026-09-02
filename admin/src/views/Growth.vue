@@ -9,7 +9,7 @@
       title="请先在顶部选择校区，再编辑该校区成长文案与赛道"
     />
     <el-alert
-      v-else-if="!isCompact"
+      v-else-if="!isMobile"
       type="info"
       :closable="false"
       show-icon
@@ -159,8 +159,8 @@ const copySaving = ref(false)
 const copyForm = reactive({})
 const form = reactive({})
 
-const { isCompact, isMobile } = useBreakpoint()
-const formLabelPosition = computed(() => (isCompact.value ? 'top' : 'right'))
+const { isMobile } = useBreakpoint()
+const formLabelPosition = computed(() => (isMobile.value ? 'top' : 'right'))
 const introRows = computed(() => (isMobile.value ? 5 : 4))
 
 const campusLabel = computed(() => campusName(campusId.value))

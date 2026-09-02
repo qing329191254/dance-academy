@@ -13,7 +13,6 @@
             <span class="mobile-feed-status">板块</span>
           </div>
           <div class="mobile-feed-meta">
-            <span v-if="section.code">标识 {{ section.code }}</span>
             <span>排序 {{ section.sortOrder ?? 0 }}</span>
             <span>{{ section.enabled ? '已启用' : '已停用' }}</span>
           </div>
@@ -30,7 +29,6 @@
             <span class="mobile-feed-status is-style">舞种</span>
           </div>
           <div class="mobile-feed-meta">
-            <span v-if="child.code">标识 {{ child.code }}</span>
             <span>排序 {{ child.sortOrder ?? 0 }}</span>
             <span>{{ child.enabled ? '已启用' : '已停用' }}</span>
           </div>
@@ -47,7 +45,6 @@
 
     <el-table v-else :data="tree" row-key="id" default-expand-all>
       <el-table-column prop="name" label="名称" min-width="180" />
-      <el-table-column prop="code" label="标识" width="140" />
       <el-table-column label="类型" width="100">
         <template #default="{ row }">{{ row.section ? '板块' : '舞种' }}</template>
       </el-table-column>
@@ -75,9 +72,6 @@
         </el-select>
       </el-form-item>
       <el-form-item label="名称"><el-input v-model="form.name" maxlength="64" /></el-form-item>
-      <el-form-item label="标识">
-        <el-input v-model="form.code" maxlength="64" placeholder="如 street / yoga，可留空自动生成" />
-      </el-form-item>
       <el-form-item label="排序"><el-input-number v-model="form.sortOrder" :min="0" /></el-form-item>
       <el-form-item label="启用"><el-switch v-model="form.enabled" /></el-form-item>
     </el-form>
@@ -155,7 +149,7 @@ async function save() {
   const payload = {
     parentId: form.parentId || null,
     name: form.name.trim(),
-    code: form.code?.trim() || '',
+    code: form.id ? (form.code || '') : '',
     sortOrder: form.sortOrder,
     enabled: form.enabled,
   }

@@ -61,6 +61,15 @@
         </template>
         <template v-else>
           <div class="header-left">
+            <button
+              v-if="isCompact"
+              type="button"
+              class="menu-btn"
+              aria-label="打开菜单"
+              @click="menuOpen = true"
+            >
+              <el-icon :size="20"><Menu /></el-icon>
+            </button>
             <div class="crumb">{{ route.meta.title || '管理后台' }}</div>
           </div>
           <div class="right">

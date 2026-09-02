@@ -26,13 +26,15 @@
         <div v-for="row in banners" :key="row.id" class="mobile-media-item">
           <img class="mobile-media-thumb" :src="mediaSrc(row.imageUrl)" alt="" />
           <div class="mobile-media-body">
-            <div class="mobile-media-meta">
-              <span>排序 {{ row.sortOrder ?? 0 }}</span>
-              <span>{{ row.enabled ? '已启用' : '未启用' }}</span>
-            </div>
-            <div class="table-actions">
-              <el-button link type="primary" @click="editBanner(row)">编辑</el-button>
-              <el-button link type="danger" @click="remove('/admin/banners', row.id, loadBanners)">删除</el-button>
+            <div class="mobile-media-foot">
+              <div class="mobile-media-meta">
+                <span>排序 {{ row.sortOrder ?? 0 }}</span>
+                <span>{{ row.enabled ? '已启用' : '未启用' }}</span>
+              </div>
+              <div class="table-actions">
+                <el-button link type="primary" @click="editBanner(row)">编辑</el-button>
+                <el-button link type="danger" @click="remove('/admin/banners', row.id, loadBanners)">删除</el-button>
+              </div>
             </div>
           </div>
         </div>
@@ -67,12 +69,14 @@
         <div v-for="row in photos" :key="row.id" class="mobile-media-item">
           <img class="mobile-media-thumb" :src="mediaSrc(row.imageUrl)" alt="" />
           <div class="mobile-media-body">
-            <div class="mobile-media-meta">
-              <span>排序 {{ row.sortOrder ?? 0 }}</span>
-            </div>
-            <div class="table-actions">
-              <el-button link type="primary" @click="editPhoto(row)">编辑</el-button>
-              <el-button link type="danger" @click="remove('/admin/brand-photos', row.id, loadPhotos)">删除</el-button>
+            <div class="mobile-media-foot">
+              <div class="mobile-media-meta">
+                <span>排序 {{ row.sortOrder ?? 0 }}</span>
+              </div>
+              <div class="table-actions">
+                <el-button link type="primary" @click="editPhoto(row)">编辑</el-button>
+                <el-button link type="danger" @click="remove('/admin/brand-photos', row.id, loadPhotos)">删除</el-button>
+              </div>
             </div>
           </div>
         </div>
@@ -206,6 +210,11 @@ async function remove(path, id, reload) {
 @media (max-width: 768px) {
   .campus-hint {
     margin-bottom: 10px;
+  }
+
+  .media-page .toolbar > .el-button {
+    width: 100%;
+    margin-left: 0 !important;
   }
 }
 </style>
