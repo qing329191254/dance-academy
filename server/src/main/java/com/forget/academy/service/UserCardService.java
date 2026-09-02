@@ -175,20 +175,20 @@ public class UserCardService {
         if (userId == null || scheduleId == null) {
             return;
         }
-        String date = classDate == null || classDate.isBlank() || "default".equals(classDate.trim())
+        String rawDate = classDate == null || classDate.isBlank() || "default".equals(classDate.trim())
                 ? LocalDate.now().toString()
                 : classDate.trim();
         LocalDate day;
         try {
-            day = LocalDate.parse(date.length() >= 10 ? date.substring(0, 10) : date);
+            day = LocalDate.parse(rawDate.length() >= 10 ? rawDate.substring(0, 10) : rawDate);
         } catch (Exception e) {
             day = LocalDate.now();
-            date = day.toString();
         }
+        String lookupDate = day.toString();
         Booking booking = bookingRepo.findFirstByUserIdAndScheduleIdAndClassDateAndStatus(
-                        userId, scheduleId, date, "待上课")
+                        userId, scheduleId, lookupDate, "待上课")
                 .or(() -> bookingRepo.findFirstByUserIdAndScheduleIdAndClassDateAndStatus(
-                        userId, scheduleId, date, "已完成"))
+                        userId, scheduleId, lookupDate, "已完成"))
                 .orElse(null);
         if (booking == null && !"default".equals(classDate)) {
             booking = bookingRepo.findFirstByUserIdAndScheduleIdAndClassDateAndStatus(
