@@ -25,6 +25,15 @@
         <el-form-item label="营业时间"><el-input v-model="form.businessHours" /></el-form-item>
         <el-form-item label="电话"><el-input v-model="form.phone" /></el-form-item>
         <el-form-item label="电话展示"><el-input v-model="form.phoneDisplay" /></el-form-item>
+        <el-form-item label="运营主体">
+          <el-input v-model="form.company" maxlength="120" placeholder="隐私政策/用户协议中的公司名称" />
+        </el-form-item>
+        <el-form-item label="联系邮箱">
+          <el-input v-model="form.email" maxlength="120" placeholder="用于协议与学员须知展示" />
+        </el-form-item>
+        <el-form-item label="协议更新日期">
+          <el-input v-model="form.legalUpdateDate" maxlength="32" placeholder="如 2026年8月31日" />
+        </el-form-item>
         <el-form-item label="Logo">
           <ImageField v-model="form.logo" auto-persist @uploaded="onLogoUploaded" />
         </el-form-item>

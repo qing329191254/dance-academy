@@ -63,4 +63,13 @@ public class Studio extends BaseEntity {
     /** 学员须知正文（## 标题 + 段落，按校区配置） */
     @Column(length = 8000)
     private String studentNotice;
+    /** 运营主体（隐私政策/用户协议展示） */
+    @Column(length = 120)
+    private String company;
+    /** 联系邮箱 */
+    @Column(length = 120)
+    private String email;
+    /** 协议更新日期展示，如 2026年8月31日 */
+    @Column(length = 32)
+    private String legalUpdateDate;
 }

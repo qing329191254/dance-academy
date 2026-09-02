@@ -50,9 +50,17 @@
 </template>
 
 <script setup>
-import { legalInfo } from '@/common/legal.js'
+import { ref } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
+import { getLegalInfo, loadLegalInfo } from '@/common/legal.js'
+import { selectedCampusId } from '@/common/campus.js'
 
-const info = legalInfo
+const info = ref(getLegalInfo())
+
+onShow(async () => {
+  await loadLegalInfo(selectedCampusId.value)
+  info.value = getLegalInfo()
+})
 </script>
 
 <style scoped>

@@ -95,6 +95,9 @@ public class StudioService {
         studio.setShareTitle("高校FOR-GET舞室");
         studio.setCourseSystemLead("按学习方式和目标选择：固定班、次通卡、私教，或定制赛事与商演。");
         studio.setCourseSystemHomeSummary("特色固定班、次卡、通卡\n私教、定制课、商演赛事");
+        studio.setCompany("四川佳贝行教育咨询有限公司");
+        studio.setEmail("lhno1111@163.com");
+        studio.setLegalUpdateDate("2026年8月31日");
         applyCampusDefaults(studio, campusId);
         return studio;
     }
@@ -146,6 +149,9 @@ public class StudioService {
         target.setWorkModuleSummary(body.getWorkModuleSummary());
         target.setDanceModuleSummary(body.getDanceModuleSummary());
         target.setStudentNotice(body.getStudentNotice());
+        target.setCompany(body.getCompany());
+        target.setEmail(body.getEmail());
+        target.setLegalUpdateDate(body.getLegalUpdateDate());
     }
 
     private String normalizeCampusId(String campusId) {

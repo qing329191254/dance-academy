@@ -1,6 +1,7 @@
 import { API_BASE, USER_STORAGE_KEY, mediaUrl } from './config.js'
 import { request } from './request.js'
 import { applyShareFromStudio } from './share.js'
+import { applyLegalFromStudio } from './legal.js'
 
 function formatDate(value) {
   if (!value) return ''
@@ -48,6 +49,7 @@ export function getHome(campusId) {
   return request({ url: `/home${query}` }).then((data) => {
     const studio = mapStudio(data.studio)
     applyShareFromStudio(studio)
+    applyLegalFromStudio(studio)
     return {
       studio,
       banners: (data.banners || []).map(mediaUrl),
@@ -61,6 +63,7 @@ export function getBrand(campusId) {
   return request({ url: `/brand${query}` }).then((data) => {
     const studio = mapStudio(data.studio)
     applyShareFromStudio(studio)
+    applyLegalFromStudio(studio)
     return {
       studio,
       photos: (data.photos || []).map(mediaUrl),

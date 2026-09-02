@@ -40,7 +40,8 @@ import { onLoad } from '@dcloudio/uni-app'
 import { reactive, ref } from 'vue'
 import { getCourseIntro, getCourseModule } from '@/common/api.js'
 import { trialCourse as mockTrial } from '@/common/mock.js'
-import { legalInfo } from '@/common/legal.js'
+import { getLegalInfo, loadLegalInfo } from '@/common/legal.js'
+import { selectedCampusId } from '@/common/campus.js'
 import { openBookTab } from '@/common/navigate.js'
 import { showToast } from '@/common/toast.js'
 
@@ -61,6 +62,7 @@ onLoad(async (query) => {
       const intro = await getCourseIntro()
       applyTrial(intro.trial)
     }
+    await loadLegalInfo(selectedCampusId.value)
   } catch (e) {
     applyTrial(mockTrial)
   } finally {
@@ -69,8 +71,9 @@ onLoad(async (query) => {
 })
 
 function callStudio() {
+  const phone = getLegalInfo().phone
   uni.makePhoneCall({
-    phoneNumber: legalInfo.phone,
+    phoneNumber: phone,
     fail() {
       showToast('暂无法拨打电话')
     },
