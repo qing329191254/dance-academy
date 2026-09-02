@@ -17,6 +17,7 @@ import com.forget.academy.repo.ScheduleRepo;
 import com.forget.academy.repo.TeacherRepo;
 import com.forget.academy.service.AdminAccessService;
 import com.forget.academy.service.CourseModuleMapper;
+import com.forget.academy.service.DanceCategoryService;
 import com.forget.academy.service.TeacherResumeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -50,6 +51,7 @@ public class AdminCatalogController {
     private final BookingRepo bookingRepo;
     private final AdminAccessService adminAccessService;
     private final TeacherResumeService teacherResumeService;
+    private final DanceCategoryService danceCategoryService;
 
     @GetMapping("/teachers")
     public ApiResponse<?> teachers(@RequestParam(required = false) Integer page,
@@ -197,6 +199,7 @@ public class AdminCatalogController {
             body.setCapacity(20);
         }
         normalizeClosedDoor(body);
+        normalizeSectionStyle(body);
         return ApiResponse.ok(scheduleRepo.save(body));
     }
 
@@ -221,7 +224,10 @@ public class AdminCatalogController {
         schedule.setEnabled(body.getEnabled());
         schedule.setClosedDoor(body.getClosedDoor());
         schedule.setAudienceGroup(body.getAudienceGroup());
+        schedule.setSectionId(body.getSectionId());
+        schedule.setStyleId(body.getStyleId());
         normalizeClosedDoor(schedule);
+        normalizeSectionStyle(schedule);
         fillTeacherName(schedule);
         return ApiResponse.ok(scheduleRepo.save(schedule));
     }
@@ -308,6 +314,21 @@ public class AdminCatalogController {
             throw new BizException("闭门课需选择面向分组：高阶闭门或零基础闭门");
         }
         schedule.setAudienceGroup(audience);
+    }
+
+    private void normalizeSectionStyle(Schedule schedule) {
+        if (schedule.getSectionId() != null) {
+            danceCategoryService.requireSection(schedule.getSectionId());
+        }
+        if (schedule.getStyleId() != null) {
+            var style = danceCategoryService.requireStyle(schedule.getStyleId());
+            if (schedule.getSectionId() != null && !schedule.getSectionId().equals(style.getParentId())) {
+                throw new BizException("舞种不属于所选板块");
+            }
+            if (schedule.getSectionId() == null) {
+                schedule.setSectionId(style.getParentId());
+            }
+        }
     }
 
     private List<Map<String, Object>> enrichTeachers(List<Teacher> teachers) {

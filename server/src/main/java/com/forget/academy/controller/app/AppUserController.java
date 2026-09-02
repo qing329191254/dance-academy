@@ -12,6 +12,7 @@ import com.forget.academy.service.AppAuthService;
 import com.forget.academy.service.BookingService;
 import com.forget.academy.service.CheckinPendingService;
 import com.forget.academy.service.CheckinService;
+import com.forget.academy.service.DanceCategoryService;
 import com.forget.academy.service.GrowthService;
 import com.forget.academy.service.StorageService;
 import lombok.RequiredArgsConstructor;
@@ -40,6 +41,7 @@ public class AppUserController {
     private final UserCourseRepo userCourseRepo;
     private final FeedbackRepo feedbackRepo;
     private final StorageService storageService;
+    private final DanceCategoryService danceCategoryService;
 
     @PostMapping("/auth/login")
     public ApiResponse<?> login(@RequestBody(required = false) Map<String, String> body,
@@ -147,7 +149,13 @@ public class AppUserController {
                     map.put("type", card.getType());
                     map.put("remain", card.getRemain());
                     map.put("total", card.getTotal());
+                    map.put("sectionId", card.getSectionId());
+                    map.put("sectionName", danceCategoryService.nameOf(card.getSectionId()));
+                    map.put("validDays", card.getValidDays());
+                    map.put("activatedAt", card.getActivatedAt());
+                    map.put("activated", card.getActivatedAt() != null);
                     map.put("expire", card.getExpireDate());
+                    map.put("expireDate", card.getExpireDate());
                     map.put("cover", card.getCover());
                     return map;
                 })

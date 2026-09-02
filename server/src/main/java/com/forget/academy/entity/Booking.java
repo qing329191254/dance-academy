@@ -30,6 +30,8 @@ public class Booking extends BaseEntity {
     private String status;
     /** 团课开课前提醒是否已发送（或已跳过） */
     private Boolean remindSent = false;
-    /** 预约扣减的团课卡 ID，取消待上课时返还 */
+    /** 预约锁定的卡 ID，到课成功后再扣次 */
     private Long cardId;
+    /** 是否已在到课时扣过次 */
+    private Boolean cardConsumed = false;
 }

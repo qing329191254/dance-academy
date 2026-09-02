@@ -23,10 +23,18 @@
       <el-table-column prop="userId" label="学员ID" width="90" />
       <el-table-column prop="name" label="卡名" />
       <el-table-column prop="type" label="类型" width="90" />
+      <el-table-column label="适用板块" width="140">
+        <template #default="{ row }">{{ row.sectionName || '通用' }}</template>
+      </el-table-column>
       <el-table-column label="次数" width="120">
         <template #default="{ row }">{{ row.remain }}/{{ row.total }}</template>
       </el-table-column>
-      <el-table-column prop="expireDate" label="有效期" width="130" />
+      <el-table-column label="开卡" width="100">
+        <template #default="{ row }">{{ row.activatedAt ? '已开卡' : '未开卡' }}</template>
+      </el-table-column>
+      <el-table-column label="有效期" width="160">
+        <template #default="{ row }">{{ expireLabel(row) }}</template>
+      </el-table-column>
       <el-table-column label="操作" width="120" class-name="col-actions" label-class-name="col-actions" align="left" header-align="left">
         <template #default="{ row }">
           <div class="table-actions">
@@ -50,19 +58,34 @@
   </div>
 
   <el-dialog v-model="visible" :title="form.id ? '编辑卡' : '发放卡包'" width="560px">
-    <el-form :model="form" label-width="90px">
+    <el-form :model="form" label-width="100px">
       <el-form-item label="微信ID"><el-input v-model="form.openid" /></el-form-item>
       <el-form-item label="卡名"><el-input v-model="form.name" /></el-form-item>
       <el-form-item label="类型">
-        <el-select v-model="form.type">
+        <el-select v-model="form.type" style="width: 100%">
           <el-option label="团课" value="团课" />
           <el-option label="私教" value="私教" />
           <el-option label="固定班" value="固定班" />
         </el-select>
       </el-form-item>
+      <el-form-item label="适用板块">
+        <el-select v-model="form.sectionId" clearable placeholder="不选=通用" style="width: 100%">
+          <el-option v-for="s in sections" :key="s.id" :label="s.name" :value="s.id" />
+        </el-select>
+      </el-form-item>
       <el-form-item label="总次数"><el-input-number v-model="form.total" :min="1" /></el-form-item>
       <el-form-item label="剩余次数"><el-input-number v-model="form.remain" :min="0" /></el-form-item>
-      <el-form-item label="有效期"><el-date-picker v-model="form.expireDate" value-format="YYYY-MM-DD" /></el-form-item>
+      <el-form-item label="有效天数">
+        <el-input-number v-model="form.validDays" :min="0" :max="3650" />
+        <div class="form-tip">留空或 0 = 不过期；有天数则首次到课后起算</div>
+      </el-form-item>
+      <el-form-item v-if="form.id" label="开卡日期">
+        <el-date-picker v-model="form.activatedAt" value-format="YYYY-MM-DD" placeholder="空=未开卡" clearable />
+      </el-form-item>
+      <el-form-item v-if="form.id" label="到期日">
+        <el-date-picker v-model="form.expireDate" value-format="YYYY-MM-DD" clearable />
+        <div class="form-tip">一般由首次到课自动填写，也可手动改</div>
+      </el-form-item>
       <el-form-item label="封面"><ImageField v-model="form.cover" /></el-form-item>
     </el-form>
     <template #footer>
@@ -73,13 +96,14 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import http from '../api/http'
 import ImageField from '../components/ImageField.vue'
 import { useCampusScope } from '../composables/useCampusScope'
 
 const list = ref([])
+const sections = ref([])
 const total = ref(0)
 const page = ref(1)
 const size = ref(15)
@@ -88,10 +112,23 @@ const type = ref('')
 const visible = ref(false)
 const form = reactive({})
 
+function expireLabel(row) {
+  if (!row.activatedAt) {
+    if (row.validDays) return `首次到课后 ${row.validDays} 天`
+    return '未开卡 · 不过期'
+  }
+  return row.expireDate || '已开卡'
+}
+
 function queryParams() {
   const params = { keyword: keyword.value, page: page.value, size: size.value, ...campusParams() }
   if (type.value) params.type = type.value
   return params
+}
+
+async function loadSections() {
+  const res = await http.get('/admin/dance-sections', { params: { enabledOnly: false } })
+  sections.value = res.data || []
 }
 
 async function load() {
@@ -105,7 +142,21 @@ function search() {
   return load()
 }
 function edit(row) {
-  Object.assign(form, { id: null, userId: null, openid: '', name: '团课 10 次卡', type: '团课', remain: 10, total: 10, expireDate: '', cover: '' }, row || {})
+  Object.assign(form, {
+    id: null,
+    userId: null,
+    openid: '',
+    name: '团课 10 次卡',
+    type: '团课',
+    remain: 10,
+    total: 10,
+    sectionId: null,
+    validDays: null,
+    activatedAt: null,
+    expireDate: '',
+    cover: '',
+  }, row || {})
+  if (form.validDays === 0) form.validDays = null
   visible.value = true
 }
 async function save() {
@@ -114,7 +165,13 @@ async function save() {
     ElMessage.warning('请填写微信ID')
     return
   }
-  const payload = { ...form, userId: null, openid }
+  const payload = {
+    ...form,
+    userId: null,
+    openid,
+    sectionId: form.sectionId || null,
+    validDays: form.validDays || null,
+  }
   if (form.id) await http.put(`/admin/cards/${form.id}`, payload)
   else await http.post('/admin/cards', payload)
   visible.value = false
@@ -130,6 +187,7 @@ async function remove(row) {
 }
 
 const { campusParams } = useCampusScope(load)
+onMounted(loadSections)
 </script>
 
 <style scoped>
@@ -137,5 +195,11 @@ const { campusParams } = useCampusScope(load)
   display: flex;
   gap: 12px;
   align-items: center;
+}
+.form-tip {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #999;
+  line-height: 1.4;
 }
 </style>

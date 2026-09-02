@@ -30,6 +30,7 @@ public class CheckinService {
     private final ScheduleRepo scheduleRepo;
     private final ObjectMapper mapper;
     private final UserCampusService userCampusService;
+    private final UserCardService userCardService;
 
     @Transactional
     public Map<String, Object> checkin(Long userId, String raw) {
@@ -40,6 +41,10 @@ public class CheckinService {
         Schedule schedule = scheduleRepo.findById(parseLong(session.id)).orElse(null);
         PracticeRecord record = buildRecord(userId, schedule, session, SOURCE_SCAN, null);
         saveRecord(record, "今日该课程已签到，请勿重复扫描");
+        Long scheduleId = parseLong(session.id);
+        if (scheduleId != null && scheduleId > 0) {
+            userCardService.consumeOnClassCheckin(userId, scheduleId, session.date);
+        }
         return Map.of("ok", true, "message", session.className + " 签到成功", "record", toMap(record));
     }
 
@@ -66,6 +71,7 @@ public class CheckinService {
                 "75分钟");
         PracticeRecord record = buildRecord(userId, schedule, session, source, operatorName);
         saveRecord(record, "该学员本节课已签到");
+        userCardService.consumeOnClassCheckin(userId, scheduleId, date);
         return Map.of("ok", true, "message", schedule.getName() + " 签到成功", "record", toMap(record));
     }
 

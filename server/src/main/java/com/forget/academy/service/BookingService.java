@@ -37,6 +37,7 @@ public class BookingService {
     private final BookingRemindService bookingRemindService;
     private final UserCardService userCardService;
     private final UserCampusService userCampusService;
+    private final DanceCategoryService danceCategoryService;
 
     public List<Map<String, Object>> listSchedules(String type, String date, String campusId, Long userId) {
         String tab = type == null || type.isBlank() ? "group" : type;
@@ -64,6 +65,7 @@ public class BookingService {
             row.put("status", resolveStatus(item, booked));
             row.put("booked", false);
             row.put("queued", false);
+            enrichSectionLabels(row, item);
             if (userId != null) {
                 String classDate = "group".equals(tab) ? date : "default";
                 String key = buildKey(tab, item.getId(), classDate);
@@ -76,6 +78,13 @@ public class BookingService {
                         row.put("queueNo", queueNo(booking));
                     }
                 });
+                if ("group".equals(tab) && !Boolean.TRUE.equals(row.get("booked")) && !Boolean.TRUE.equals(row.get("queued"))) {
+                    UserCard usable = userCardService.findUsableGroupCard(userId, item.getSectionId());
+                    row.put("canBook", usable != null);
+                    if (usable == null) {
+                        row.put("bookBlockReason", userCardService.blockReason(userId, "团课", item.getSectionId()));
+                    }
+                }
             }
             result.add(row);
         }
@@ -378,7 +387,18 @@ public class BookingService {
         map.put("closedDoor", Boolean.TRUE.equals(item.getClosedDoor()));
         map.put("audienceGroup", item.getAudienceGroup());
         map.put("audienceGroupLabel", ClosedClassGroup.label(item.getAudienceGroup()));
+        map.put("sectionId", item.getSectionId());
+        map.put("styleId", item.getStyleId());
         return map;
+    }
+
+    private void enrichSectionLabels(Map<String, Object> row, Schedule item) {
+        if (item.getSectionId() != null) {
+            row.put("sectionName", danceCategoryService.nameOf(item.getSectionId()));
+        }
+        if (item.getStyleId() != null) {
+            row.put("styleName", danceCategoryService.nameOf(item.getStyleId()));
+        }
     }
 
     private void assertCanBookGroup(Schedule schedule, AppUser user) {
@@ -388,16 +408,19 @@ public class BookingService {
         if (!ClosedClassGroup.canAccess(schedule, user)) {
             throw new BizException(ClosedClassGroup.accessDeniedMessage(schedule));
         }
-        userCardService.requireUsableGroupCard(user.getId());
+        userCardService.requireUsableGroupCard(user.getId(), schedule.getSectionId());
     }
 
+    /** 预约成功：仅锁定卡，不扣次；到课成功后再扣 */
     private void reserveGroupCard(Booking booking, AppUser user) {
         if (!"group".equals(booking.getTab())) {
             return;
         }
-        UserCard card = userCardService.requireUsableGroupCard(user.getId());
-        userCardService.deduct(card);
+        Schedule schedule = scheduleRepo.findById(booking.getScheduleId()).orElse(null);
+        Long sectionId = schedule == null ? null : schedule.getSectionId();
+        UserCard card = userCardService.requireUsableGroupCard(user.getId(), sectionId);
         booking.setCardId(card.getId());
+        booking.setCardConsumed(false);
     }
 
     private void linkCampus(Long userId, Schedule schedule) {
@@ -407,12 +430,13 @@ public class BookingService {
         userCampusService.ensureLinked(userId, schedule.getCampusId());
     }
 
+    /** 取消预约：释放锁定，未扣次故不退次 */
     private void releaseGroupCard(Booking booking) {
-        if (booking.getCardId() == null) {
+        if (Boolean.TRUE.equals(booking.getCardConsumed())) {
             return;
         }
-        userCardService.refund(booking.getCardId());
         booking.setCardId(null);
+        booking.setCardConsumed(false);
     }
 
     public Map<String, Object> toBookingMap(Booking booking) {

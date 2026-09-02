@@ -91,8 +91,11 @@
         <image v-if="getTeacherAvatar(item.teacher)" class="avatar" :src="getTeacherAvatar(item.teacher)" mode="aspectFill" />
         <view v-else class="avatar" />
         <view class="info">
-          <text class="name">{{ item.name }}</text>
-          <text v-if="item.closedDoor" class="closed-tag">{{ item.audienceGroupLabel || '闭门课' }}</text>
+          <view class="title-row">
+            <text class="name">{{ item.name }}</text>
+            <text v-if="item.closedDoor" class="closed-tag">{{ item.audienceGroupLabel || '闭门课' }}</text>
+          </view>
+          <text v-if="item.sectionName || item.styleName" class="section-tag">{{ item.styleName || item.sectionName }}</text>
           <view class="meta">
             <text v-if="active === 'group'" class="date-text">{{ selectedDateText }}</text>
             <text class="accent">{{ item.time }}</text>
@@ -269,12 +272,14 @@ function actionLabel(item) {
   if (isBooked(item)) return '取消预约'
   if (isQueued(item)) return '退出排队'
   if (active.value === 'group' && item.status === '已满') return '排队'
+  if (active.value === 'group' && item.canBook === false) return '无可用卡'
   return '预约'
 }
 
 function actionClass(item) {
   if (isBooked(item) || isQueued(item)) return 'btn-cancel'
   if (active.value === 'group' && item.status === '已满') return 'btn-queue'
+  if (active.value === 'group' && item.canBook === false) return 'btn-disabled'
   return 'btn-ghost'
 }
 
@@ -297,6 +302,16 @@ function askBookingSubscribe() {
 async function toggleBook(item) {
   if (!ensureLogin()) return
   const toastOptions = { offsetTop: TOAST_OFFSET }
+  if (
+    active.value === 'group'
+    && !isBooked(item)
+    && !isQueued(item)
+    && item.status !== '已满'
+    && item.canBook === false
+  ) {
+    showError(item.bookBlockReason || '没有可用的对应次卡', toastOptions)
+    return
+  }
   const date =
     active.value === 'group' ? weekDates.value[selectedDateIndex.value]?.date : undefined
   const booked = isBooked(item)
@@ -454,9 +469,21 @@ async function toggleBook(item) {
   margin-bottom: 10rpx;
 }
 
+.title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8rpx;
+  margin-bottom: 10rpx;
+}
+
+.title-row .name {
+  margin-bottom: 0;
+}
+
 .closed-tag {
   display: inline-block;
-  margin-left: 12rpx;
+  margin-left: 0;
   padding: 2rpx 12rpx;
   border-radius: 999rpx;
   background: rgba(138, 116, 229, 0.18);
@@ -464,6 +491,23 @@ async function toggleBook(item) {
   font-size: 22rpx;
   font-weight: 500;
   vertical-align: middle;
+}
+
+.section-tag {
+  display: inline-block;
+  margin: 0 0 10rpx 0;
+  padding: 2rpx 12rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.08);
+  color: #cfcfcf;
+  font-size: 22rpx;
+  font-weight: 500;
+}
+
+.btn-disabled {
+  background: rgba(255, 255, 255, 0.06);
+  color: #777;
+  border: 1rpx solid rgba(255, 255, 255, 0.12);
 }
 
 .side {

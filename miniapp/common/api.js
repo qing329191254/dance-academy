@@ -288,6 +288,9 @@ export function getCards() {
       ...item,
       cover: mediaUrl(item.cover),
       expire: formatDate(item.expire),
+      sectionName: item.sectionName || '',
+      validDays: item.validDays || null,
+      activatedAt: item.activatedAt || null,
     })),
   )
 }

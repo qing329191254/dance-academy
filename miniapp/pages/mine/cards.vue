@@ -13,12 +13,16 @@
           <view class="foot">
             <view class="meta-list">
               <view class="meta-item">
+                <text class="meta-label">适用板块</text>
+                <text class="meta-value">{{ item.sectionName || '通用' }}</text>
+              </view>
+              <view class="meta-item">
                 <text class="meta-label">剩余次数</text>
                 <text class="meta-value accent">{{ item.remain }}/{{ item.total }}</text>
               </view>
               <view class="meta-item">
-                <text class="meta-label">有效期至</text>
-                <text class="meta-value">{{ item.expire }}</text>
+                <text class="meta-label">有效期</text>
+                <text class="meta-value">{{ expireText(item) }}</text>
               </view>
             </view>
           </view>
@@ -40,6 +44,14 @@ import { getCards } from '@/common/api.js'
 import { ensureLogin } from '@/common/auth.js'
 
 const cardList = ref([])
+
+function expireText(item) {
+  if (!item.activatedAt) {
+    if (item.validDays) return `未开卡 · ${item.validDays} 天`
+    return '未开卡'
+  }
+  return item.expire || '—'
+}
 
 onShow(async () => {
   if (!ensureLogin()) return

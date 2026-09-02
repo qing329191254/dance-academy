@@ -30,4 +30,8 @@ public class Schedule extends BaseEntity {
     private Boolean closedDoor = false;
     /** 闭门课面向分组，与 AppUser.closedClassGroup 对应 */
     private String audienceGroup;
+    /** 所属板块（dance_category 顶级），空 = 不限 */
+    private Long sectionId;
+    /** 舞种（叶子节点），仅展示，不参与卡匹配 */
+    private Long styleId;
 }

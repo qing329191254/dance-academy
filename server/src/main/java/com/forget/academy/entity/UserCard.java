@@ -18,6 +18,12 @@ public class UserCard extends BaseEntity {
     private String type;
     private Integer remain;
     private Integer total;
+    /** 适用板块（dance_category 顶级），空 = 不限板块 */
+    private Long sectionId;
+    /** 有效天数，空 = 不过期；首次到课后起算 */
+    private Integer validDays;
+    /** 首次到课开卡日期，空 = 未开卡 */
+    private LocalDate activatedAt;
     private LocalDate expireDate;
     private String cover;
 
@@ -25,4 +31,6 @@ public class UserCard extends BaseEntity {
     private String nickname;
     @Transient
     private String openid;
+    @Transient
+    private String sectionName;
 }

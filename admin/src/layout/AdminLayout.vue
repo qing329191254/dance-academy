@@ -28,6 +28,7 @@
 
         <el-sub-menu index="group-course">
           <template #title>课程教务</template>
+          <el-menu-item index="/dance-categories">板块与舞种</el-menu-item>
           <el-menu-item index="/teachers">老师档案</el-menu-item>
           <el-menu-item index="/courses">课程产品</el-menu-item>
           <el-menu-item index="/schedules">课表管理</el-menu-item>

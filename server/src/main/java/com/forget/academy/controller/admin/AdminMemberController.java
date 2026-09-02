@@ -21,6 +21,7 @@ import com.forget.academy.repo.UserMemberTagRepo;
 import com.forget.academy.service.AppAuthService;
 import com.forget.academy.service.AdminAccessService;
 import com.forget.academy.service.CampusCatalogService;
+import com.forget.academy.service.DanceCategoryService;
 import com.forget.academy.service.EmployeeService;
 import com.forget.academy.service.UserCampusService;
 import lombok.RequiredArgsConstructor;
@@ -61,6 +62,7 @@ public class AdminMemberController {
     private final UserCampusRepo userCampusRepo;
     private final UserCampusService userCampusService;
     private final CampusCatalogService campusCatalogService;
+    private final DanceCategoryService danceCategoryService;
 
     @GetMapping("/member-tag-options")
     public ApiResponse<?> memberTagOptions() {
@@ -312,7 +314,10 @@ public class AdminMemberController {
         adminAccessService.requireSuperAdmin();
         body.setUserId(resolveUserId(body));
         body.setId(null);
-        return ApiResponse.ok(userCardRepo.save(body));
+        if (body.getSectionId() != null) {
+            danceCategoryService.requireSection(body.getSectionId());
+        }
+        return ApiResponse.ok(enrichCard(userCardRepo.save(body)));
     }
 
     @PutMapping("/cards/{id}")
@@ -324,9 +329,15 @@ public class AdminMemberController {
         card.setType(body.getType());
         card.setRemain(body.getRemain());
         card.setTotal(body.getTotal());
+        if (body.getSectionId() != null) {
+            danceCategoryService.requireSection(body.getSectionId());
+        }
+        card.setSectionId(body.getSectionId());
+        card.setValidDays(body.getValidDays());
+        card.setActivatedAt(body.getActivatedAt());
         card.setExpireDate(body.getExpireDate());
         card.setCover(body.getCover());
-        return ApiResponse.ok(userCardRepo.save(card));
+        return ApiResponse.ok(enrichCard(userCardRepo.save(card)));
     }
 
     @DeleteMapping("/cards/{id}")
@@ -489,6 +500,14 @@ public class AdminMemberController {
                 card.setNickname(user.getNickname());
                 card.setOpenid(user.getOpenid());
             }
+            card.setSectionName(danceCategoryService.nameOf(card.getSectionId()));
         }
+    }
+
+    private UserCard enrichCard(UserCard card) {
+        if (card != null) {
+            card.setSectionName(danceCategoryService.nameOf(card.getSectionId()));
+        }
+        return card;
     }
 }

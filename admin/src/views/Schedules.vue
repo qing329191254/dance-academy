@@ -34,6 +34,12 @@
       <el-table-column prop="timeText" label="时间" width="150" />
       <el-table-column prop="teacherName" label="老师" width="100" />
       <el-table-column prop="room" label="教室" width="130" />
+      <el-table-column label="板块" width="120">
+        <template #default="{ row }">{{ sectionName(row.sectionId) }}</template>
+      </el-table-column>
+      <el-table-column label="舞种" width="100">
+        <template #default="{ row }">{{ styleName(row.styleId) }}</template>
+      </el-table-column>
       <el-table-column label="星期" width="90">
         <template #default="{ row }">{{ weekdayLabel[row.weekday] || '-' }}</template>
       </el-table-column>
@@ -104,6 +110,16 @@
           <el-option label="零基础闭门" value="foundation" />
         </el-select>
       </el-form-item>
+      <el-form-item label="板块">
+        <el-select v-model="form.sectionId" clearable placeholder="不选=不限板块" style="width: 100%" @change="onSectionChange">
+          <el-option v-for="s in sections" :key="s.id" :label="s.name" :value="s.id" />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="舞种">
+        <el-select v-model="form.styleId" clearable placeholder="可选，仅展示" style="width: 100%">
+          <el-option v-for="s in styleOptions" :key="s.id" :label="s.name" :value="s.id" />
+        </el-select>
+      </el-form-item>
       <el-form-item label="星级"><el-input-number v-model="form.stars" :min="1" :max="5" /></el-form-item>
       <el-form-item label="名额"><el-input-number v-model="form.capacity" :min="1" /></el-form-item>
       <el-form-item label="状态"><el-input v-model="form.status" /></el-form-item>
@@ -158,6 +174,7 @@ const keyword = ref('')
 const type = ref('')
 const enabled = ref()
 const teachers = ref([])
+const categoryTree = ref([])
 const visible = ref(false)
 const qrVisible = ref(false)
 const qrLoading = ref(false)
@@ -167,6 +184,33 @@ let qrRefreshTimer = null
 const qrMeta = reactive({ className: '', date: '', time: '', teacher: '', room: '' })
 const form = reactive({})
 const original = reactive({ timeText: '', weekday: null, type: '' })
+
+const sections = computed(() => categoryTree.value)
+const styleOptions = computed(() => {
+  if (!form.sectionId) {
+    return categoryTree.value.flatMap((s) => s.children || [])
+  }
+  const section = categoryTree.value.find((s) => s.id === form.sectionId)
+  return section?.children || []
+})
+
+function sectionName(id) {
+  if (!id) return '-'
+  return categoryTree.value.find((s) => s.id === id)?.name || '-'
+}
+function styleName(id) {
+  if (!id) return '-'
+  for (const s of categoryTree.value) {
+    const hit = (s.children || []).find((c) => c.id === id)
+    if (hit) return hit.name
+  }
+  return '-'
+}
+function onSectionChange() {
+  if (!form.styleId) return
+  const ok = styleOptions.value.some((s) => s.id === form.styleId)
+  if (!ok) form.styleId = null
+}
 
 function queryParams() {
   const params = { keyword: keyword.value, page: page.value, size: size.value, ...campusParams() }
@@ -185,6 +229,11 @@ async function loadTeachers() {
   teachers.value = (await http.get('/admin/teachers')).data || []
 }
 
+async function loadCategories() {
+  const res = await http.get('/admin/dance-categories', { params: { all: true } })
+  categoryTree.value = (res.data || []).map((s) => ({ ...s, section: true }))
+}
+
 function search() {
   page.value = 1
   return load()
@@ -196,7 +245,7 @@ function edit(row) {
   Object.assign(form, {
     id: null, type: 'group', campusId: fallbackCampus, name: '', timeText: '', teacherId: null, teacherName: '',
     room: '', weekday: 1, stars: 3, capacity: 20, status: '可预约', sortOrder: 0, enabled: true,
-    closedDoor: false, audienceGroup: '',
+    closedDoor: false, audienceGroup: '', sectionId: null, styleId: null,
   }, row || {})
   if (!form.closedDoor) {
     form.closedDoor = false
@@ -323,7 +372,10 @@ function downloadQr() {
   link.download = `签到码-${safe}.png`
   link.click()
 }
-onMounted(loadTeachers)
+onMounted(() => {
+  loadTeachers()
+  loadCategories()
+})
 onUnmounted(stopQrRefresh)
 </script>
 

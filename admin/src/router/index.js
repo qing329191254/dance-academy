@@ -12,6 +12,7 @@ const routes = [
       { path: '/media', component: () => import('../views/Media.vue'), meta: { title: '轮播与相册' } },
       { path: '/classrooms', component: () => import('../views/Classrooms.vue'), meta: { title: '教室管理' } },
       { path: '/teachers', component: () => import('../views/Teachers.vue'), meta: { title: '老师档案' } },
+      { path: '/dance-categories', component: () => import('../views/DanceCategories.vue'), meta: { title: '板块与舞种' } },
       { path: '/teacher-reviews', component: () => import('../views/TeacherReviews.vue'), meta: { title: '评价教师' } },
       { path: '/courses', component: () => import('../views/Courses.vue'), meta: { title: '课程产品' } },
       { path: '/schedules', component: () => import('../views/Schedules.vue'), meta: { title: '课表管理' } },
