@@ -145,6 +145,7 @@ public class StudioService {
         target.setDanceLead(body.getDanceLead());
         target.setWorkModuleSummary(body.getWorkModuleSummary());
         target.setDanceModuleSummary(body.getDanceModuleSummary());
+        target.setStudentNotice(body.getStudentNotice());
     }
 
     private String normalizeCampusId(String campusId) {

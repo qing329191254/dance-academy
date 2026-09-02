@@ -52,6 +52,19 @@
             placeholder="首页「课程产品」卡片副标题，回车可换行"
           />
         </el-form-item>
+        <el-form-item label="学员须知">
+          <el-input
+            v-model="form.studentNotice"
+            type="textarea"
+            :rows="14"
+            maxlength="8000"
+            show-word-limit
+            placeholder="以 ## 开头为章节标题，其下为正文。留空则小程序使用系统默认须知。"
+          />
+          <div class="form-tip">
+            示例：<code>## 一、预约上课</code> 换行后写正文。按校区配置，小程序「我的 → 学员须知」展示。
+          </div>
+        </el-form-item>
         <el-form-item>
           <el-button type="primary" :loading="saving" :disabled="!campusId" @click="save">保存</el-button>
         </el-form-item>

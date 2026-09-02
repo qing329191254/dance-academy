@@ -60,4 +60,7 @@ public class Studio extends BaseEntity {
     /** 成长中心舞蹈发展卡片摘要 */
     @Column(length = 500)
     private String danceModuleSummary;
+    /** 学员须知正文（## 标题 + 段落，按校区配置） */
+    @Column(length = 8000)
+    private String studentNotice;
 }
