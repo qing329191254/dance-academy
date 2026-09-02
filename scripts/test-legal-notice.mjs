@@ -1,5 +1,5 @@
 import { applyLegalFromStudio, getLegalInfo } from '../miniapp/common/legal.js'
-import { parseStudentNotice } from '../miniapp/common/studentNotice.js'
+import { parseStudentNotice, parseInlineParts } from '../miniapp/common/studentNotice.js'
 
 applyLegalFromStudio({
   name: '测试舞室',
@@ -26,9 +26,18 @@ for (const [key, actual, expected] of checks) {
   }
 }
 
-const sections = parseStudentNotice('## 一、测试\n第一行\n\n## 二、测试2\n第二行')
-if (sections.length !== 2 || sections[0].title !== '一、测试') {
-  throw new Error('parseStudentNotice failed')
+const boldParts = parseInlineParts('支持**分期付款**，请知悉')
+if (boldParts.length !== 3 || !boldParts[1].bold || boldParts[1].text !== '分期付款') {
+  throw new Error('parseInlineParts failed')
+}
+
+const lines = parseStudentNotice('标题\n\n第一行  保留空格\n**加粗**')
+if (lines.length !== 4 || !lines[1].empty || lines[0].parts[0].text !== '标题') {
+  throw new Error('parseStudentNotice line break failed')
+}
+
+if (parseStudentNotice('').length !== 0 || parseStudentNotice('   ').length !== 0) {
+  throw new Error('parseStudentNotice empty failed')
 }
 
 console.log('legal + studentNotice tests passed')
