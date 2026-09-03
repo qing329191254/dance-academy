@@ -269,6 +269,7 @@ function isQueued(item) {
 }
 
 function actionLabel(item) {
+  if (item.sessionCancelled || item.status === '已取消') return '已取消'
   if (isBooked(item)) return '取消预约'
   if (isQueued(item)) return '退出排队'
   if (active.value === 'group' && item.status === '已满') return '排队'
@@ -277,6 +278,7 @@ function actionLabel(item) {
 }
 
 function actionClass(item) {
+  if (item.sessionCancelled || item.status === '已取消') return 'btn-disabled'
   if (isBooked(item) || isQueued(item)) return 'btn-cancel'
   if (active.value === 'group' && item.status === '已满') return 'btn-queue'
   if (active.value === 'group' && item.canBook === false) return 'btn-disabled'
@@ -302,6 +304,10 @@ function askBookingSubscribe() {
 async function toggleBook(item) {
   if (!ensureLogin()) return
   const toastOptions = { offsetTop: TOAST_OFFSET }
+  if (item.sessionCancelled || item.status === '已取消') {
+    showError(item.bookBlockReason || '本课因人数不足已取消', toastOptions)
+    return
+  }
   if (
     active.value === 'group'
     && !isBooked(item)

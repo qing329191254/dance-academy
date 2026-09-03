@@ -82,6 +82,17 @@ public interface BookingRepo extends JpaRepository<Booking, Long> {
     List<Booking> findGroupPendingReminders();
 
     @Query("""
+            select b from Booking b
+            where b.status = '待上课'
+              and b.tab = 'group'
+              and b.classDate is not null
+              and b.classDate <> ''
+              and b.classDate <> 'default'
+              and (b.cardConsumed is null or b.cardConsumed = false)
+            """)
+    List<Booking> findGroupPendingForNoShowSettle();
+
+    @Query("""
             select distinct b.userId, s.campusId from Booking b join Schedule s on b.scheduleId = s.id
             where b.userId is not null
               and s.campusId is not null and s.campusId <> ''

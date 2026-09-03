@@ -6,13 +6,14 @@ import java.time.LocalTime;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-final class ClassStartTimes {
+/** 从课表 timeText（如 18:10-19:30）解析开课开始时间。 */
+public final class ClassStartTimes {
     private static final Pattern CLOCK = Pattern.compile("(\\d{1,2}):(\\d{2})");
 
     private ClassStartTimes() {
     }
 
-    static LocalDateTime parse(String classDate, String timeText) {
+    public static LocalDateTime parse(String classDate, String timeText) {
         if (classDate == null || classDate.isBlank() || "default".equals(classDate)) {
             return null;
         }

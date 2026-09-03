@@ -24,6 +24,8 @@ public class Schedule extends BaseEntity {
     /** 0=周日 ... 6=周六，团课使用 */
     private Integer weekday;
     private Integer capacity = 20;
+    /** 最低开课人数；默认 4。≤0 表示不因人数不足自动取消 */
+    private Integer minEnrollment = 4;
     private Integer sortOrder = 0;
     private Boolean enabled = true;
     /** 是否闭门团课 */

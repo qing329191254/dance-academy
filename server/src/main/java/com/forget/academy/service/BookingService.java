@@ -5,10 +5,12 @@ import com.forget.academy.common.CampusIds;
 import com.forget.academy.common.ClosedClassGroup;
 import com.forget.academy.entity.AppUser;
 import com.forget.academy.entity.Booking;
+import com.forget.academy.entity.ClassSessionCancel;
 import com.forget.academy.entity.Schedule;
 import com.forget.academy.entity.UserCard;
 import com.forget.academy.repo.AppUserRepo;
 import com.forget.academy.repo.BookingRepo;
+import com.forget.academy.repo.ClassSessionCancelRepo;
 import com.forget.academy.repo.ScheduleRepo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -17,6 +19,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -29,6 +33,8 @@ public class BookingService {
     private static final String STATUS_WAITLIST = "排队中";
     private static final String STATUS_DONE = "已完成";
     private static final String STATUS_CANCELLED = "已取消";
+    private static final ZoneId ZONE = ZoneId.of("Asia/Shanghai");
+    private static final int STUDENT_CANCEL_LOCK_HOURS = 2;
 
     private final ScheduleRepo scheduleRepo;
     private final AdminAccessService adminAccessService;
@@ -38,6 +44,7 @@ public class BookingService {
     private final UserCardService userCardService;
     private final UserCampusService userCampusService;
     private final DanceCategoryService danceCategoryService;
+    private final ClassSessionCancelRepo classSessionCancelRepo;
 
     public List<Map<String, Object>> listSchedules(String type, String date, String campusId, Long userId) {
         String tab = type == null || type.isBlank() ? "group" : type;
@@ -62,7 +69,15 @@ public class BookingService {
                 booked = bookingRepo.countByScheduleIdAndClassDateAndStatus(item.getId(), date, STATUS_PENDING);
             }
             row.put("bookedCount", booked);
-            row.put("status", resolveStatus(item, booked));
+            boolean sessionCancelled = "group".equals(tab) && date != null
+                    && classSessionCancelRepo.existsByScheduleIdAndClassDate(item.getId(), date);
+            if (sessionCancelled) {
+                row.put("status", "已取消");
+                row.put("sessionCancelled", true);
+            } else {
+                row.put("status", resolveStatus(item, booked));
+                row.put("sessionCancelled", false);
+            }
             row.put("booked", false);
             row.put("queued", false);
             enrichSectionLabels(row, item);
@@ -79,10 +94,15 @@ public class BookingService {
                     }
                 });
                 if ("group".equals(tab) && !Boolean.TRUE.equals(row.get("booked")) && !Boolean.TRUE.equals(row.get("queued"))) {
-                    UserCard usable = userCardService.findUsableGroupCard(userId, item.getSectionId());
-                    row.put("canBook", usable != null);
-                    if (usable == null) {
-                        row.put("bookBlockReason", userCardService.blockReason(userId, "团课", item.getSectionId()));
+                    if (sessionCancelled) {
+                        row.put("canBook", false);
+                        row.put("bookBlockReason", "本课因人数不足已取消");
+                    } else {
+                        UserCard usable = userCardService.findUsableGroupCard(userId, item.getSectionId());
+                        row.put("canBook", usable != null);
+                        if (usable == null) {
+                            row.put("bookBlockReason", userCardService.blockReason(userId, "团课", item.getSectionId()));
+                        }
                     }
                 }
             }
@@ -103,6 +123,7 @@ public class BookingService {
         String key = buildKey(tab, scheduleId, classDate);
         var existing = bookingRepo.findByUserIdAndBookingKey(userId, key);
         if (existing.isPresent() && STATUS_PENDING.equals(existing.get().getStatus())) {
+            assertStudentCanCancel(existing.get());
             markCancelled(existing.get());
             promoteWaitlist(schedule, classDate);
             return result(false, false, "已取消预约", null);
@@ -113,6 +134,7 @@ public class BookingService {
         }
         if (existing.isPresent()) {
             Booking booking = existing.get();
+            assertSessionBookable(scheduleId, classDate);
             boolean full = isGroupFull(schedule, classDate);
             assertCanBookGroup(schedule, user);
             booking.setStatus(full ? STATUS_WAITLIST : STATUS_PENDING);
@@ -130,6 +152,7 @@ public class BookingService {
             return result(true, false, "预约成功", booking);
         }
 
+        assertSessionBookable(scheduleId, classDate);
         assertCanBookGroup(schedule, user);
         boolean waitlist = isGroupFull(schedule, classDate);
         Booking booking = new Booking();
@@ -182,6 +205,7 @@ public class BookingService {
             if (STATUS_PENDING.equals(booking.getStatus()) || STATUS_WAITLIST.equals(booking.getStatus())) {
                 throw new BizException("该学员已有有效预约");
             }
+            assertSessionBookable(scheduleId, classDate);
             boolean full = isGroupFull(schedule, classDate);
             assertCanBookGroup(schedule, user);
             booking.setStatus(full ? STATUS_WAITLIST : STATUS_PENDING);
@@ -198,6 +222,7 @@ public class BookingService {
             return booking;
         }
 
+        assertSessionBookable(scheduleId, classDate);
         assertCanBookGroup(schedule, user);
         boolean waitlist = isGroupFull(schedule, classDate);
         Booking booking = new Booking();
@@ -383,6 +408,7 @@ public class BookingService {
         map.put("stars", item.getStars());
         map.put("weekday", item.getWeekday());
         map.put("capacity", item.getCapacity());
+        map.put("minEnrollment", item.getMinEnrollment());
         map.put("date", date);
         map.put("closedDoor", Boolean.TRUE.equals(item.getClosedDoor()));
         map.put("audienceGroup", item.getAudienceGroup());
@@ -409,6 +435,90 @@ public class BookingService {
             throw new BizException(ClosedClassGroup.accessDeniedMessage(schedule));
         }
         userCardService.requireUsableGroupCard(user.getId(), schedule.getSectionId());
+    }
+
+    private void assertSessionBookable(Long scheduleId, String classDate) {
+        if (scheduleId == null || classDate == null || classDate.isBlank() || "default".equals(classDate)) {
+            return;
+        }
+        if (classSessionCancelRepo.existsByScheduleIdAndClassDate(scheduleId, classDate)) {
+            throw new BizException("本课因人数不足已取消，无法预约");
+        }
+    }
+
+    /** 开课前 2 小时内学员不可取消待上课预约 */
+    private void assertStudentCanCancel(Booking booking) {
+        if (booking == null || !"group".equals(booking.getTab())) {
+            return;
+        }
+        LocalDateTime start = ClassStartTimes.parse(booking.getClassDate(), booking.getTimeText());
+        if (start == null) {
+            return;
+        }
+        LocalDateTime now = LocalDateTime.now(ZONE);
+        if (!now.isBefore(start.minusHours(STUDENT_CANCEL_LOCK_HOURS))) {
+            throw new BizException("距开课不足 2 小时，无法取消预约");
+        }
+    }
+
+    /**
+     * 人数不足：取消该日该课全部待上课/排队预约，释放锁卡不扣次，并记录场次取消。
+     */
+    @Transactional
+    public void cancelSessionForLowEnrollment(Schedule schedule, String classDate, int bookedCount, int minEnrollment) {
+        if (schedule == null || schedule.getId() == null || classDate == null || classDate.isBlank()) {
+            return;
+        }
+        if (classSessionCancelRepo.existsByScheduleIdAndClassDate(schedule.getId(), classDate)) {
+            return;
+        }
+        ClassSessionCancel cancel = new ClassSessionCancel();
+        cancel.setScheduleId(schedule.getId());
+        cancel.setClassDate(classDate);
+        cancel.setReason("low_enrollment");
+        cancel.setBookedCount(bookedCount);
+        cancel.setMinEnrollment(minEnrollment);
+        cancel.setCancelledAt(LocalDateTime.now(ZONE));
+        classSessionCancelRepo.save(cancel);
+
+        List<Booking> pending = bookingRepo.findByScheduleIdAndClassDateAndStatusOrderByIdAsc(
+                schedule.getId(), classDate, STATUS_PENDING);
+        for (Booking booking : pending) {
+            markCancelled(booking);
+        }
+        List<Booking> waitlist = bookingRepo.findByScheduleIdAndClassDateAndStatusOrderByIdAsc(
+                schedule.getId(), classDate, STATUS_WAITLIST);
+        for (Booking booking : waitlist) {
+            markCancelled(booking);
+        }
+    }
+
+    /** 缺席：开课超过宽限后仍待上课则扣次并标记已完成 */
+    @Transactional
+    public void settleNoShow(Long bookingId) {
+        if (bookingId == null) {
+            return;
+        }
+        Booking booking = bookingRepo.findById(bookingId).orElse(null);
+        if (booking == null || !STATUS_PENDING.equals(booking.getStatus())) {
+            return;
+        }
+        if (classSessionCancelRepo.existsByScheduleIdAndClassDate(booking.getScheduleId(), booking.getClassDate())) {
+            return;
+        }
+        if (Boolean.TRUE.equals(booking.getCardConsumed())) {
+            booking.setStatus(STATUS_DONE);
+            bookingRepo.save(booking);
+            return;
+        }
+        // 复用到课扣次：优先扣锁定卡，无卡也标记已消耗避免反复结算
+        userCardService.consumeOnClassCheckin(booking.getUserId(), booking.getScheduleId(), booking.getClassDate());
+        Booking refreshed = bookingRepo.findById(bookingId).orElse(null);
+        if (refreshed != null && STATUS_PENDING.equals(refreshed.getStatus())) {
+            refreshed.setCardConsumed(true);
+            refreshed.setStatus(STATUS_DONE);
+            bookingRepo.save(refreshed);
+        }
     }
 
     /** 预约成功：仅锁定卡，不扣次；到课成功后再扣 */

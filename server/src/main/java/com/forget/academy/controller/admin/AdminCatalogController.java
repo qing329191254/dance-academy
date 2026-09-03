@@ -198,6 +198,9 @@ public class AdminCatalogController {
         if (body.getCapacity() == null) {
             body.setCapacity(20);
         }
+        if (body.getMinEnrollment() == null) {
+            body.setMinEnrollment(4);
+        }
         normalizeClosedDoor(body);
         normalizeSectionStyle(body);
         return ApiResponse.ok(scheduleRepo.save(body));
@@ -220,6 +223,7 @@ public class AdminCatalogController {
         schedule.setStatus(body.getStatus());
         schedule.setWeekday(body.getWeekday());
         schedule.setCapacity(body.getCapacity());
+        schedule.setMinEnrollment(body.getMinEnrollment() == null ? 4 : body.getMinEnrollment());
         schedule.setSortOrder(body.getSortOrder());
         schedule.setEnabled(body.getEnabled());
         schedule.setClosedDoor(body.getClosedDoor());

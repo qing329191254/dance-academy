@@ -75,6 +75,9 @@
         <template #default="{ row }">{{ weekdayLabel[row.weekday] || '-' }}</template>
       </el-table-column>
       <el-table-column prop="capacity" label="名额" width="80" />
+      <el-table-column label="最低开课" width="90">
+        <template #default="{ row }">{{ row.type === 'group' ? (row.minEnrollment ?? 4) : '—' }}</template>
+      </el-table-column>
       <el-table-column label="闭门" width="100">
         <template #default="{ row }">
           <span v-if="row.closedDoor">{{ closedClassGroupLabel(row.audienceGroup) }}</span>
@@ -153,6 +156,10 @@
       </el-form-item>
       <el-form-item label="星级"><el-input-number v-model="form.stars" :min="1" :max="5" /></el-form-item>
       <el-form-item label="名额"><el-input-number v-model="form.capacity" :min="1" /></el-form-item>
+      <el-form-item v-if="form.type === 'group'" label="最低开课">
+        <el-input-number v-model="form.minEnrollment" :min="0" :max="200" />
+        <div class="form-tip">默认 4；开课前 2 小时人数不足则自动取消（不扣卡）。填 0 关闭。</div>
+      </el-form-item>
       <el-form-item label="状态"><el-input v-model="form.status" /></el-form-item>
       <el-form-item label="排序"><el-input-number v-model="form.sortOrder" :min="0" /></el-form-item>
       <el-form-item label="启用"><el-switch v-model="form.enabled" /></el-form-item>
@@ -277,7 +284,7 @@ function edit(row) {
   const fallbackCampus = campusId.value || campusOptions.value[0]?.id || 'shizishan'
   Object.assign(form, {
     id: null, type: 'group', campusId: fallbackCampus, name: '', timeText: '', teacherId: null, teacherName: '',
-    room: '', weekday: 1, stars: 3, capacity: 20, status: '可预约', sortOrder: 0, enabled: true,
+    room: '', weekday: 1, stars: 3, capacity: 20, minEnrollment: 4, status: '可预约', sortOrder: 0, enabled: true,
     closedDoor: false, audienceGroup: '', sectionId: null, styleId: null,
   }, row || {})
   if (!form.closedDoor) {
@@ -473,5 +480,11 @@ onUnmounted(stopQrRefresh)
 }
 .muted {
   color: #8a8a96;
+}
+.form-tip {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #999;
+  line-height: 1.4;
 }
 </style>
