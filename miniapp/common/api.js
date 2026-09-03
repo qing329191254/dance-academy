@@ -287,10 +287,12 @@ export function getCards() {
     (list || []).map((item) => ({
       ...item,
       cover: mediaUrl(item.cover),
-      expire: formatDate(item.expire),
+      expire: formatDate(item.expire || item.expireDate),
       sectionName: item.sectionName || '',
+      expireMode: item.expireMode || 'from_activation',
       validDays: item.validDays || null,
       activatedAt: item.activatedAt || null,
+      expired: !!item.expired,
     })),
   )
 }

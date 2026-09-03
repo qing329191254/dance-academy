@@ -15,6 +15,7 @@ import com.forget.academy.service.CheckinService;
 import com.forget.academy.service.DanceCategoryService;
 import com.forget.academy.service.GrowthService;
 import com.forget.academy.service.StorageService;
+import com.forget.academy.service.UserCardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -42,6 +43,7 @@ public class AppUserController {
     private final FeedbackRepo feedbackRepo;
     private final StorageService storageService;
     private final DanceCategoryService danceCategoryService;
+    private final UserCardService userCardService;
 
     @PostMapping("/auth/login")
     public ApiResponse<?> login(@RequestBody(required = false) Map<String, String> body,
@@ -143,20 +145,8 @@ public class AppUserController {
         return ApiResponse.ok(userCardRepo.findByUserIdOrderByIdDesc(AuthContext.requireApp().id())
                 .stream()
                 .map(card -> {
-                    Map<String, Object> map = new LinkedHashMap<>();
-                    map.put("id", card.getId());
-                    map.put("name", card.getName());
-                    map.put("type", card.getType());
-                    map.put("remain", card.getRemain());
-                    map.put("total", card.getTotal());
-                    map.put("sectionId", card.getSectionId());
-                    map.put("sectionName", danceCategoryService.nameOf(card.getSectionId()));
-                    map.put("validDays", card.getValidDays());
-                    map.put("activatedAt", card.getActivatedAt());
-                    map.put("activated", card.getActivatedAt() != null);
+                    Map<String, Object> map = userCardService.toPublicMap(card);
                     map.put("expire", card.getExpireDate());
-                    map.put("expireDate", card.getExpireDate());
-                    map.put("cover", card.getCover());
                     return map;
                 })
                 .toList());

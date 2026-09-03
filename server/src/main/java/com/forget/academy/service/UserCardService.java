@@ -23,11 +23,50 @@ public class UserCardService {
     public static final String GROUP_CARD_TYPE = "团课";
     public static final String FIXED_CARD_TYPE = "固定班";
     public static final String PRIVATE_CARD_TYPE = "私教";
+    /** 首次到课起算有效天数 */
+    public static final String MODE_FROM_ACTIVATION = "from_activation";
+    /** 固定截止日期，逾期未开卡也作废 */
+    public static final String MODE_FIXED_DEADLINE = "fixed_deadline";
 
     private final UserCardRepo userCardRepo;
     private final BookingRepo bookingRepo;
     private final ScheduleRepo scheduleRepo;
     private final DanceCategoryService danceCategoryService;
+
+    public static String resolveExpireMode(UserCard card) {
+        if (card == null) {
+            return MODE_FROM_ACTIVATION;
+        }
+        String mode = card.getExpireMode();
+        if (MODE_FIXED_DEADLINE.equals(mode) || MODE_FROM_ACTIVATION.equals(mode)) {
+            return mode;
+        }
+        // 旧数据：未标明模式时按「首次到课起算」兼容
+        return MODE_FROM_ACTIVATION;
+    }
+
+    /** 发卡/改卡时规范字段：二选一，互斥清理 */
+    public void normalizeExpireFields(UserCard card) {
+        if (card == null) {
+            return;
+        }
+        String mode = resolveExpireMode(card);
+        card.setExpireMode(mode);
+        if (MODE_FIXED_DEADLINE.equals(mode)) {
+            card.setValidDays(null);
+            if (card.getExpireDate() == null) {
+                throw new BizException("固定截止日期模式下请填写到期日");
+            }
+        } else {
+            if (card.getValidDays() != null && card.getValidDays() <= 0) {
+                card.setValidDays(null);
+            }
+            // 未开卡时不应提前写死到期日（由首次到课写入）
+            if (card.getActivatedAt() == null) {
+                card.setExpireDate(null);
+            }
+        }
+    }
 
     public static String cardTypeForSchedule(String scheduleType) {
         if (scheduleType == null) {
@@ -98,6 +137,15 @@ public class UserCardService {
         boolean anyNotExpired = cards.stream().anyMatch(c ->
                 c.getRemain() != null && c.getRemain() > 0 && !isExpired(c, today));
         if (!anyNotExpired) {
+            boolean anyDeadlineMissed = cards.stream().anyMatch(c ->
+                    c.getRemain() != null && c.getRemain() > 0
+                            && MODE_FIXED_DEADLINE.equals(resolveExpireMode(c))
+                            && c.getExpireDate() != null
+                            && c.getExpireDate().isBefore(today)
+                            && c.getActivatedAt() == null);
+            if (anyDeadlineMissed) {
+                return type + "卡已逾期作废（未在截止日期前开卡），请联系前台办卡";
+            }
             return type + "卡已过期，请联系前台办卡";
         }
         if (scheduleSectionId != null) {
@@ -132,12 +180,20 @@ public class UserCardService {
         return true;
     }
 
-    private boolean isExpired(UserCard card, LocalDate today) {
-        // 未开卡：不按到期日拦截
-        if (card.getActivatedAt() == null) {
+    public boolean isExpired(UserCard card, LocalDate today) {
+        if (card == null || card.getExpireDate() == null || today == null) {
             return false;
         }
-        return card.getExpireDate() != null && card.getExpireDate().isBefore(today);
+        if (!card.getExpireDate().isBefore(today)) {
+            return false;
+        }
+        String mode = resolveExpireMode(card);
+        // 固定截止：到期即作废（含未开卡逾期）
+        if (MODE_FIXED_DEADLINE.equals(mode)) {
+            return true;
+        }
+        // 首次到课起算：未开卡不算过期；开卡后看到期日
+        return card.getActivatedAt() != null;
     }
 
     @Transactional
@@ -155,13 +211,19 @@ public class UserCardService {
             throw new BizException("次卡次数不足");
         }
         LocalDate day = classDate == null ? LocalDate.now() : classDate;
+        if (isExpired(latest, day)) {
+            throw new BizException(MODE_FIXED_DEADLINE.equals(resolveExpireMode(latest)) && latest.getActivatedAt() == null
+                    ? "次卡已逾期作废"
+                    : "次卡已过期");
+        }
         if (latest.getActivatedAt() == null) {
             latest.setActivatedAt(day);
-            if (latest.getValidDays() != null && latest.getValidDays() > 0) {
+            // 仅「首次到课起算」在开卡时写入到期日；固定截止模式沿用发卡时的到期日
+            if (MODE_FROM_ACTIVATION.equals(resolveExpireMode(latest))
+                    && latest.getValidDays() != null
+                    && latest.getValidDays() > 0) {
                 latest.setExpireDate(day.plusDays(latest.getValidDays()));
             }
-        } else if (isExpired(latest, day)) {
-            throw new BizException("次卡已过期");
         }
         latest.setRemain(latest.getRemain() - 1);
         userCardRepo.save(latest);
@@ -241,6 +303,8 @@ public class UserCardService {
     }
 
     public Map<String, Object> toPublicMap(UserCard card) {
+        LocalDate today = LocalDate.now();
+        String mode = resolveExpireMode(card);
         Map<String, Object> map = new LinkedHashMap<>();
         map.put("id", card.getId());
         map.put("name", card.getName());
@@ -251,10 +315,12 @@ public class UserCardService {
         map.put("sectionName", card.getSectionName() != null
                 ? card.getSectionName()
                 : danceCategoryService.nameOf(card.getSectionId()));
+        map.put("expireMode", mode);
         map.put("validDays", card.getValidDays());
         map.put("activatedAt", card.getActivatedAt());
         map.put("activated", card.getActivatedAt() != null);
         map.put("expireDate", card.getExpireDate());
+        map.put("expired", isExpired(card, today));
         map.put("cover", card.getCover());
         return map;
     }

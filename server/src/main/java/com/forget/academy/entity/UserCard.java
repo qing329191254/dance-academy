@@ -20,10 +20,17 @@ public class UserCard extends BaseEntity {
     private Integer total;
     /** 适用板块（dance_category 顶级），空 = 不限板块 */
     private Long sectionId;
-    /** 有效天数，空 = 不过期；首次到课后起算 */
+    /**
+     * 有效期模式：
+     * from_activation = 首次到课起算有效天数；
+     * fixed_deadline = 固定截止日期，逾期未开卡也作废。
+     */
+    private String expireMode;
+    /** 有效天数（from_activation），空 = 开卡后不过期 */
     private Integer validDays;
     /** 首次到课开卡日期，空 = 未开卡 */
     private LocalDate activatedAt;
+    /** 到期日：fixed_deadline 发卡时填写；from_activation 开卡后写入 */
     private LocalDate expireDate;
     private String cover;
 

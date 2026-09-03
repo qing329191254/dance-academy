@@ -24,6 +24,7 @@ import com.forget.academy.service.CampusCatalogService;
 import com.forget.academy.service.DanceCategoryService;
 import com.forget.academy.service.EmployeeService;
 import com.forget.academy.service.UserCampusService;
+import com.forget.academy.service.UserCardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -63,6 +64,7 @@ public class AdminMemberController {
     private final UserCampusService userCampusService;
     private final CampusCatalogService campusCatalogService;
     private final DanceCategoryService danceCategoryService;
+    private final UserCardService userCardService;
 
     @GetMapping("/member-tag-options")
     public ApiResponse<?> memberTagOptions() {
@@ -317,6 +319,7 @@ public class AdminMemberController {
         if (body.getSectionId() != null) {
             danceCategoryService.requireSection(body.getSectionId());
         }
+        userCardService.normalizeExpireFields(body);
         return ApiResponse.ok(enrichCard(userCardRepo.save(body)));
     }
 
@@ -333,10 +336,12 @@ public class AdminMemberController {
             danceCategoryService.requireSection(body.getSectionId());
         }
         card.setSectionId(body.getSectionId());
+        card.setExpireMode(body.getExpireMode());
         card.setValidDays(body.getValidDays());
         card.setActivatedAt(body.getActivatedAt());
         card.setExpireDate(body.getExpireDate());
         card.setCover(body.getCover());
+        userCardService.normalizeExpireFields(card);
         return ApiResponse.ok(enrichCard(userCardRepo.save(card)));
     }
 
@@ -501,12 +506,14 @@ public class AdminMemberController {
                 card.setOpenid(user.getOpenid());
             }
             card.setSectionName(danceCategoryService.nameOf(card.getSectionId()));
+            card.setExpireMode(UserCardService.resolveExpireMode(card));
         }
     }
 
     private UserCard enrichCard(UserCard card) {
         if (card != null) {
             card.setSectionName(danceCategoryService.nameOf(card.getSectionId()));
+            card.setExpireMode(UserCardService.resolveExpireMode(card));
         }
         return card;
     }

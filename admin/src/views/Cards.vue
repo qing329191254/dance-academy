@@ -53,7 +53,7 @@
       <el-table-column label="开卡" width="100">
         <template #default="{ row }">{{ row.activatedAt ? '已开卡' : '未开卡' }}</template>
       </el-table-column>
-      <el-table-column label="有效期" width="160">
+      <el-table-column label="有效期" min-width="180">
         <template #default="{ row }">{{ expireLabel(row) }}</template>
       </el-table-column>
       <el-table-column label="操作" width="120" class-name="col-actions" label-class-name="col-actions" align="left" header-align="left">
@@ -79,7 +79,7 @@
   </div>
 
   <el-dialog v-model="visible" :title="form.id ? '编辑卡' : '发放卡包'" width="560px">
-    <el-form :model="form" label-width="100px">
+    <el-form :model="form" label-width="110px">
       <el-form-item label="微信ID"><el-input v-model="form.openid" /></el-form-item>
       <el-form-item label="卡名"><el-input v-model="form.name" /></el-form-item>
       <el-form-item label="类型">
@@ -96,14 +96,28 @@
       </el-form-item>
       <el-form-item label="总次数"><el-input-number v-model="form.total" :min="1" /></el-form-item>
       <el-form-item label="剩余次数"><el-input-number v-model="form.remain" :min="0" /></el-form-item>
-      <el-form-item label="有效天数">
+      <el-form-item label="有效期模式">
+        <el-radio-group v-model="form.expireMode" @change="onExpireModeChange">
+          <el-radio value="from_activation">首次到课起算</el-radio>
+          <el-radio value="fixed_deadline">固定截止日期</el-radio>
+        </el-radio-group>
+        <div class="form-tip">二选一。小次卡常用「首次到课起算」；学期通/大次卡/年通用「固定截止日期」。</div>
+      </el-form-item>
+      <el-form-item v-if="form.expireMode === 'from_activation'" label="有效天数">
         <el-input-number v-model="form.validDays" :min="0" :max="3650" />
-        <div class="form-tip">留空或 0 = 不过期；有天数则首次到课后起算</div>
+        <div class="form-tip">留空或 0 = 开卡后不过期；有天数则首次到课后起算</div>
+      </el-form-item>
+      <el-form-item v-if="form.expireMode === 'fixed_deadline'" label="到期日" required>
+        <el-date-picker v-model="form.expireDate" value-format="YYYY-MM-DD" placeholder="学期末等截止日期" clearable />
+        <div class="form-tip">过此日期无论开没开卡都作废（期期清）</div>
       </el-form-item>
       <el-form-item v-if="form.id" label="开卡日期">
         <el-date-picker v-model="form.activatedAt" value-format="YYYY-MM-DD" placeholder="空=未开卡" clearable />
       </el-form-item>
-      <el-form-item v-if="form.id" label="到期日">
+      <el-form-item
+        v-if="form.id && form.expireMode === 'from_activation'"
+        label="到期日"
+      >
         <el-date-picker v-model="form.expireDate" value-format="YYYY-MM-DD" clearable />
         <div class="form-tip">一般由首次到课自动填写，也可手动改</div>
       </el-form-item>
@@ -124,6 +138,9 @@ import ImageField from '../components/ImageField.vue'
 import { useCampusScope } from '../composables/useCampusScope'
 import { useBreakpoint } from '../composables/useBreakpoint'
 
+const MODE_FROM = 'from_activation'
+const MODE_FIXED = 'fixed_deadline'
+
 const list = ref([])
 const { isMobile } = useBreakpoint()
 const sections = ref([])
@@ -135,12 +152,31 @@ const type = ref('')
 const visible = ref(false)
 const form = reactive({})
 
+function resolveMode(row) {
+  if (row?.expireMode === MODE_FIXED || row?.expireMode === MODE_FROM) return row.expireMode
+  return MODE_FROM
+}
+
 function expireLabel(row) {
+  const mode = resolveMode(row)
+  if (mode === MODE_FIXED) {
+    if (!row.expireDate) return '固定截止 · 未设到期日'
+    if (!row.activatedAt) return `未开卡 · 须在 ${row.expireDate} 前`
+    return `至 ${row.expireDate}`
+  }
   if (!row.activatedAt) {
-    if (row.validDays) return `首次到课后 ${row.validDays} 天`
+    if (row.validDays) return `未开卡 · 首次到课后 ${row.validDays} 天`
     return '未开卡 · 不过期'
   }
-  return row.expireDate || '已开卡'
+  return row.expireDate ? `至 ${row.expireDate}` : '已开卡 · 不过期'
+}
+
+function onExpireModeChange() {
+  if (form.expireMode === MODE_FIXED) {
+    form.validDays = null
+  } else if (!form.activatedAt) {
+    form.expireDate = ''
+  }
 }
 
 function queryParams() {
@@ -174,12 +210,15 @@ function edit(row) {
     remain: 10,
     total: 10,
     sectionId: null,
+    expireMode: MODE_FROM,
     validDays: null,
     activatedAt: null,
     expireDate: '',
     cover: '',
   }, row || {})
+  form.expireMode = resolveMode(form)
   if (form.validDays === 0) form.validDays = null
+  if (form.expireMode === MODE_FIXED) form.validDays = null
   visible.value = true
 }
 async function save() {
@@ -188,12 +227,22 @@ async function save() {
     ElMessage.warning('请填写微信ID')
     return
   }
+  const expireMode = form.expireMode === MODE_FIXED ? MODE_FIXED : MODE_FROM
+  if (expireMode === MODE_FIXED && !form.expireDate) {
+    ElMessage.warning('固定截止日期模式下请填写到期日')
+    return
+  }
   const payload = {
     ...form,
     userId: null,
     openid,
     sectionId: form.sectionId || null,
-    validDays: form.validDays || null,
+    expireMode,
+    validDays: expireMode === MODE_FROM ? (form.validDays || null) : null,
+    expireDate: form.expireDate || null,
+  }
+  if (expireMode === MODE_FROM && !form.activatedAt) {
+    payload.expireDate = null
   }
   if (form.id) await http.put(`/admin/cards/${form.id}`, payload)
   else await http.post('/admin/cards', payload)

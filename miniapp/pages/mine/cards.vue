@@ -46,6 +46,16 @@ import { ensureLogin } from '@/common/auth.js'
 const cardList = ref([])
 
 function expireText(item) {
+  if (item.expired) {
+    if (!item.activatedAt && item.expireMode === 'fixed_deadline') return '已逾期作废'
+    return '已过期'
+  }
+  if (item.expireMode === 'fixed_deadline') {
+    if (!item.activatedAt) {
+      return item.expire ? `未开卡 · 须在 ${item.expire} 前` : '未开卡'
+    }
+    return item.expire || '—'
+  }
   if (!item.activatedAt) {
     if (item.validDays) return `未开卡 · ${item.validDays} 天`
     return '未开卡'
