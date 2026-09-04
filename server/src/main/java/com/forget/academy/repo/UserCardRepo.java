@@ -59,6 +59,9 @@ public interface UserCardRepo extends JpaRepository<UserCard, Long> {
                        where s.campusId in :campusIds and s.teacherId is not null))
                    or ((u.role is null or u.role = '' or lower(u.role) = 'student') and (
                        exists (
+                           select 1 from UserCampus uc
+                           where uc.userId = u.id and uc.campusId in :campusIds)
+                       or exists (
                            select 1 from Booking b join Schedule s on b.scheduleId = s.id
                            where b.userId = u.id and s.campusId in :campusIds)
                        or exists (

@@ -4,7 +4,7 @@
       <div class="filters">
         <el-input
           v-model="keyword"
-          placeholder="搜索卡名 / 学员ID / 昵称"
+          placeholder="搜索卡名 / 姓名 / 微信ID"
           clearable
           @keyup.enter="search"
           @clear="search"
@@ -25,7 +25,7 @@
           <span class="mobile-feed-title">{{ row.name || '—' }}</span>
           <span class="mobile-feed-status">{{ row.type || '—' }}</span>
         </div>
-        <div class="mobile-feed-main">学员 ID {{ row.userId ?? '—' }}</div>
+        <div class="mobile-feed-main">{{ row.nickname || '—' }}</div>
         <div class="mobile-feed-meta">
           <span>{{ row.sectionName || '通用板块' }}</span>
           <span>剩余 {{ row.remain ?? 0 }}/{{ row.total ?? 0 }}</span>
@@ -41,7 +41,7 @@
     </div>
 
     <el-table v-else :data="list">
-      <el-table-column prop="userId" label="学员ID" width="90" />
+      <el-table-column prop="nickname" label="姓名" width="120" />
       <el-table-column prop="name" label="卡名" />
       <el-table-column prop="type" label="类型" width="90" />
       <el-table-column label="适用板块" width="140">
@@ -245,7 +245,7 @@ async function save() {
     payload.expireDate = null
   }
   if (form.id) await http.put(`/admin/cards/${form.id}`, payload)
-  else await http.post('/admin/cards', payload)
+  else await http.post('/admin/cards', payload, { params: campusParams() })
   visible.value = false
   ElMessage.success('已保存')
   await load()

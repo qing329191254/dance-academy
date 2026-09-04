@@ -312,7 +312,8 @@ public class AdminMemberController {
     }
 
     @PostMapping("/cards")
-    public ApiResponse<UserCard> createCard(@RequestBody UserCard body) {
+    public ApiResponse<UserCard> createCard(@RequestBody UserCard body,
+                                            @RequestParam(required = false) String campusId) {
         adminAccessService.requireSuperAdmin();
         body.setUserId(resolveUserId(body));
         body.setId(null);
@@ -320,7 +321,12 @@ public class AdminMemberController {
             danceCategoryService.requireSection(body.getSectionId());
         }
         userCardService.normalizeExpireFields(body);
-        return ApiResponse.ok(enrichCard(userCardRepo.save(body)));
+        UserCard saved = userCardRepo.save(body);
+        if (campusId != null && !campusId.isBlank()) {
+            userCampusService.claimCampus(saved.getUserId(), campusId);
+        }
+        fillCardUsers(List.of(saved));
+        return ApiResponse.ok(saved);
     }
 
     @PutMapping("/cards/{id}")
@@ -342,7 +348,9 @@ public class AdminMemberController {
         card.setExpireDate(body.getExpireDate());
         card.setCover(body.getCover());
         userCardService.normalizeExpireFields(card);
-        return ApiResponse.ok(enrichCard(userCardRepo.save(card)));
+        UserCard saved = userCardRepo.save(card);
+        fillCardUsers(List.of(saved));
+        return ApiResponse.ok(saved);
     }
 
     @DeleteMapping("/cards/{id}")
