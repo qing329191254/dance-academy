@@ -167,6 +167,9 @@ public class AdminOpsController {
                 boolean cancelled = classSessionCancelRepo.existsByScheduleIdAndClassDate(schedule.getId(), classDate);
                 int capacity = schedule.getCapacity() == null ? 0 : schedule.getCapacity();
                 Integer minEnrollment = schedule.getMinEnrollment();
+                if (minEnrollment == null) {
+                    minEnrollment = 4;
+                }
                 Map<String, Object> row = new LinkedHashMap<>();
                 row.put("scheduleId", schedule.getId());
                 row.put("classDate", classDate);

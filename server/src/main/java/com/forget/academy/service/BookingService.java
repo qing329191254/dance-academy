@@ -408,7 +408,7 @@ public class BookingService {
         map.put("stars", item.getStars());
         map.put("weekday", item.getWeekday());
         map.put("capacity", item.getCapacity());
-        map.put("minEnrollment", item.getMinEnrollment());
+        map.put("minEnrollment", item.getMinEnrollment() == null ? 4 : item.getMinEnrollment());
         map.put("date", date);
         map.put("closedDoor", Boolean.TRUE.equals(item.getClosedDoor()));
         map.put("audienceGroup", item.getAudienceGroup());

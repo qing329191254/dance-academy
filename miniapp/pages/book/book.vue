@@ -269,15 +269,15 @@ function isQueued(item) {
   return !!item.queued
 }
 
-/** 团课：已约人数 + 最低开课（0 表示关闭自动取消，不展示开课门槛） */
+/** 团课：已约人数 + 最低开课（与后台策略一致：null 视为 4；0 表示关闭不展示门槛） */
 function enrollLine(item) {
   if (!item) return ''
   const booked = Number(item.bookedCount ?? 0)
   const capacity = Number(item.capacity ?? 0)
   const minRaw = item.minEnrollment
-  const min = minRaw == null || minRaw === '' ? null : Number(minRaw)
+  const min = minRaw == null || minRaw === '' ? 4 : Number(minRaw)
   const countPart = capacity > 0 ? `已约 ${booked}/${capacity}` : `已约 ${booked} 人`
-  if (min != null && !Number.isNaN(min) && min > 0) {
+  if (!Number.isNaN(min) && min > 0) {
     return `${countPart} · 满 ${min} 人开课`
   }
   return countPart
