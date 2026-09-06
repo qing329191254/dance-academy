@@ -14,6 +14,7 @@ import com.forget.academy.entity.Schedule;
 import com.forget.academy.repo.AppUserRepo;
 import com.forget.academy.repo.BookingRepo;
 import com.forget.academy.repo.ClassArchiveRepo;
+import com.forget.academy.repo.ClassSessionCancelRepo;
 import com.forget.academy.repo.FeedbackRepo;
 import com.forget.academy.repo.OpportunityApplyRepo;
 import com.forget.academy.repo.OpportunityRepo;
@@ -44,10 +45,15 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @RestController
@@ -69,6 +75,7 @@ public class AdminOpsController {
     private final AdminAccessService adminAccessService;
     private final CampusCatalogService campusCatalogService;
     private final ScheduleRepo scheduleRepo;
+    private final ClassSessionCancelRepo classSessionCancelRepo;
     private final CheckinService checkinService;
     private final TeacherService teacherService;
 
@@ -102,16 +109,93 @@ public class AdminOpsController {
     @GetMapping("/bookings")
     public ApiResponse<?> bookings(@RequestParam(defaultValue = "") String keyword,
                                   @RequestParam(defaultValue = "") String status,
+                                  @RequestParam(required = false) Long scheduleId,
+                                  @RequestParam(defaultValue = "") String classDate,
                                   @RequestParam(required = false) String campusId,
                                   @RequestParam(defaultValue = "1") int page,
                                   @RequestParam(defaultValue = "20") int size) {
         var pageable = PageRequest.of(Math.max(page - 1, 0), size);
         String query = keyword == null ? "" : keyword.trim();
         String st = status == null ? "" : status.trim();
+        String date = classDate == null ? "" : classDate.trim();
         var campuses = adminAccessService.resolveCampusScope(campusId);
-        var result = bookingRepo.searchInCampuses(query, st, campuses, pageable);
+        var result = bookingRepo.searchInCampuses(query, st, scheduleId, date, campuses, pageable);
         var list = result.getContent().stream().map(this::toBookingRow).toList();
         return ApiResponse.ok(new PageResult<>(list, result.getTotalElements(), page, size));
+    }
+
+    /** 按上课日期汇总每节课预约人数（团课按星期匹配排课） */
+    @GetMapping("/booking-sessions")
+    public ApiResponse<?> bookingSessions(@RequestParam String date,
+                                          @RequestParam(required = false) String campusId,
+                                          @RequestParam(required = false) Long teacherId,
+                                          @RequestParam(defaultValue = "") String keyword) {
+        if (date == null || date.isBlank()) {
+            throw new BizException("请选择上课日期");
+        }
+        LocalDate classDay;
+        try {
+            classDay = LocalDate.parse(date.trim());
+        } catch (Exception e) {
+            throw new BizException("上课日期格式不正确");
+        }
+        int weekday = toWeekday(classDay);
+        String query = keyword == null ? "" : keyword.trim().toLowerCase(Locale.ROOT);
+        var campuses = adminAccessService.resolveCampusScope(campusId);
+        List<Map<String, Object>> rows = new ArrayList<>();
+        for (String campus : campuses) {
+            for (Schedule schedule : scheduleRepo.findByCampusIdAndEnabledTrue(campus)) {
+                if (schedule.getWeekday() == null || schedule.getWeekday() != weekday) {
+                    continue;
+                }
+                if (teacherId != null && !teacherId.equals(schedule.getTeacherId())) {
+                    continue;
+                }
+                if (!query.isEmpty()) {
+                    String hay = ((schedule.getName() == null ? "" : schedule.getName()) + " "
+                            + (schedule.getTeacherName() == null ? "" : schedule.getTeacherName()) + " "
+                            + (schedule.getRoom() == null ? "" : schedule.getRoom())).toLowerCase(Locale.ROOT);
+                    if (!hay.contains(query)) {
+                        continue;
+                    }
+                }
+                String classDate = classDay.toString();
+                int booked = (int) bookingRepo.countByScheduleIdAndClassDateAndStatus(
+                        schedule.getId(), classDate, "待上课");
+                int waitlisted = (int) bookingRepo.countByScheduleIdAndClassDateAndStatus(
+                        schedule.getId(), classDate, "排队中");
+                boolean cancelled = classSessionCancelRepo.existsByScheduleIdAndClassDate(schedule.getId(), classDate);
+                int capacity = schedule.getCapacity() == null ? 0 : schedule.getCapacity();
+                Integer minEnrollment = schedule.getMinEnrollment();
+                Map<String, Object> row = new LinkedHashMap<>();
+                row.put("scheduleId", schedule.getId());
+                row.put("classDate", classDate);
+                row.put("name", schedule.getName());
+                row.put("type", schedule.getType());
+                row.put("timeText", schedule.getTimeText());
+                row.put("teacherId", schedule.getTeacherId());
+                row.put("teacherName", schedule.getTeacherName());
+                row.put("room", schedule.getRoom());
+                row.put("campusId", schedule.getCampusId());
+                row.put("campusName", campusCatalogService.displayName(schedule.getCampusId()));
+                row.put("capacity", capacity);
+                row.put("minEnrollment", minEnrollment);
+                row.put("bookedCount", booked);
+                row.put("waitlistCount", waitlisted);
+                row.put("sessionCancelled", cancelled);
+                row.put("full", capacity > 0 && booked >= capacity);
+                rows.add(row);
+            }
+        }
+        rows.sort(Comparator
+                .comparing((Map<String, Object> r) -> String.valueOf(r.getOrDefault("timeText", "")))
+                .thenComparing(r -> String.valueOf(r.getOrDefault("name", ""))));
+        return ApiResponse.ok(rows);
+    }
+
+    private static int toWeekday(LocalDate date) {
+        DayOfWeek day = date.getDayOfWeek();
+        return day == DayOfWeek.SUNDAY ? 0 : day.getValue();
     }
 
     @PostMapping("/bookings")

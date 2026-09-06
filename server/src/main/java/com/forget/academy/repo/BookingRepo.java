@@ -65,11 +65,15 @@ public interface BookingRepo extends JpaRepository<Booking, Long> {
                 or lower(coalesce(b.nickname, '')) like lower(concat('%', :keyword, '%'))
                 or lower(coalesce(b.teacherName, '')) like lower(concat('%', :keyword, '%')))
               and (:status = '' or b.status = :status)
+              and (:scheduleId is null or b.scheduleId = :scheduleId)
+              and (:classDate = '' or b.classDate = :classDate)
               and s.campusId in :campusIds
             order by case when b.status = '待上课' then 0 when b.status = '排队中' then 1 when b.status = '已完成' then 2 else 3 end, b.id desc
             """)
     Page<Booking> searchInCampuses(@Param("keyword") String keyword,
                                    @Param("status") String status,
+                                   @Param("scheduleId") Long scheduleId,
+                                   @Param("classDate") String classDate,
                                    @Param("campusIds") List<String> campusIds,
                                    Pageable pageable);
 
