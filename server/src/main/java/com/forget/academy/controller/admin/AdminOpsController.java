@@ -366,7 +366,28 @@ public class AdminOpsController {
         var pageable = PageRequest.of(Math.max(page - 1, 0), size);
         String query = keyword == null ? "" : keyword.trim();
         var campuses = adminAccessService.resolveCampusScope(campusId);
-        return ApiResponse.ok(PageResult.of(practiceRecordRepo.searchInCampuses(query, campuses, pageable)));
+        var result = practiceRecordRepo.searchInCampuses(query, campuses, pageable);
+        var userIds = result.getContent().stream().map(PracticeRecord::getUserId).distinct().toList();
+        var users = appUserRepo.findAllById(userIds).stream()
+                .collect(java.util.stream.Collectors.toMap(AppUser::getId, u -> u.getNickname() == null ? "" : u.getNickname()));
+        var list = result.getContent().stream().map(item -> {
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("id", item.getId());
+            row.put("userId", item.getUserId());
+            row.put("nickname", users.getOrDefault(item.getUserId(), ""));
+            row.put("name", item.getName());
+            row.put("classDate", item.getClassDate());
+            row.put("timeText", item.getTimeText());
+            row.put("duration", item.getDuration());
+            row.put("teacherName", item.getTeacherName());
+            row.put("room", item.getRoom());
+            row.put("campusId", item.getCampusId());
+            row.put("checkinSource", item.getCheckinSource());
+            row.put("operatorName", item.getOperatorName());
+            row.put("checkedAt", item.getCheckedAt());
+            return row;
+        }).toList();
+        return ApiResponse.ok(Map.of("list", list, "total", result.getTotalElements()));
     }
 
     @GetMapping("/feedbacks")

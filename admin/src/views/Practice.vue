@@ -16,10 +16,10 @@
     <div v-if="isMobile" class="mobile-feed">
       <div v-for="row in list" :key="row.id" class="mobile-feed-item">
         <div class="mobile-feed-head">
-          <span class="mobile-feed-title">{{ row.name || '—' }}</span>
+          <span class="mobile-feed-title">{{ row.nickname || '—' }}</span>
           <span class="mobile-feed-status">{{ checkinSourceLabel(row.checkinSource) }}</span>
         </div>
-        <div class="mobile-feed-main">学员 ID {{ row.userId ?? '—' }}</div>
+        <div class="mobile-feed-main">{{ row.name || '—' }}</div>
         <div class="mobile-feed-meta">
           <span v-if="row.classDate">{{ row.classDate }}</span>
           <span v-if="row.timeText">{{ row.timeText }}</span>
@@ -37,7 +37,7 @@
     </div>
 
     <el-table v-else :data="list">
-      <el-table-column prop="userId" label="学员ID" width="90" align="left" header-align="left" />
+      <el-table-column prop="nickname" label="姓名" width="120" align="left" header-align="left" />
       <el-table-column prop="name" label="课程" align="left" header-align="left" />
       <el-table-column prop="classDate" label="日期" width="120" align="left" header-align="left" />
       <el-table-column prop="timeText" label="时间" width="140" align="left" header-align="left" />
