@@ -45,7 +45,7 @@ public class CheckinService {
         if (scheduleId != null && scheduleId > 0) {
             userCardService.consumeOnClassCheckin(userId, scheduleId, session.date);
         }
-        return Map.of("ok", true, "message", session.className + " 签到成功", "record", toMap(record));
+        return okResult(session.className + " 签到成功", toMap(record));
     }
 
     @Transactional
@@ -72,7 +72,7 @@ public class CheckinService {
         PracticeRecord record = buildRecord(userId, schedule, session, source, operatorName);
         saveRecord(record, "该学员本节课已签到");
         userCardService.consumeOnClassCheckin(userId, scheduleId, date);
-        return Map.of("ok", true, "message", schedule.getName() + " 签到成功", "record", toMap(record));
+        return okResult(schedule.getName() + " 签到成功", toMap(record));
     }
 
     public boolean hasCheckedIn(Long userId, Long scheduleId, String classDate) {
@@ -154,6 +154,15 @@ public class CheckinService {
 
     private String normalizeDate(String classDate) {
         return classDate == null || classDate.isBlank() ? LocalDate.now().toString() : classDate.trim();
+    }
+
+    /** 可变 Map，供上层继续 put（不可用 Map.of）。 */
+    private static Map<String, Object> okResult(String message, Map<String, Object> record) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("ok", true);
+        result.put("message", message);
+        result.put("record", record);
+        return result;
     }
 
     private Session parse(String raw) {

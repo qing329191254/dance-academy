@@ -73,7 +73,11 @@ public class AdminAccessService {
         AdminUser admin = currentAdmin();
         List<String> allowed = allowedCampusIds(admin);
         if (requestedCampusId != null && !requestedCampusId.isBlank()) {
-            String campus = requestedCampusId.trim();
+            String raw = requestedCampusId.trim();
+            // 兼容历史校区 key（如 cdu），但未知值不要落到 defaultKey
+            String campus = campusCatalogService.contains(raw)
+                    ? campusCatalogService.normalize(raw)
+                    : raw;
             if (!allowed.contains(campus)) {
                 throw new BizException(403, "无权访问该校区");
             }

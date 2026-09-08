@@ -172,15 +172,18 @@ public class CheckinPendingService {
             pending.setConfirmedByUserId(operatorUserId);
             pending.setConfirmedByName(operatorName);
             checkinPendingRepo.save(pending);
-            return Map.of("ok", true, "message", "该用户已签到");
+            Map<String, Object> already = new LinkedHashMap<>();
+            already.put("ok", true);
+            already.put("message", "该用户已签到");
+            return already;
         }
         String operator = operatorName == null || operatorName.isBlank() ? "工作人员" : operatorName.trim();
-        Map<String, Object> result = attendanceService.finalizeAfterConfirm(
+        Map<String, Object> result = new LinkedHashMap<>(attendanceService.finalizeAfterConfirm(
                 pending.getUserId(),
                 pending.getCheckinType(),
                 pending.getScheduleId(),
                 pending.getClassDate(),
-                operator);
+                operator));
         pending.setStatus(STATUS_CONFIRMED);
         pending.setConfirmedAt(Instant.now());
         pending.setConfirmedByUserId(operatorUserId);

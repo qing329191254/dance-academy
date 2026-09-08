@@ -54,8 +54,8 @@ public class AttendanceService {
 
     @Transactional
     public Map<String, Object> finalizeStudentCheckin(Long userId, Long scheduleId, String classDate, String operatorName) {
-        Map<String, Object> result = checkinService.manualCheckin(
-                userId, scheduleId, classDate, operatorName, CheckinService.SOURCE_CONFIRMED);
+        Map<String, Object> result = new LinkedHashMap<>(checkinService.manualCheckin(
+                userId, scheduleId, classDate, operatorName, CheckinService.SOURCE_CONFIRMED));
         teacherService.syncArchiveCounts(scheduleId, classDate);
         result.put("message", "已确认到场");
         return result;
@@ -106,7 +106,7 @@ public class AttendanceService {
         String message = STATUS_LATE.equals(status)
                 ? schedule.getName() + " 考勤已确认（迟到 " + lateMinutes + " 分钟）"
                 : schedule.getName() + " 考勤已确认";
-        return Map.of("ok", true, "message", message, "record", toTeacherMap(record));
+        return okResult(message, toTeacherMap(record));
     }
 
     @Transactional
@@ -152,7 +152,7 @@ public class AttendanceService {
         String message = STATUS_LATE.equals(status)
                 ? "值班已确认（迟到 " + lateMinutes + " 分钟）"
                 : "值班已确认";
-        return Map.of("ok", true, "message", message, "record", toEmployeeMap(record));
+        return okResult(message, toEmployeeMap(record));
     }
 
     /** @deprecated 扫码改为待确认流程，请使用 CheckinPendingService.submitScan */
@@ -216,7 +216,7 @@ public class AttendanceService {
         String message = STATUS_LATE.equals(status)
                 ? schedule.getName() + " 考勤成功（迟到 " + lateMinutes + " 分钟）"
                 : schedule.getName() + " 考勤签到成功";
-        return Map.of("ok", true, "message", message, "record", toTeacherMap(record));
+        return okResult(message, toTeacherMap(record));
     }
 
     @Transactional
@@ -265,7 +265,7 @@ public class AttendanceService {
         String message = STATUS_LATE.equals(status)
                 ? "值班签到成功（迟到 " + lateMinutes + " 分钟）"
                 : "值班签到成功";
-        return Map.of("ok", true, "message", message, "record", toEmployeeMap(record));
+        return okResult(message, toEmployeeMap(record));
     }
 
     public List<Map<String, Object>> myTeacherAttendance(Long userId) {
@@ -297,6 +297,14 @@ public class AttendanceService {
             return CampusIds.DEFAULT;
         }
         return schedule.getCampusId();
+    }
+
+    private static Map<String, Object> okResult(String message, Map<String, Object> record) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("ok", true);
+        result.put("message", message);
+        result.put("record", record);
+        return result;
     }
 
     private Map<String, Object> toTeacherMap(TeacherAttendance record) {
