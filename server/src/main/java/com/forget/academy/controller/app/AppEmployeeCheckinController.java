@@ -76,14 +76,14 @@ public class AppEmployeeCheckinController {
     public ApiResponse<?> confirm(@PathVariable Long id) {
         AppUser user = employeeService.requireEmployee(AuthContext.requireApp().id());
         String name = user.getNickname() == null || user.getNickname().isBlank() ? "员工" : user.getNickname();
-        return ApiResponse.ok(checkinPendingService.confirm(id, user.getId(), name));
+        return ApiResponse.ok(checkinPendingService.confirmByEmployee(id, user.getId(), name));
     }
 
     @PostMapping("/pending/{id}/reject")
     public ApiResponse<Void> reject(@PathVariable Long id) {
         AppUser user = employeeService.requireEmployee(AuthContext.requireApp().id());
         String name = user.getNickname() == null || user.getNickname().isBlank() ? "员工" : user.getNickname();
-        checkinPendingService.reject(id, user.getId(), name);
+        checkinPendingService.rejectByEmployee(id, user.getId(), name);
         return ApiResponse.ok();
     }
 

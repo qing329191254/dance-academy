@@ -74,14 +74,14 @@ public class AdminCheckinController {
     public ApiResponse<?> confirm(@PathVariable Long id) {
         var admin = adminAccessService.currentAdmin();
         String name = admin.getName() == null || admin.getName().isBlank() ? admin.getUsername() : admin.getName();
-        return ApiResponse.ok(checkinPendingService.confirm(id, admin.getId(), name));
+        return ApiResponse.ok(checkinPendingService.confirmByAdmin(id, admin.getId(), name));
     }
 
     @PostMapping("/checkin-pending/{id}/reject")
     public ApiResponse<Void> reject(@PathVariable Long id) {
         var admin = adminAccessService.currentAdmin();
         String name = admin.getName() == null || admin.getName().isBlank() ? admin.getUsername() : admin.getName();
-        checkinPendingService.reject(id, admin.getId(), name);
+        checkinPendingService.rejectByAdmin(id, admin.getId(), name);
         return ApiResponse.ok();
     }
 

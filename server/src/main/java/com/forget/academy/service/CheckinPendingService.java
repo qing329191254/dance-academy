@@ -44,6 +44,7 @@ public class CheckinPendingService {
     private final PracticeRecordRepo practiceRecordRepo;
     private final TeacherAttendanceRepo teacherAttendanceRepo;
     private final EmployeeDutyRecordRepo employeeDutyRecordRepo;
+    private final AdminAccessService adminAccessService;
 
     @Transactional
     public Map<String, Object> submitScan(Long userId, String raw, String mode) {
@@ -115,19 +116,56 @@ public class CheckinPendingService {
     }
 
     @Transactional
-    public Map<String, Object> confirm(Long pendingId, Long operatorUserId, String operatorName) {
+    public Map<String, Object> confirmByAdmin(Long pendingId, Long adminId, String operatorName) {
+        CheckinPending pending = requirePending(pendingId);
+        adminAccessService.assertCanAccessCampus(pending.getCampusId());
+        return doConfirm(pending, adminId, operatorName);
+    }
+
+    @Transactional
+    public Map<String, Object> confirmByEmployee(Long pendingId, Long employeeUserId, String operatorName) {
+        CheckinPending pending = requirePending(pendingId);
+        assertEmployeeCampus(employeeUserId, pending.getCampusId());
+        return doConfirm(pending, employeeUserId, operatorName);
+    }
+
+    @Transactional
+    public void rejectByAdmin(Long pendingId, Long adminId, String operatorName) {
+        CheckinPending pending = requirePending(pendingId);
+        adminAccessService.assertCanAccessCampus(pending.getCampusId());
+        doReject(pending, adminId, operatorName);
+    }
+
+    @Transactional
+    public void rejectByEmployee(Long pendingId, Long employeeUserId, String operatorName) {
+        CheckinPending pending = requirePending(pendingId);
+        assertEmployeeCampus(employeeUserId, pending.getCampusId());
+        doReject(pending, employeeUserId, operatorName);
+    }
+
+    private CheckinPending requirePending(Long pendingId) {
         CheckinPending pending = checkinPendingRepo.findById(pendingId)
                 .orElseThrow(() -> new BizException("签到记录不存在"));
         if (!STATUS_PENDING.equals(pending.getStatus())) {
             throw new BizException("该记录已处理");
         }
-        appUserRepo.findById(operatorUserId).ifPresent(operator -> {
-            if (AppRoles.EMPLOYEE.equalsIgnoreCase(operator.getRole())
-                    && operator.getCampusId() != null
-                    && !operator.getCampusId().equals(pending.getCampusId())) {
-                throw new BizException("无权确认其他校区的签到");
-            }
-        });
+        return pending;
+    }
+
+    private void assertEmployeeCampus(Long employeeUserId, String pendingCampusId) {
+        AppUser operator = appUserRepo.findById(employeeUserId)
+                .orElseThrow(() -> new BizException("操作人不存在"));
+        if (!AppRoles.EMPLOYEE.equalsIgnoreCase(operator.getRole())) {
+            throw new BizException("仅员工可确认签到");
+        }
+        if (operator.getCampusId() != null
+                && pendingCampusId != null
+                && !operator.getCampusId().equals(pendingCampusId)) {
+            throw new BizException("无权确认其他校区的签到");
+        }
+    }
+
+    private Map<String, Object> doConfirm(CheckinPending pending, Long operatorUserId, String operatorName) {
         if (alreadyCheckedIn(pending.getUserId(), pending.getCheckinType(), pending.getScheduleId(), pending.getClassDate())) {
             pending.setStatus(STATUS_CONFIRMED);
             pending.setConfirmedAt(Instant.now());
@@ -152,13 +190,7 @@ public class CheckinPendingService {
         return result;
     }
 
-    @Transactional
-    public void reject(Long pendingId, Long operatorUserId, String operatorName) {
-        CheckinPending pending = checkinPendingRepo.findById(pendingId)
-                .orElseThrow(() -> new BizException("签到记录不存在"));
-        if (!STATUS_PENDING.equals(pending.getStatus())) {
-            throw new BizException("该记录已处理");
-        }
+    private void doReject(CheckinPending pending, Long operatorUserId, String operatorName) {
         pending.setStatus(STATUS_REJECTED);
         pending.setConfirmedAt(Instant.now());
         pending.setConfirmedByUserId(operatorUserId);
