@@ -93,9 +93,9 @@
         <view class="info">
           <view class="title-row">
             <text class="name">{{ item.name }}</text>
+            <text v-if="item.sectionName || item.styleName" class="section-tag">{{ item.styleName || item.sectionName }}</text>
             <text v-if="item.closedDoor" class="closed-tag">{{ item.audienceGroupLabel || '闭门课' }}</text>
           </view>
-          <text v-if="item.sectionName || item.styleName" class="section-tag">{{ item.styleName || item.sectionName }}</text>
           <view class="meta">
             <text v-if="active === 'group'" class="date-text">{{ selectedDateText }}</text>
             <text class="accent">{{ item.time }}</text>
@@ -158,6 +158,8 @@ const teacherAvatars = ref({})
 const rankPeriod = ref('month')
 const rankList = ref([])
 const rankMine = ref(null)
+/** 约课操作进行中锁（按课程+日期），只锁当前点击项 */
+const actionBusyKeys = ref({})
 
 const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
 
@@ -269,6 +271,24 @@ function isQueued(item) {
   return !!item.queued
 }
 
+function actionItemKey(item) {
+  const date =
+    active.value === 'group' ? weekDates.value[selectedDateIndex.value]?.date || '' : 'default'
+  return `${item.id}:${date}`
+}
+
+function isActionBusy(item) {
+  return !!actionBusyKeys.value[actionItemKey(item)]
+}
+
+function setActionBusy(item, busy) {
+  const key = actionItemKey(item)
+  const next = { ...actionBusyKeys.value }
+  if (busy) next[key] = true
+  else delete next[key]
+  actionBusyKeys.value = next
+}
+
 /** 团课：已约人数 + 最低开课（与后台策略一致：null 视为 4；0 表示关闭不展示门槛） */
 function enrollLine(item) {
   if (!item) return ''
@@ -284,7 +304,14 @@ function enrollLine(item) {
 }
 
 function actionLabel(item) {
+  if (isActionBusy(item)) {
+    if (isBooked(item)) return '取消中...'
+    if (isQueued(item)) return '处理中...'
+    if (active.value === 'group' && item.status === '已满') return '排队中...'
+    return '预约中...'
+  }
   if (item.sessionCancelled || item.status === '已取消') return '已取消'
+  if (item.sessionEnded || item.status === '已结束') return '已结束'
   if (isBooked(item)) return '取消预约'
   if (isQueued(item)) return '退出排队'
   if (active.value === 'group' && item.status === '已满') return '排队'
@@ -293,7 +320,9 @@ function actionLabel(item) {
 }
 
 function actionClass(item) {
+  if (isActionBusy(item)) return 'btn-disabled'
   if (item.sessionCancelled || item.status === '已取消') return 'btn-disabled'
+  if (item.sessionEnded || item.status === '已结束') return 'btn-disabled'
   if (isBooked(item) || isQueued(item)) return 'btn-cancel'
   if (active.value === 'group' && item.status === '已满') return 'btn-queue'
   if (active.value === 'group' && item.canBook === false) return 'btn-disabled'
@@ -318,9 +347,14 @@ function askBookingSubscribe() {
 
 async function toggleBook(item) {
   if (!ensureLogin()) return
+  if (isActionBusy(item)) return
   const toastOptions = { offsetTop: TOAST_OFFSET }
   if (item.sessionCancelled || item.status === '已取消') {
     showError(item.bookBlockReason || '本课因人数不足已取消', toastOptions)
+    return
+  }
+  if (item.sessionEnded || item.status === '已结束') {
+    showError(item.bookBlockReason || '课程已结束，无法预约', toastOptions)
     return
   }
   if (
@@ -337,6 +371,7 @@ async function toggleBook(item) {
     active.value === 'group' ? weekDates.value[selectedDateIndex.value]?.date : undefined
   const booked = isBooked(item)
   const queued = isQueued(item)
+  setActionBusy(item, true)
   try {
     if (!booked && !queued && active.value === 'group' && item.status !== '已满') {
       await askBookingSubscribe()
@@ -354,6 +389,8 @@ async function toggleBook(item) {
     }
   } catch (e) {
     showError(e.message || '操作失败', toastOptions)
+  } finally {
+    setActionBusy(item, false)
   }
 }
 </script>
@@ -516,13 +553,14 @@ async function toggleBook(item) {
 
 .section-tag {
   display: inline-block;
-  margin: 0 0 10rpx 0;
+  margin: 0;
   padding: 2rpx 12rpx;
   border-radius: 999rpx;
   background: rgba(255, 255, 255, 0.08);
   color: #cfcfcf;
   font-size: 22rpx;
   font-weight: 500;
+  flex-shrink: 0;
 }
 
 .btn-disabled {

@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -16,6 +17,30 @@ class ClassSessionPolicyLogicTest {
         assertEquals(LocalDateTime.of(2026, 9, 9, 18, 10), start);
         assertNull(ClassStartTimes.parse(null, "18:10"));
         assertNull(ClassStartTimes.parse("default", "18:10"));
+    }
+
+    @Test
+    void parseEndTime_andIsEnded() {
+        assertEquals(
+                LocalDateTime.of(2026, 9, 11, 13, 45),
+                ClassStartTimes.parseEnd("2026-09-11", "12:15-13:45"));
+        assertNull(ClassStartTimes.parseEnd("2026-09-11", "12:15"));
+        assertTrue(ClassStartTimes.isEnded(
+                "2026-09-11", "12:15-13:45", LocalDateTime.of(2026, 9, 11, 13, 45)));
+        assertFalse(ClassStartTimes.isEnded(
+                "2026-09-11", "12:15-13:45", LocalDateTime.of(2026, 9, 11, 13, 44)));
+    }
+
+    @Test
+    void parseEndTime() {
+        assertEquals(
+                LocalDateTime.of(2026, 9, 11, 13, 45),
+                ClassStartTimes.parseEnd("2026-09-11", "12:15-13:45"));
+        assertNull(ClassStartTimes.parseEnd("2026-09-11", "12:15"));
+        assertTrue(ClassStartTimes.isEnded(
+                "2026-09-11", "12:15-13:45", LocalDateTime.of(2026, 9, 11, 13, 45)));
+        assertFalse(ClassStartTimes.isEnded(
+                "2026-09-11", "12:15-13:45", LocalDateTime.of(2026, 9, 11, 13, 44)));
     }
 
     @Test

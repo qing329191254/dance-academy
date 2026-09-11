@@ -13,7 +13,13 @@
           <text class="accent time">{{ item.time }}</text>
         </view>
         <text class="muted">老师：{{ item.teacher }} · {{ item.room }}</text>
-        <view class="cancel-btn" @click="cancelBooking(item)">取消预约</view>
+        <view
+          class="cancel-btn"
+          :class="{ disabled: isBusy(item) }"
+          @click="cancelBooking(item)"
+        >
+          {{ isBusy(item) ? '取消中...' : '取消预约' }}
+        </view>
       </view>
     </view>
     <app-toast />
@@ -28,6 +34,15 @@ import { ensureLogin } from '@/common/auth.js'
 import { showToast, showError } from '@/common/toast.js'
 
 const bookingList = ref([])
+const busyKey = ref('')
+
+function itemKey(item) {
+  return String(item.id || `${item.scheduleId}-${item.date || ''}`)
+}
+
+function isBusy(item) {
+  return busyKey.value === itemKey(item)
+}
 
 async function refreshBookings() {
   try {
@@ -43,12 +58,16 @@ onShow(() => {
 })
 
 async function cancelBooking(item) {
+  if (busyKey.value) return
+  busyKey.value = itemKey(item)
   try {
     await toggleBooking(item.scheduleId, item.date || undefined)
     await refreshBookings()
     showToast('已取消预约')
   } catch (e) {
     showError(e.message || '取消失败')
+  } finally {
+    busyKey.value = ''
   }
 }
 </script>
@@ -111,5 +130,10 @@ async function cancelBooking(item) {
   color: #e57373;
   background: rgba(229, 115, 115, 0.12);
   border: 1rpx solid rgba(229, 115, 115, 0.35);
+}
+
+.cancel-btn.disabled {
+  opacity: 0.55;
+  pointer-events: none;
 }
 </style>

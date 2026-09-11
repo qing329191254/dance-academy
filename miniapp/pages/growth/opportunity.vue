@@ -67,11 +67,11 @@
       <view class="btn-ghost action-btn" @tap="share">复制报名链接</view>
       <view
         class="action-btn apply-btn"
-        :class="applied ? 'btn-cancel' : 'btn-primary'"
+        :class="[applied ? 'btn-cancel' : 'btn-primary', { disabled: applying }]"
         hover-class="none"
         @tap="toggleApply"
       >
-        {{ applied ? '取消报名' : '立即报名' }}
+        {{ applyLabel }}
       </view>
     </view>
     <app-toast />
@@ -96,6 +96,11 @@ const meta = computed(() => trackMetaMap.value[key.value] || { name: '成长' })
 const resumeUrl = ref('')
 const resumeName = ref('')
 const uploading = ref(false)
+const applying = ref(false)
+const applyLabel = computed(() => {
+  if (applying.value) return applied.value ? '取消中...' : '报名中...'
+  return applied.value ? '取消报名' : '立即报名'
+})
 
 async function loadItem() {
   try {
@@ -141,6 +146,8 @@ onShow(() => {
 async function toggleApply() {
   if (!ensureLogin()) return
   if (!item.value) return
+  if (applying.value || uploading.value) return
+  applying.value = true
   try {
     const payload = applied.value
       ? {}
@@ -154,6 +161,8 @@ async function toggleApply() {
     }
   } catch (e) {
     showError(e.message || '操作失败')
+  } finally {
+    applying.value = false
   }
 }
 
@@ -377,6 +386,11 @@ function share() {
 
 .apply-btn.btn-primary {
   padding: 0;
+}
+
+.apply-btn.disabled {
+  opacity: 0.55;
+  pointer-events: none;
 }
 
 .btn-cancel {

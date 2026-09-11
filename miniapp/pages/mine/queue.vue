@@ -14,7 +14,13 @@
         </view>
         <text class="muted">老师：{{ item.teacher }} · {{ item.room }}</text>
         <text class="queue-tip">当前第 {{ item.queueNo }} 位 · 前面有人取消即可替补</text>
-        <view class="cancel-btn" @click="cancelQueue(item)">退出排队</view>
+        <view
+          class="cancel-btn"
+          :class="{ disabled: isBusy(item) }"
+          @click="cancelQueue(item)"
+        >
+          {{ isBusy(item) ? '处理中...' : '退出排队' }}
+        </view>
       </view>
     </view>
     <app-toast />
@@ -29,6 +35,15 @@ import { ensureLogin } from '@/common/auth.js'
 import { showToast, showError } from '@/common/toast.js'
 
 const queueList = ref([])
+const busyKey = ref('')
+
+function itemKey(item) {
+  return String(item.id || `${item.scheduleId}-${item.date || ''}`)
+}
+
+function isBusy(item) {
+  return busyKey.value === itemKey(item)
+}
 
 async function refreshQueue() {
   try {
@@ -44,12 +59,16 @@ onShow(() => {
 })
 
 async function cancelQueue(item) {
+  if (busyKey.value) return
+  busyKey.value = itemKey(item)
   try {
     await toggleBooking(item.scheduleId, item.date || undefined)
     await refreshQueue()
     showToast('已退出排队')
   } catch (e) {
     showError(e.message || '操作失败')
+  } finally {
+    busyKey.value = ''
   }
 }
 </script>
@@ -119,5 +138,10 @@ async function cancelQueue(item) {
   color: #e57373;
   background: rgba(229, 115, 115, 0.12);
   border: 1rpx solid rgba(229, 115, 115, 0.35);
+}
+
+.cancel-btn.disabled {
+  opacity: 0.55;
+  pointer-events: none;
 }
 </style>

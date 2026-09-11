@@ -82,12 +82,20 @@ public class BookingService {
             }
             // 已有人到场完成时，不把场次展示为「已取消」
             boolean sessionCancelled = cancelRecorded && doneCount == 0;
+            boolean sessionEnded = "group".equals(tab) && date != null
+                    && ClassStartTimes.isEnded(date, item.getTimeText(), LocalDateTime.now(ZONE));
             if (sessionCancelled) {
                 row.put("status", "已取消");
                 row.put("sessionCancelled", true);
+                row.put("sessionEnded", false);
+            } else if (sessionEnded) {
+                row.put("status", "已结束");
+                row.put("sessionCancelled", false);
+                row.put("sessionEnded", true);
             } else {
                 row.put("status", resolveStatus(item, booked));
                 row.put("sessionCancelled", false);
+                row.put("sessionEnded", false);
             }
             row.put("booked", false);
             row.put("queued", false);
@@ -108,6 +116,9 @@ public class BookingService {
                     if (sessionCancelled) {
                         row.put("canBook", false);
                         row.put("bookBlockReason", "本课因人数不足已取消");
+                    } else if (sessionEnded) {
+                        row.put("canBook", false);
+                        row.put("bookBlockReason", "课程已结束，无法预约");
                     } else {
                         UserCard usable = userCardService.findUsableGroupCard(userId, item.getSectionId());
                         row.put("canBook", usable != null);
@@ -475,6 +486,10 @@ public class BookingService {
         }
         if (classSessionCancelRepo.existsByScheduleIdAndClassDate(scheduleId, classDate)) {
             throw new BizException("本课因人数不足已取消，无法预约");
+        }
+        Schedule schedule = scheduleRepo.findById(scheduleId).orElse(null);
+        if (schedule != null && ClassStartTimes.isEnded(classDate, schedule.getTimeText(), LocalDateTime.now(ZONE))) {
+            throw new BizException("课程已结束，无法预约");
         }
     }
 
