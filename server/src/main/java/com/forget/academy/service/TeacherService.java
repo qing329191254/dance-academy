@@ -37,6 +37,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class TeacherService {
     private static final String STATUS_PENDING = "待上课";
+    private static final String STATUS_DONE = "已完成";
 
     private final AppUserRepo appUserRepo;
     private final TeacherRepo teacherRepo;
@@ -178,7 +179,8 @@ public class TeacherService {
         archive.setCampusId(schedule.getCampusId() == null ? CampusIds.DEFAULT : schedule.getCampusId());
         archive.setDuration(session.get("duration"));
         archive.setTeacherCheckedAt(Instant.now());
-        int booked = (int) bookingRepo.countByScheduleIdAndClassDateAndStatus(scheduleId, classDate, STATUS_PENDING);
+        int booked = (int) bookingRepo.countByScheduleIdAndClassDateAndStatusIn(
+                scheduleId, classDate, List.of(STATUS_PENDING, STATUS_DONE));
         int checked = (int) practiceRecordRepo.countBySessionIdAndClassDate(String.valueOf(scheduleId), classDate);
         archive.setBookedCount(booked);
         archive.setCheckedInCount(checked);
@@ -192,8 +194,8 @@ public class TeacherService {
         classArchiveRepo.findAll().stream()
                 .filter(item -> scheduleId.equals(item.getScheduleId()) && classDate.equals(item.getClassDate()))
                 .forEach(item -> {
-                    item.setBookedCount((int) bookingRepo.countByScheduleIdAndClassDateAndStatus(
-                            scheduleId, classDate, STATUS_PENDING));
+                    item.setBookedCount((int) bookingRepo.countByScheduleIdAndClassDateAndStatusIn(
+                            scheduleId, classDate, List.of(STATUS_PENDING, STATUS_DONE)));
                     item.setCheckedInCount((int) practiceRecordRepo.countBySessionIdAndClassDate(
                             String.valueOf(scheduleId), classDate));
                     classArchiveRepo.save(item);
@@ -211,7 +213,8 @@ public class TeacherService {
         map.put("campusId", schedule.getCampusId());
         map.put("date", classDate);
         map.put("capacity", schedule.getCapacity());
-        long booked = bookingRepo.countByScheduleIdAndClassDateAndStatus(schedule.getId(), classDate, STATUS_PENDING);
+        long booked = bookingRepo.countByScheduleIdAndClassDateAndStatusIn(
+                schedule.getId(), classDate, List.of(STATUS_PENDING, STATUS_DONE));
         long checked = practiceRecordRepo.countBySessionIdAndClassDate(String.valueOf(schedule.getId()), classDate);
         map.put("bookedCount", booked);
         map.put("checkedInCount", checked);

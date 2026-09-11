@@ -73,15 +73,23 @@ public class ClassSessionPolicyService {
                 if (classSessionCancelRepo.existsByScheduleIdAndClassDate(schedule.getId(), classDate)) {
                     continue;
                 }
-                long booked = bookingRepo.countByScheduleIdAndClassDateAndStatus(
+                // 已有人确认到场/完成：课已开，禁止再因人数不足整场取消
+                long done = bookingRepo.countByScheduleIdAndClassDateAndStatus(
+                        schedule.getId(), classDate, "已完成");
+                if (done > 0) {
+                    continue;
+                }
+                // 有效报名 = 待上课 + 已完成（防早期签到把待上课压低后误取消）
+                long pending = bookingRepo.countByScheduleIdAndClassDateAndStatus(
                         schedule.getId(), classDate, "待上课");
-                if (booked >= min) {
+                long enrolled = pending + done;
+                if (enrolled >= min) {
                     continue;
                 }
                 try {
-                    bookingService.cancelSessionForLowEnrollment(schedule, classDate, (int) booked, min);
-                    log.info("人数不足取消课程 scheduleId={} date={} booked={} min={}",
-                            schedule.getId(), classDate, booked, min);
+                    bookingService.cancelSessionForLowEnrollment(schedule, classDate, (int) enrolled, min);
+                    log.info("人数不足取消课程 scheduleId={} date={} enrolled={} min={}",
+                            schedule.getId(), classDate, enrolled, min);
                 } catch (Exception e) {
                     log.warn("取消课程失败 scheduleId={} date={}: {}", schedule.getId(), classDate, e.getMessage());
                 }

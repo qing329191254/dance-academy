@@ -6,6 +6,7 @@ import com.forget.academy.common.BizException;
 import com.forget.academy.common.CampusIds;
 import com.forget.academy.entity.PracticeRecord;
 import com.forget.academy.entity.Schedule;
+import com.forget.academy.repo.BookingRepo;
 import com.forget.academy.repo.PracticeRecordRepo;
 import com.forget.academy.repo.ScheduleRepo;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ public class CheckinService {
 
     private final PracticeRecordRepo practiceRecordRepo;
     private final ScheduleRepo scheduleRepo;
+    private final BookingRepo bookingRepo;
     private final ObjectMapper mapper;
     private final UserCampusService userCampusService;
     private final UserCardService userCardService;
@@ -58,6 +60,8 @@ public class CheckinService {
         Schedule schedule = scheduleRepo.findById(scheduleId).orElseThrow(() -> new BizException("课表不存在"));
         String date = normalizeDate(classDate);
         String sessionId = String.valueOf(scheduleId);
+        bookingRepo.findFirstByUserIdAndScheduleIdAndClassDateAndStatus(userId, scheduleId, date, "待上课")
+                .orElseThrow(() -> new BizException("预约已取消，无法签到"));
         if (practiceRecordRepo.existsByUserIdAndSessionIdAndClassDate(userId, sessionId, date)) {
             throw new BizException("该学员本节课已签到");
         }

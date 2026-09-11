@@ -24,6 +24,8 @@ public interface BookingRepo extends JpaRepository<Booking, Long> {
 
     long countByScheduleIdAndClassDateAndStatus(Long scheduleId, String classDate, String status);
 
+    long countByScheduleIdAndClassDateAndStatusIn(Long scheduleId, String classDate, Collection<String> statuses);
+
     List<Booking> findByScheduleIdAndClassDateAndStatusOrderByIdAsc(
             Long scheduleId, String classDate, String status);
 

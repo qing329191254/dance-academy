@@ -2,6 +2,7 @@ package com.forget.academy.service;
 
 import com.forget.academy.common.BizException;
 import com.forget.academy.common.CampusIds;
+import com.forget.academy.common.CheckinTypes;
 import com.forget.academy.common.ClosedClassGroup;
 import com.forget.academy.entity.AppUser;
 import com.forget.academy.entity.Booking;
@@ -10,6 +11,7 @@ import com.forget.academy.entity.Schedule;
 import com.forget.academy.entity.UserCard;
 import com.forget.academy.repo.AppUserRepo;
 import com.forget.academy.repo.BookingRepo;
+import com.forget.academy.repo.CheckinPendingRepo;
 import com.forget.academy.repo.ClassSessionCancelRepo;
 import com.forget.academy.repo.ScheduleRepo;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -45,6 +48,7 @@ public class BookingService {
     private final UserCampusService userCampusService;
     private final DanceCategoryService danceCategoryService;
     private final ClassSessionCancelRepo classSessionCancelRepo;
+    private final CheckinPendingRepo checkinPendingRepo;
 
     public List<Map<String, Object>> listSchedules(String type, String date, String campusId, Long userId) {
         String tab = type == null || type.isBlank() ? "group" : type;
@@ -66,11 +70,18 @@ public class BookingService {
             Map<String, Object> row = toScheduleMap(item, date);
             long booked = 0;
             if ("group".equals(tab) && date != null) {
-                booked = bookingRepo.countByScheduleIdAndClassDateAndStatus(item.getId(), date, STATUS_PENDING);
+                booked = bookingRepo.countByScheduleIdAndClassDateAndStatusIn(
+                        item.getId(), date, List.of(STATUS_PENDING, STATUS_DONE));
             }
             row.put("bookedCount", booked);
-            boolean sessionCancelled = "group".equals(tab) && date != null
+            boolean cancelRecorded = "group".equals(tab) && date != null
                     && classSessionCancelRepo.existsByScheduleIdAndClassDate(item.getId(), date);
+            long doneCount = 0;
+            if ("group".equals(tab) && date != null) {
+                doneCount = bookingRepo.countByScheduleIdAndClassDateAndStatus(item.getId(), date, STATUS_DONE);
+            }
+            // 已有人到场完成时，不把场次展示为「已取消」
+            boolean sessionCancelled = cancelRecorded && doneCount == 0;
             if (sessionCancelled) {
                 row.put("status", "已取消");
                 row.put("sessionCancelled", true);
@@ -330,6 +341,26 @@ public class BookingService {
         }
         booking.setStatus(STATUS_CANCELLED);
         bookingRepo.save(booking);
+        rejectPendingClassCheckin(booking);
+    }
+
+    /** 取消预约后拒绝待确认的上课签到，避免前台仍可确认。 */
+    private void rejectPendingClassCheckin(Booking booking) {
+        if (booking.getUserId() == null || booking.getScheduleId() == null) {
+            return;
+        }
+        String date = booking.getClassDate() == null ? "" : booking.getClassDate().trim();
+        checkinPendingRepo.findByUserIdAndScheduleIdAndClassDateAndCheckinType(
+                        booking.getUserId(), booking.getScheduleId(), date, CheckinTypes.CLASS)
+                .ifPresent(pending -> {
+                    if (!CheckinPendingService.STATUS_PENDING.equals(pending.getStatus())) {
+                        return;
+                    }
+                    pending.setStatus(CheckinPendingService.STATUS_REJECTED);
+                    pending.setConfirmedAt(Instant.now());
+                    pending.setConfirmedByName("系统");
+                    checkinPendingRepo.save(pending);
+                });
     }
 
     private void assertBookingCampusAccess(Booking booking) {
@@ -364,7 +395,8 @@ public class BookingService {
         if (!"group".equals(schedule.getType()) || classDate == null || classDate.isBlank() || "default".equals(classDate)) {
             return false;
         }
-        long booked = bookingRepo.countByScheduleIdAndClassDateAndStatus(schedule.getId(), classDate, STATUS_PENDING);
+        long booked = bookingRepo.countByScheduleIdAndClassDateAndStatusIn(
+                schedule.getId(), classDate, List.of(STATUS_PENDING, STATUS_DONE));
         int capacity = schedule.getCapacity() == null ? 20 : schedule.getCapacity();
         return booked >= capacity;
     }
@@ -463,6 +495,7 @@ public class BookingService {
 
     /**
      * 人数不足：取消该日该课全部待上课/排队预约，释放锁卡不扣次，并记录场次取消。
+     * 若已有「已完成」预约（已确认到场），则不取消整场。
      */
     @Transactional
     public void cancelSessionForLowEnrollment(Schedule schedule, String classDate, int bookedCount, int minEnrollment) {
@@ -470,6 +503,10 @@ public class BookingService {
             return;
         }
         if (classSessionCancelRepo.existsByScheduleIdAndClassDate(schedule.getId(), classDate)) {
+            return;
+        }
+        long done = bookingRepo.countByScheduleIdAndClassDateAndStatus(schedule.getId(), classDate, STATUS_DONE);
+        if (done > 0) {
             return;
         }
         ClassSessionCancel cancel = new ClassSessionCancel();

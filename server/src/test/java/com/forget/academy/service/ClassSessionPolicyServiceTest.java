@@ -50,6 +50,7 @@ class ClassSessionPolicyServiceTest {
         when(scheduleRepo.findByTypeAndEnabledTrueOrderBySortOrderAscIdAsc("group"))
                 .thenReturn(List.of(schedule));
         when(classSessionCancelRepo.existsByScheduleIdAndClassDate(1L, "2026-09-09")).thenReturn(false);
+        when(bookingRepo.countByScheduleIdAndClassDateAndStatus(1L, "2026-09-09", "已完成")).thenReturn(0L);
         when(bookingRepo.countByScheduleIdAndClassDateAndStatus(1L, "2026-09-09", "待上课")).thenReturn(2L);
 
         // 开课前约 1.5 小时：已过取消节点，未到开课
@@ -65,6 +66,7 @@ class ClassSessionPolicyServiceTest {
         when(scheduleRepo.findByTypeAndEnabledTrueOrderBySortOrderAscIdAsc("group"))
                 .thenReturn(List.of(schedule));
         when(classSessionCancelRepo.existsByScheduleIdAndClassDate(2L, "2026-09-09")).thenReturn(false);
+        when(bookingRepo.countByScheduleIdAndClassDateAndStatus(2L, "2026-09-09", "已完成")).thenReturn(0L);
         when(bookingRepo.countByScheduleIdAndClassDateAndStatus(2L, "2026-09-09", "待上课")).thenReturn(4L);
 
         service.checkLowEnrollment(LocalDateTime.of(2026, 9, 9, 16, 40));
@@ -92,6 +94,34 @@ class ClassSessionPolicyServiceTest {
 
         // 开课前 3 小时，尚未到取消窗口
         service.checkLowEnrollment(LocalDateTime.of(2026, 9, 9, 15, 10));
+
+        verify(bookingService, never()).cancelSessionForLowEnrollment(any(), anyString(), anyInt(), anyInt());
+    }
+
+    @Test
+    void lowEnrollment_skipsWhenSomeoneAlreadyCompleted() {
+        Schedule schedule = groupSchedule(5L, weekdayOf(LocalDate.of(2026, 9, 9)), "18:10-19:30", 6);
+        when(scheduleRepo.findByTypeAndEnabledTrueOrderBySortOrderAscIdAsc("group"))
+                .thenReturn(List.of(schedule));
+        when(classSessionCancelRepo.existsByScheduleIdAndClassDate(5L, "2026-09-09")).thenReturn(false);
+        when(bookingRepo.countByScheduleIdAndClassDateAndStatus(5L, "2026-09-09", "已完成")).thenReturn(3L);
+
+        service.checkLowEnrollment(LocalDateTime.of(2026, 9, 9, 16, 40));
+
+        verify(bookingService, never()).cancelSessionForLowEnrollment(any(), anyString(), anyInt(), anyInt());
+        verify(bookingRepo, never()).countByScheduleIdAndClassDateAndStatus(5L, "2026-09-09", "待上课");
+    }
+
+    @Test
+    void lowEnrollment_countsCompletedTowardMin() {
+        Schedule schedule = groupSchedule(6L, weekdayOf(LocalDate.of(2026, 9, 9)), "18:10-19:30", 4);
+        when(scheduleRepo.findByTypeAndEnabledTrueOrderBySortOrderAscIdAsc("group"))
+                .thenReturn(List.of(schedule));
+        when(classSessionCancelRepo.existsByScheduleIdAndClassDate(6L, "2026-09-09")).thenReturn(false);
+        // 已有人完成：直接跳过，不再因「待上课不足」取消
+        when(bookingRepo.countByScheduleIdAndClassDateAndStatus(6L, "2026-09-09", "已完成")).thenReturn(2L);
+
+        service.checkLowEnrollment(LocalDateTime.of(2026, 9, 9, 16, 40));
 
         verify(bookingService, never()).cancelSessionForLowEnrollment(any(), anyString(), anyInt(), anyInt());
     }

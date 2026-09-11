@@ -177,6 +177,7 @@ public class CheckinPendingService {
             already.put("message", "该用户已签到");
             return already;
         }
+        assertActiveClassBooking(pending);
         String operator = operatorName == null || operatorName.isBlank() ? "工作人员" : operatorName.trim();
         Map<String, Object> result = new LinkedHashMap<>(attendanceService.finalizeAfterConfirm(
                 pending.getUserId(),
@@ -191,6 +192,17 @@ public class CheckinPendingService {
         checkinPendingRepo.save(pending);
         result.put("pendingId", pending.getId());
         return result;
+    }
+
+    /** 学员上课签到确认时须仍有待上课预约，避免取消后仍确认写出签到记录。 */
+    private void assertActiveClassBooking(CheckinPending pending) {
+        if (!CheckinTypes.CLASS.equals(CheckinTypes.normalize(pending.getCheckinType()))) {
+            return;
+        }
+        String date = normalizeDate(pending.getClassDate());
+        bookingRepo.findFirstByUserIdAndScheduleIdAndClassDateAndStatus(
+                        pending.getUserId(), pending.getScheduleId(), date, "待上课")
+                .orElseThrow(() -> new BizException("预约已取消，无法确认签到"));
     }
 
     private void doReject(CheckinPending pending, Long operatorUserId, String operatorName) {

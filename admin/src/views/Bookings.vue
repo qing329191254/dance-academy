@@ -65,6 +65,7 @@
           </div>
           <div class="mobile-feed-main">
             已约 {{ row.bookedCount ?? 0 }}{{ row.capacity ? ` / ${row.capacity}` : '' }}
+            <span v-if="row.doneCount" class="muted"> · 到课 {{ row.doneCount }}</span>
             <span v-if="row.waitlistCount" class="muted"> · 排队 {{ row.waitlistCount }}</span>
           </div>
           <div class="mobile-feed-meta">
@@ -97,6 +98,9 @@
               {{ row.bookedCount ?? 0 }}{{ row.capacity ? ` / ${row.capacity}` : '' }}
             </span>
           </template>
+        </el-table-column>
+        <el-table-column label="到课" width="70">
+          <template #default="{ row }">{{ row.doneCount ?? 0 }}</template>
         </el-table-column>
         <el-table-column label="排队" width="80">
           <template #default="{ row }">{{ row.waitlistCount ?? 0 }}</template>
@@ -140,7 +144,8 @@
           <div class="mobile-feed-meta">
             <span v-if="row.teacherName">{{ row.teacherName }}</span>
             <span v-if="row.room">{{ row.room }}</span>
-            <span :class="row.checkedIn ? 'checked' : 'muted'">{{ row.checkedIn ? '已签到' : '未签到' }}</span>
+            <span :class="checkinClass(row)">{{ checkinLabel(row) }}</span>
+            <span :class="row.cardConsumed ? 'checked' : 'muted'">{{ cardConsumedLabel(row) }}</span>
           </div>
           <div class="table-actions">
             <el-button
@@ -184,11 +189,15 @@
         </el-table-column>
         <el-table-column label="签到" width="80" align="left" header-align="left">
           <template #default="{ row }">
-            <span v-if="row.checkedIn" class="checked">已签到</span>
-            <span v-else class="muted">未签到</span>
+            <span :class="checkinClass(row)">{{ checkinLabel(row) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200" class-name="col-actions" label-class-name="col-actions" align="left" header-align="left" fixed="right">
+        <el-table-column label="课次" width="80" align="left" header-align="left">
+          <template #default="{ row }">
+            <span :class="row.cardConsumed ? 'checked' : 'muted'">{{ cardConsumedLabel(row) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="220" class-name="col-actions" label-class-name="col-actions" align="left" header-align="left" fixed="right">
           <template #default="{ row }">
             <div class="table-actions">
               <el-button
@@ -353,6 +362,20 @@ function statusTagType(value) {
   if (value === '排队中') return 'warning'
   if (value === '已完成') return 'info'
   return 'default'
+}
+
+function checkinLabel(row) {
+  if (row.status === '已取消') return '—'
+  return row.checkedIn ? '已签到' : '未签到'
+}
+
+function checkinClass(row) {
+  if (row.status === '已取消') return 'muted'
+  return row.checkedIn ? 'checked' : 'muted'
+}
+
+function cardConsumedLabel(row) {
+  return row.cardConsumed ? '已扣次' : '未扣次'
 }
 
 function reload() {

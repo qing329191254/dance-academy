@@ -160,11 +160,18 @@ public class AdminOpsController {
                     }
                 }
                 String classDate = classDay.toString();
-                int booked = (int) bookingRepo.countByScheduleIdAndClassDateAndStatus(
+                // 已约 = 待上课 + 已完成，避免确认到场后人数掉成 0
+                int pending = (int) bookingRepo.countByScheduleIdAndClassDateAndStatus(
                         schedule.getId(), classDate, "待上课");
+                int done = (int) bookingRepo.countByScheduleIdAndClassDateAndStatus(
+                        schedule.getId(), classDate, "已完成");
+                int booked = pending + done;
                 int waitlisted = (int) bookingRepo.countByScheduleIdAndClassDateAndStatus(
                         schedule.getId(), classDate, "排队中");
-                boolean cancelled = classSessionCancelRepo.existsByScheduleIdAndClassDate(schedule.getId(), classDate);
+                boolean cancelRecorded = classSessionCancelRepo.existsByScheduleIdAndClassDate(
+                        schedule.getId(), classDate);
+                // 已有人完成到场时不再展示「已取消」，避免课已上完仍显示取消
+                boolean cancelled = cancelRecorded && done == 0;
                 int capacity = schedule.getCapacity() == null ? 0 : schedule.getCapacity();
                 Integer minEnrollment = schedule.getMinEnrollment();
                 if (minEnrollment == null) {
@@ -184,6 +191,8 @@ public class AdminOpsController {
                 row.put("capacity", capacity);
                 row.put("minEnrollment", minEnrollment);
                 row.put("bookedCount", booked);
+                row.put("pendingCount", pending);
+                row.put("doneCount", done);
                 row.put("waitlistCount", waitlisted);
                 row.put("sessionCancelled", cancelled);
                 row.put("full", capacity > 0 && booked >= capacity);
@@ -236,9 +245,12 @@ public class AdminOpsController {
         row.put("status", booking.getStatus());
         row.put("tab", booking.getTab());
         row.put("createdAt", booking.getCreatedAt());
+        row.put("cardConsumed", Boolean.TRUE.equals(booking.getCardConsumed()));
         String sessionId = String.valueOf(booking.getScheduleId());
         String date = booking.getClassDate() == null ? "" : booking.getClassDate();
-        row.put("checkedIn", practiceRecordRepo.existsByUserIdAndSessionIdAndClassDate(
+        // 已取消行不展示签到，避免同人同课同日改约后旧行误显示「已签到」
+        boolean cancelled = "已取消".equals(booking.getStatus());
+        row.put("checkedIn", !cancelled && practiceRecordRepo.existsByUserIdAndSessionIdAndClassDate(
                 booking.getUserId(), sessionId, date));
         scheduleRepo.findById(booking.getScheduleId()).ifPresent(schedule -> {
             row.put("campusId", schedule.getCampusId());

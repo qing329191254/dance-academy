@@ -1,6 +1,7 @@
 package com.forget.academy.service;
 
 import com.forget.academy.common.CheckinTypes;
+import com.forget.academy.entity.Booking;
 import com.forget.academy.entity.CheckinPending;
 import com.forget.academy.repo.AppUserRepo;
 import com.forget.academy.repo.BookingRepo;
@@ -21,10 +22,12 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -67,6 +70,9 @@ class CheckinPendingConfirmSuccessTest {
         when(checkinPendingRepo.findById(11L)).thenReturn(Optional.of(pending));
         when(practiceRecordRepo.existsByUserIdAndSessionIdAndClassDate(anyLong(), anyString(), anyString()))
                 .thenReturn(false);
+        when(bookingRepo.findFirstByUserIdAndScheduleIdAndClassDateAndStatus(
+                eq(100L), eq(55L), eq("2026-09-08"), eq("待上课")))
+                .thenReturn(Optional.of(new Booking()));
         when(attendanceService.finalizeAfterConfirm(
                 eq(100L), eq(CheckinTypes.CLASS), eq(55L), eq("2026-09-08"), eq("超级管理员")))
                 .thenReturn(Map.of("ok", true, "message", "已确认到场"));
@@ -88,6 +94,9 @@ class CheckinPendingConfirmSuccessTest {
         when(checkinPendingRepo.findById(12L)).thenReturn(Optional.of(pending));
         when(practiceRecordRepo.existsByUserIdAndSessionIdAndClassDate(anyLong(), anyString(), anyString()))
                 .thenReturn(false);
+        when(bookingRepo.findFirstByUserIdAndScheduleIdAndClassDateAndStatus(
+                eq(100L), eq(55L), eq("2026-09-08"), eq("待上课")))
+                .thenReturn(Optional.of(new Booking()));
         Map<String, Object> mutable = new LinkedHashMap<>();
         mutable.put("ok", true);
         mutable.put("message", "已确认到场");
@@ -99,6 +108,23 @@ class CheckinPendingConfirmSuccessTest {
 
         assertEquals(12L, result.get("pendingId"));
         assertEquals(CheckinPendingService.STATUS_CONFIRMED, pending.getStatus());
+    }
+
+    @Test
+    void confirmByAdmin_rejectsWhenBookingAlreadyCancelled() {
+        CheckinPending pending = pending(13L, "1");
+        when(checkinPendingRepo.findById(13L)).thenReturn(Optional.of(pending));
+        when(practiceRecordRepo.existsByUserIdAndSessionIdAndClassDate(anyLong(), anyString(), anyString()))
+                .thenReturn(false);
+        when(bookingRepo.findFirstByUserIdAndScheduleIdAndClassDateAndStatus(
+                eq(100L), eq(55L), eq("2026-09-08"), eq("待上课")))
+                .thenReturn(Optional.empty());
+
+        var ex = assertThrows(com.forget.academy.common.BizException.class,
+                () -> service.confirmByAdmin(13L, 7L, "管理员"));
+        assertEquals("预约已取消，无法确认签到", ex.getMessage());
+        verify(attendanceService, never()).finalizeAfterConfirm(anyLong(), anyString(), anyLong(), anyString(), anyString());
+        assertEquals(CheckinPendingService.STATUS_PENDING, pending.getStatus());
     }
 
     private static CheckinPending pending(Long id, String campusId) {
