@@ -152,6 +152,9 @@ public class AdminMemberController {
                                       @RequestParam(defaultValue = "15") int size) {
         AppUser user = appUserRepo.findById(id).orElseThrow(() -> new BizException("学员不存在"));
         adminAccessService.assertCanManageUser(user);
+        if ("teacher".equalsIgnoreCase(user.getRole() == null ? "" : user.getRole().trim())) {
+            throw new BizException("教师账号请使用老师档案，不提供学员约课档案");
+        }
 
         String monthPrefix = normalizeMonthPrefix(month);
         int pageNo = Math.max(page, 1);

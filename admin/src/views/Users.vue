@@ -48,7 +48,14 @@
           <el-button link type="primary" class="copy-btn" @click="copyText(row.openid)">复制</el-button>
         </div>
         <div class="table-actions">
-          <el-button link type="primary" @click="openProfile(row)">档案</el-button>
+          <el-button
+            v-if="canOpenMemberProfile(row)"
+            link
+            type="primary"
+            @click="openProfile(row)"
+          >
+            档案
+          </el-button>
           <el-button link type="primary" @click="edit(row)">编辑</el-button>
         </div>
       </div>
@@ -102,7 +109,14 @@
       <el-table-column label="操作" width="140" class-name="col-actions" label-class-name="col-actions" align="left" header-align="left" fixed="right">
         <template #default="{ row }">
           <div class="table-actions">
-            <el-button link type="primary" @click="openProfile(row)">档案</el-button>
+            <el-button
+              v-if="canOpenMemberProfile(row)"
+              link
+              type="primary"
+              @click="openProfile(row)"
+            >
+              档案
+            </el-button>
             <el-button link type="primary" @click="edit(row)">编辑</el-button>
           </div>
         </template>
@@ -510,6 +524,10 @@ function search() {
 }
 
 async function openProfile(row) {
+  if (!canOpenMemberProfile(row)) {
+    ElMessage.warning('教师请使用老师档案，不提供学员约课档案')
+    return
+  }
   profileVisible.value = true
   profileLoading.value = true
   profileHistoryLoading.value = false
@@ -529,6 +547,11 @@ async function openProfile(row) {
   } finally {
     profileLoading.value = false
   }
+}
+
+function canOpenMemberProfile(row) {
+  const role = String(row?.role || 'student').trim().toLowerCase()
+  return role === 'student' || role === 'employee' || role === ''
 }
 
 async function loadProfile(withCards = false) {
