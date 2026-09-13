@@ -232,13 +232,41 @@
           <template #default="{ row }">{{ row.expireDate || (row.validDays ? `首次到课后${row.validDays}天` : '不过期') }}</template>
         </el-table-column>
       </el-table>
-      <h4>上课记录</h4>
-      <el-table :data="profile.classHistory || []" size="small" max-height="360" empty-text="暂无上课记录">
+      <div class="profile-history-head">
+        <h4>上课记录</h4>
+        <el-date-picker
+          v-model="profileMonth"
+          type="month"
+          value-format="YYYY-MM"
+          placeholder="全部月份"
+          clearable
+          style="width: 150px"
+          @change="onProfileMonthChange"
+        />
+      </div>
+      <el-table
+        v-loading="profileHistoryLoading"
+        :data="profile.classHistory || []"
+        size="small"
+        max-height="360"
+        empty-text="暂无上课记录"
+      >
         <el-table-column prop="classDate" label="日期" width="110" />
         <el-table-column prop="name" label="课程" min-width="120" />
         <el-table-column prop="timeText" label="时间" width="110" />
         <el-table-column prop="teacherName" label="老师" width="90" />
       </el-table>
+      <el-pagination
+        v-if="profile.classHistoryTotal > profileHistorySize"
+        class="profile-pager"
+        background
+        small
+        layout="total, prev, pager, next"
+        :total="profile.classHistoryTotal"
+        v-model:current-page="profileHistoryPage"
+        :page-size="profileHistorySize"
+        @current-change="loadProfileHistory"
+      />
     </div>
   </el-drawer>
 
@@ -348,10 +376,16 @@ const claimLoading = ref(false)
 
 const profileVisible = ref(false)
 const profileLoading = ref(false)
+const profileHistoryLoading = ref(false)
+const profileMonth = ref('')
+const profileHistoryPage = ref(1)
+const profileHistorySize = 15
+const profileUserId = ref(null)
 const profile = reactive({
   firstClassDate: '',
   classCount: 0,
   classHistory: [],
+  classHistoryTotal: 0,
   cards: [],
   user: null,
 })
@@ -442,26 +476,56 @@ function search() {
 async function openProfile(row) {
   profileVisible.value = true
   profileLoading.value = true
+  profileHistoryLoading.value = false
+  profileUserId.value = row.id
+  profileMonth.value = ''
+  profileHistoryPage.value = 1
   Object.assign(profile, {
     firstClassDate: '',
     classCount: 0,
     classHistory: [],
+    classHistoryTotal: 0,
     cards: [],
     user: row,
   })
   try {
-    const res = await http.get(`/admin/users/${row.id}/profile`)
-    const data = res.data || {}
-    Object.assign(profile, {
-      firstClassDate: data.firstClassDate || '',
-      classCount: data.classCount || 0,
-      classHistory: data.classHistory || [],
-      cards: data.cards || [],
-      user: data.user || row,
-    })
+    await loadProfile(true)
   } finally {
     profileLoading.value = false
   }
+}
+
+async function loadProfile(withCards = false) {
+  if (!profileUserId.value) return
+  const params = {
+    page: profileHistoryPage.value,
+    size: profileHistorySize,
+  }
+  if (profileMonth.value) params.month = profileMonth.value
+  const res = await http.get(`/admin/users/${profileUserId.value}/profile`, { params })
+  const data = res.data || {}
+  profile.firstClassDate = data.firstClassDate || ''
+  profile.classCount = data.classCount || 0
+  profile.classHistory = data.classHistory || []
+  profile.classHistoryTotal = data.classHistoryTotal || 0
+  profile.user = data.user || profile.user
+  if (withCards) {
+    profile.cards = data.cards || []
+  }
+}
+
+async function loadProfileHistory() {
+  profileHistoryLoading.value = true
+  try {
+    await loadProfile(false)
+  } finally {
+    profileHistoryLoading.value = false
+  }
+}
+
+function onProfileMonthChange() {
+  profileHistoryPage.value = 1
+  return loadProfileHistory()
 }
 
 function edit(row) {
@@ -625,6 +689,23 @@ onMounted(async () => {
 .profile-drawer h4 {
   margin: 20px 0 10px;
   font-size: 15px;
+}
+
+.profile-history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.profile-history-head h4 {
+  margin: 12px 0;
+}
+
+.profile-pager {
+  margin-top: 12px;
+  justify-content: flex-end;
 }
 
 .profile-summary {

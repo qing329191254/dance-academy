@@ -5,7 +5,6 @@ import com.forget.academy.common.BizException;
 import com.forget.academy.common.MemberTags;
 import com.forget.academy.common.PageResult;
 import com.forget.academy.entity.AppUser;
-import com.forget.academy.entity.Booking;
 import com.forget.academy.entity.OpportunityApply;
 import com.forget.academy.entity.UserCard;
 import com.forget.academy.entity.UserCourse;
@@ -147,20 +146,21 @@ public class AdminMemberController {
     }
 
     @GetMapping("/users/{id}/profile")
-    public ApiResponse<?> userProfile(@PathVariable Long id) {
+    public ApiResponse<?> userProfile(@PathVariable Long id,
+                                      @RequestParam(defaultValue = "") String month,
+                                      @RequestParam(defaultValue = "1") int page,
+                                      @RequestParam(defaultValue = "15") int size) {
         AppUser user = appUserRepo.findById(id).orElseThrow(() -> new BizException("学员不存在"));
         adminAccessService.assertCanManageUser(user);
 
-        List<Booking> allBookings = bookingRepo.findByUserIdOrderByClassDateDescIdDesc(id);
-        List<Booking> doneBookings = allBookings.stream()
-                .filter(b -> "已完成".equals(b.getStatus()))
-                .toList();
-        String firstClassDate = doneBookings.stream()
-                .map(Booking::getClassDate)
-                .filter(d -> d != null && !d.isBlank() && !"default".equals(d))
-                .min(String::compareTo)
-                .orElse(null);
-        if (firstClassDate == null) {
+        String monthPrefix = normalizeMonthPrefix(month);
+        int pageNo = Math.max(page, 1);
+        int pageSize = Math.min(Math.max(size, 1), 50);
+        var pageable = PageRequest.of(pageNo - 1, pageSize);
+
+        long classCount = bookingRepo.countByUserIdAndStatus(id, "已完成");
+        String firstClassDate = bookingRepo.findFirstCompletedClassDate(id);
+        if (firstClassDate == null || firstClassDate.isBlank()) {
             firstClassDate = practiceRecordRepo.findByUserIdOrderByCheckedAtDesc(id).stream()
                     .map(com.forget.academy.entity.PracticeRecord::getClassDate)
                     .filter(d -> d != null && !d.isBlank())
@@ -168,7 +168,8 @@ public class AdminMemberController {
                     .orElse(null);
         }
 
-        List<Map<String, Object>> classHistory = doneBookings.stream().map(b -> {
+        var historyPage = bookingRepo.findCompletedHistory(id, monthPrefix, pageable);
+        List<Map<String, Object>> classHistory = historyPage.getContent().stream().map(b -> {
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("id", b.getId());
             row.put("name", b.getName());
@@ -202,10 +203,25 @@ public class AdminMemberController {
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("user", user);
         data.put("firstClassDate", firstClassDate);
-        data.put("classCount", classHistory.size());
+        data.put("classCount", classCount);
         data.put("classHistory", classHistory);
+        data.put("classHistoryTotal", historyPage.getTotalElements());
+        data.put("classHistoryPage", pageNo);
+        data.put("classHistorySize", pageSize);
+        data.put("month", monthPrefix.isBlank() ? null : monthPrefix);
         data.put("cards", cardRows);
         return ApiResponse.ok(data);
+    }
+
+    private static String normalizeMonthPrefix(String month) {
+        if (month == null) {
+            return "";
+        }
+        String value = month.trim();
+        if (value.matches("^\\d{4}-\\d{2}$")) {
+            return value;
+        }
+        return "";
     }
 
     @PutMapping("/users/{id}")

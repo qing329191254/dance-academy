@@ -96,6 +96,27 @@ public interface BookingRepo extends JpaRepository<Booking, Long> {
 
     List<Booking> findByUserIdOrderByClassDateDescIdDesc(Long userId);
 
+    long countByUserIdAndStatus(Long userId, String status);
+
+    @Query("""
+            select min(b.classDate) from Booking b
+            where b.userId = :userId
+              and b.status = '已完成'
+              and b.classDate is not null and b.classDate <> '' and b.classDate <> 'default'
+            """)
+    String findFirstCompletedClassDate(@Param("userId") Long userId);
+
+    @Query("""
+            select b from Booking b
+            where b.userId = :userId
+              and b.status = '已完成'
+              and (:monthPrefix = '' or b.classDate like concat(:monthPrefix, '%'))
+            order by b.classDate desc, b.id desc
+            """)
+    Page<Booking> findCompletedHistory(@Param("userId") Long userId,
+                                       @Param("monthPrefix") String monthPrefix,
+                                       Pageable pageable);
+
     @Query("""
             select b from Booking b
             where b.status = '待上课'
