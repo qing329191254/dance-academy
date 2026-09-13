@@ -216,22 +216,42 @@
     </template>
   </el-dialog>
 
-  <el-drawer v-model="profileVisible" size="560px" :title="profileTitle" destroy-on-close>
+  <el-drawer
+    v-model="profileVisible"
+    :size="isMobile ? '100%' : '560px'"
+    :title="profileTitle"
+    destroy-on-close
+    class="profile-drawer-host"
+  >
     <div v-loading="profileLoading" class="profile-drawer">
       <div class="profile-summary">
         <div>首次上课：{{ profile.firstClassDate || '暂无' }}</div>
         <div>上课次数：{{ profile.classCount || 0 }}</div>
       </div>
+
       <h4>次卡与有效期</h4>
-      <el-table :data="profile.cards || []" size="small" empty-text="暂无卡包">
+      <template v-if="isMobile">
+        <div v-if="(profile.cards || []).length" class="profile-card-list">
+          <div v-for="row in profile.cards" :key="row.id" class="profile-card-item">
+            <div class="profile-card-name">{{ row.name || '—' }}</div>
+            <div class="profile-card-meta">
+              <span>剩余 {{ row.remain ?? 0 }}/{{ row.total ?? 0 }}</span>
+              <span>{{ cardExpireText(row) }}</span>
+            </div>
+          </div>
+        </div>
+        <div v-else class="profile-empty">暂无卡包</div>
+      </template>
+      <el-table v-else :data="profile.cards || []" size="small" empty-text="暂无卡包">
         <el-table-column prop="name" label="卡名" min-width="120" />
         <el-table-column label="剩余" width="90">
           <template #default="{ row }">{{ row.remain ?? 0 }}/{{ row.total ?? 0 }}</template>
         </el-table-column>
         <el-table-column label="到期" min-width="120">
-          <template #default="{ row }">{{ row.expireDate || (row.validDays ? `首次到课后${row.validDays}天` : '不过期') }}</template>
+          <template #default="{ row }">{{ cardExpireText(row) }}</template>
         </el-table-column>
       </el-table>
+
       <div class="profile-history-head">
         <h4>上课记录</h4>
         <el-date-picker
@@ -240,11 +260,26 @@
           value-format="YYYY-MM"
           placeholder="全部月份"
           clearable
-          style="width: 150px"
+          class="profile-month-picker"
           @change="onProfileMonthChange"
         />
       </div>
+
+      <template v-if="isMobile">
+        <div v-loading="profileHistoryLoading" class="profile-history-list">
+          <div v-for="row in profile.classHistory || []" :key="row.id" class="profile-history-item">
+            <div class="profile-history-title">{{ row.name || '—' }}</div>
+            <div class="profile-history-meta">
+              <span>{{ row.classDate || '—' }}</span>
+              <span v-if="row.timeText">{{ row.timeText }}</span>
+              <span v-if="row.teacherName">{{ row.teacherName }}</span>
+            </div>
+          </div>
+          <div v-if="!(profile.classHistory || []).length" class="profile-empty">暂无上课记录</div>
+        </div>
+      </template>
       <el-table
+        v-else
         v-loading="profileHistoryLoading"
         :data="profile.classHistory || []"
         size="small"
@@ -256,12 +291,13 @@
         <el-table-column prop="timeText" label="时间" width="110" />
         <el-table-column prop="teacherName" label="老师" width="90" />
       </el-table>
+
       <el-pagination
         v-if="profile.classHistoryTotal > profileHistorySize"
         class="profile-pager"
         background
         small
-        layout="total, prev, pager, next"
+        :layout="isMobile ? 'total, prev, next' : 'total, prev, pager, next'"
         :total="profile.classHistoryTotal"
         v-model:current-page="profileHistoryPage"
         :page-size="profileHistorySize"
@@ -528,6 +564,10 @@ function onProfileMonthChange() {
   return loadProfileHistory()
 }
 
+function cardExpireText(row) {
+  return row?.expireDate || (row?.validDays ? `首次到课后${row.validDays}天` : '不过期')
+}
+
 function edit(row) {
   Object.assign(form, row)
   if (!form.role) form.role = 'student'
@@ -703,6 +743,10 @@ onMounted(async () => {
   margin: 12px 0;
 }
 
+.profile-month-picker {
+  width: 150px;
+}
+
 .profile-pager {
   margin-top: 12px;
   justify-content: flex-end;
@@ -716,6 +760,60 @@ onMounted(async () => {
   border-radius: 8px;
   color: #4a4a55;
   font-size: 14px;
+}
+
+.profile-empty {
+  padding: 20px 0;
+  text-align: center;
+  color: #8a8a96;
+  font-size: 13px;
+}
+
+.profile-card-list,
+.profile-history-list {
+  display: grid;
+  gap: 10px;
+}
+
+.profile-card-item,
+.profile-history-item {
+  padding: 12px 14px;
+  border: 1px solid #ececf0;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.profile-card-name,
+.profile-history-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #222;
+  margin-bottom: 6px;
+  word-break: break-all;
+}
+
+.profile-card-meta,
+.profile-history-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  color: #8a8a96;
+  font-size: 13px;
+}
+
+@media (max-width: 768px) {
+  .profile-history-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .profile-month-picker {
+    width: 100%;
+  }
+
+  .profile-pager {
+    justify-content: center;
+  }
 }
 
 .tag-list {
