@@ -36,6 +36,9 @@ public class BookingService {
     private static final String STATUS_WAITLIST = "排队中";
     private static final String STATUS_DONE = "已完成";
     private static final String STATUS_CANCELLED = "已取消";
+    public static final String CANCEL_SOURCE_USER = "user";
+    public static final String CANCEL_SOURCE_ADMIN = "admin";
+    public static final String CANCEL_SOURCE_SYSTEM = "system_low_enrollment";
     private static final ZoneId ZONE = ZoneId.of("Asia/Shanghai");
     private static final int STUDENT_CANCEL_LOCK_HOURS = 2;
 
@@ -64,10 +67,10 @@ public class BookingService {
         }
         List<Map<String, Object>> result = new ArrayList<>();
         for (Schedule item : schedules) {
-            if (ClosedClassGroup.isClosedDoor(item) && !ClosedClassGroup.canAccess(item, user)) {
-                continue;
-            }
             Map<String, Object> row = toScheduleMap(item, date);
+            boolean closedDoorAccessible = !ClosedClassGroup.isClosedDoor(item)
+                    || ClosedClassGroup.canAccess(item, user);
+            row.put("closedDoorAccessible", closedDoorAccessible);
             long booked = 0;
             if ("group".equals(tab) && date != null) {
                 booked = bookingRepo.countByScheduleIdAndClassDateAndStatusIn(
@@ -119,6 +122,9 @@ public class BookingService {
                     } else if (sessionEnded) {
                         row.put("canBook", false);
                         row.put("bookBlockReason", "课程已结束，无法预约");
+                    } else if (!closedDoorAccessible) {
+                        row.put("canBook", false);
+                        row.put("bookBlockReason", ClosedClassGroup.accessDeniedMessage(item));
                     } else {
                         UserCard usable = userCardService.findUsableGroupCard(userId, item.getSectionId());
                         row.put("canBook", usable != null);
@@ -146,12 +152,12 @@ public class BookingService {
         var existing = bookingRepo.findByUserIdAndBookingKey(userId, key);
         if (existing.isPresent() && STATUS_PENDING.equals(existing.get().getStatus())) {
             assertStudentCanCancel(existing.get());
-            markCancelled(existing.get());
+            markCancelled(existing.get(), CANCEL_SOURCE_USER);
             promoteWaitlist(schedule, classDate);
             return result(false, false, "已取消预约", null);
         }
         if (existing.isPresent() && STATUS_WAITLIST.equals(existing.get().getStatus())) {
-            markCancelled(existing.get());
+            markCancelled(existing.get(), CANCEL_SOURCE_USER);
             return result(false, false, "已退出排队", null);
         }
         if (existing.isPresent()) {
@@ -289,7 +295,7 @@ public class BookingService {
         }
         String previous = booking.getStatus();
         if (STATUS_CANCELLED.equals(status)) {
-            markCancelled(booking);
+            markCancelled(booking, CANCEL_SOURCE_ADMIN);
             if (STATUS_PENDING.equals(previous)) {
                 scheduleRepo.findById(booking.getScheduleId())
                         .ifPresent(schedule -> promoteWaitlist(schedule, booking.getClassDate()));
@@ -342,7 +348,7 @@ public class BookingService {
         return tab + ":" + (date == null || date.isBlank() ? "default" : date) + ":" + scheduleId;
     }
 
-    private void markCancelled(Booking booking) {
+    private void markCancelled(Booking booking, String cancelSource) {
         if (STATUS_PENDING.equals(booking.getStatus())) {
             releaseGroupCard(booking);
         }
@@ -351,6 +357,7 @@ public class BookingService {
             booking.setBookingKey(key + ":x:" + booking.getId());
         }
         booking.setStatus(STATUS_CANCELLED);
+        booking.setCancelSource(cancelSource == null || cancelSource.isBlank() ? CANCEL_SOURCE_ADMIN : cancelSource);
         bookingRepo.save(booking);
         rejectPendingClassCheckin(booking);
     }
@@ -536,12 +543,93 @@ public class BookingService {
         List<Booking> pending = bookingRepo.findByScheduleIdAndClassDateAndStatusOrderByIdAsc(
                 schedule.getId(), classDate, STATUS_PENDING);
         for (Booking booking : pending) {
-            markCancelled(booking);
+            markCancelled(booking, CANCEL_SOURCE_SYSTEM);
         }
         List<Booking> waitlist = bookingRepo.findByScheduleIdAndClassDateAndStatusOrderByIdAsc(
                 schedule.getId(), classDate, STATUS_WAITLIST);
         for (Booking booking : waitlist) {
-            markCancelled(booking);
+            markCancelled(booking, CANCEL_SOURCE_SYSTEM);
+        }
+    }
+
+    /**
+     * 手动恢复因人数不足取消的场次：清除取消记录，并把系统强制取消的预约尽量恢复为待上课/排队中。
+     */
+    @Transactional
+    public Map<String, Object> restoreSession(Long scheduleId, String classDate) {
+        if (scheduleId == null || classDate == null || classDate.isBlank()) {
+            throw new BizException("请指定课程与上课日期");
+        }
+        Schedule schedule = scheduleRepo.findById(scheduleId).orElseThrow(() -> new BizException("课表不存在"));
+        adminAccessService.assertCanAccessCampus(schedule.getCampusId());
+        ClassSessionCancel cancel = classSessionCancelRepo.findByScheduleIdAndClassDate(scheduleId, classDate)
+                .orElseThrow(() -> new BizException("该场次未处于取消状态"));
+        classSessionCancelRepo.delete(cancel);
+
+        List<Booking> cancelled = bookingRepo.findByScheduleIdAndClassDateAndStatusOrderByIdAsc(
+                scheduleId, classDate, STATUS_CANCELLED);
+        int restoredPending = 0;
+        int restoredWaitlist = 0;
+        int skipped = 0;
+        for (Booking booking : cancelled) {
+            if (!CANCEL_SOURCE_SYSTEM.equals(booking.getCancelSource())) {
+                skipped++;
+                continue;
+            }
+            AppUser user = appUserRepo.findById(booking.getUserId()).orElse(null);
+            if (user == null) {
+                skipped++;
+                continue;
+            }
+            restoreBookingKey(booking);
+            boolean full = isGroupFull(schedule, classDate);
+            try {
+                if (!full) {
+                    assertCanBookGroup(schedule, user);
+                    booking.setStatus(STATUS_PENDING);
+                    booking.setCancelSource(null);
+                    booking.setRemindSent(false);
+                    reserveGroupCard(booking, user);
+                    bookingRepo.save(booking);
+                    linkCampus(booking.getUserId(), schedule);
+                    bookingRemindService.scheduleGroupRemind(booking);
+                    restoredPending++;
+                } else {
+                    booking.setStatus(STATUS_WAITLIST);
+                    booking.setCancelSource(null);
+                    booking.setRemindSent(false);
+                    booking.setCardId(null);
+                    booking.setCardConsumed(false);
+                    bookingRepo.save(booking);
+                    restoredWaitlist++;
+                }
+            } catch (BizException ex) {
+                // 恢复场次后若学员暂不可约（无卡等），保留已取消，不阻断整场恢复
+                booking.setStatus(STATUS_CANCELLED);
+                booking.setCancelSource(CANCEL_SOURCE_SYSTEM);
+                bookingRepo.save(booking);
+                skipped++;
+            }
+        }
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("scheduleId", scheduleId);
+        result.put("classDate", classDate);
+        result.put("restoredPending", restoredPending);
+        result.put("restoredWaitlist", restoredWaitlist);
+        result.put("skipped", skipped);
+        result.put("sessionCancelled", false);
+        return result;
+    }
+
+    private void restoreBookingKey(Booking booking) {
+        String key = booking.getBookingKey();
+        if (key == null || key.isBlank()) {
+            booking.setBookingKey(buildKey(booking.getTab(), booking.getScheduleId(), booking.getClassDate()));
+            return;
+        }
+        int marker = key.indexOf(":x:");
+        if (marker > 0) {
+            booking.setBookingKey(key.substring(0, marker));
         }
     }
 
@@ -613,6 +701,7 @@ public class BookingService {
         map.put("teacher", booking.getTeacherName());
         map.put("room", booking.getRoom());
         map.put("status", booking.getStatus());
+        map.put("cancelSource", booking.getCancelSource());
         return map;
     }
 

@@ -40,6 +40,17 @@
             <el-option label="已完成" value="已完成" />
             <el-option label="已取消" value="已取消" />
           </el-select>
+          <el-select
+            v-if="status === '已取消'"
+            v-model="cancelSource"
+            placeholder="取消来源"
+            clearable
+            @change="search"
+          >
+            <el-option label="自主取消" value="user" />
+            <el-option label="系统强制取消" value="system_low_enrollment" />
+            <el-option label="后台取消" value="admin" />
+          </el-select>
           <el-tag
             v-if="detailFilter.scheduleId"
             closable
@@ -79,6 +90,14 @@
           </div>
           <div class="table-actions">
             <el-button link type="primary" @click="openSessionDetail(row)">查看学员</el-button>
+            <el-button
+              v-if="row.sessionCancelled"
+              link
+              type="warning"
+              @click="restoreSession(row)"
+            >
+              恢复课程
+            </el-button>
           </div>
         </div>
         <div v-if="!sessionList.length" class="mobile-feed-empty">该日暂无排课</div>
@@ -119,9 +138,17 @@
             <el-tag v-else type="success" size="small">可预约</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="110" fixed="right" class-name="col-actions" label-class-name="col-actions">
+        <el-table-column label="操作" width="180" fixed="right" class-name="col-actions" label-class-name="col-actions">
           <template #default="{ row }">
             <el-button link type="primary" @click="openSessionDetail(row)">查看学员</el-button>
+            <el-button
+              v-if="row.sessionCancelled"
+              link
+              type="warning"
+              @click="restoreSession(row)"
+            >
+              恢复课程
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -134,6 +161,7 @@
           <div class="mobile-feed-head">
             <span class="mobile-feed-title">{{ row.nickname || '—' }}</span>
             <el-tag :type="statusTagType(row.status)" size="small">{{ row.status }}</el-tag>
+            <span v-if="row.cancelSourceLabel" class="muted"> · {{ row.cancelSourceLabel }}</span>
           </div>
           <div class="mobile-feed-main">{{ row.name || '—' }}</div>
           <div class="mobile-feed-meta">
@@ -186,6 +214,9 @@
           <template #default="{ row }">
             <el-tag :type="statusTagType(row.status)" size="small">{{ row.status }}</el-tag>
           </template>
+        </el-table-column>
+        <el-table-column label="取消来源" width="120" align="left" header-align="left">
+          <template #default="{ row }">{{ row.cancelSourceLabel || '—' }}</template>
         </el-table-column>
         <el-table-column label="签到" width="80" align="left" header-align="left">
           <template #default="{ row }">
@@ -325,6 +356,7 @@ const page = ref(1)
 const size = 15
 const keyword = ref('')
 const status = ref('')
+const cancelSource = ref('')
 const detailFilter = reactive({
   scheduleId: null,
   classDate: '',
@@ -412,6 +444,7 @@ async function load() {
   const params = {
     keyword: keyword.value,
     status: status.value,
+    cancelSource: status.value === '已取消' ? cancelSource.value : '',
     page: page.value,
     size,
     ...campusParams(),
@@ -423,6 +456,23 @@ async function load() {
   const res = await http.get('/admin/bookings', { params })
   list.value = res.data.list || []
   total.value = res.data.total || 0
+}
+
+async function restoreSession(row) {
+  await ElMessageBox.confirm(
+    `确认恢复「${row.name || '课程'}」在 ${row.classDate} 的场次？系统强制取消的学员预约将尽量恢复。`,
+    '恢复课程',
+    { type: 'warning' },
+  )
+  const res = await http.post('/admin/booking-sessions/restore', {
+    scheduleId: row.scheduleId,
+    classDate: row.classDate,
+  })
+  const data = res.data || {}
+  ElMessage.success(
+    `已恢复课程（待上课 ${data.restoredPending || 0}，排队 ${data.restoredWaitlist || 0}，跳过 ${data.skipped || 0}）`,
+  )
+  await loadSessions()
 }
 
 function openSessionDetail(row) {

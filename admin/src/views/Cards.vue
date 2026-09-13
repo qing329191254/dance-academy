@@ -14,6 +14,11 @@
           <el-option label="私教" value="私教" />
           <el-option label="固定班" value="固定班" />
         </el-select>
+        <el-select v-model="expiringWithinDays" placeholder="即将过期" clearable @change="search">
+          <el-option label="7 天内到期" :value="7" />
+          <el-option label="15 天内到期" :value="15" />
+          <el-option label="30 天内到期" :value="30" />
+        </el-select>
         <el-button @click="search">查询</el-button>
       </div>
       <el-button type="primary" class="toolbar-add" @click="edit()">发卡</el-button>
@@ -149,6 +154,7 @@ const page = ref(1)
 const size = ref(15)
 const keyword = ref('')
 const type = ref('')
+const expiringWithinDays = ref(null)
 const visible = ref(false)
 const form = reactive({})
 
@@ -182,6 +188,7 @@ function onExpireModeChange() {
 function queryParams() {
   const params = { keyword: keyword.value, page: page.value, size: size.value, ...campusParams() }
   if (type.value) params.type = type.value
+  if (expiringWithinDays.value) params.expiringWithinDays = expiringWithinDays.value
   return params
 }
 

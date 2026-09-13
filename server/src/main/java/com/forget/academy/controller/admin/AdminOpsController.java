@@ -109,6 +109,7 @@ public class AdminOpsController {
     @GetMapping("/bookings")
     public ApiResponse<?> bookings(@RequestParam(defaultValue = "") String keyword,
                                   @RequestParam(defaultValue = "") String status,
+                                  @RequestParam(defaultValue = "") String cancelSource,
                                   @RequestParam(required = false) Long scheduleId,
                                   @RequestParam(defaultValue = "") String classDate,
                                   @RequestParam(required = false) String campusId,
@@ -117,9 +118,10 @@ public class AdminOpsController {
         var pageable = PageRequest.of(Math.max(page - 1, 0), size);
         String query = keyword == null ? "" : keyword.trim();
         String st = status == null ? "" : status.trim();
+        String source = cancelSource == null ? "" : cancelSource.trim();
         String date = classDate == null ? "" : classDate.trim();
         var campuses = adminAccessService.resolveCampusScope(campusId);
-        var result = bookingRepo.searchInCampuses(query, st, scheduleId, date, campuses, pageable);
+        var result = bookingRepo.searchInCampuses(query, st, source, scheduleId, date, campuses, pageable);
         var list = result.getContent().stream().map(this::toBookingRow).toList();
         return ApiResponse.ok(new PageResult<>(list, result.getTotalElements(), page, size));
     }
@@ -231,6 +233,72 @@ public class AdminOpsController {
         return ApiResponse.ok(bookingService.adminCancel(id));
     }
 
+    @PostMapping("/booking-sessions/restore")
+    public ApiResponse<?> restoreSession(@RequestBody Map<String, Object> body) {
+        Long scheduleId = parseLong(body.get("scheduleId"));
+        String classDate = body.get("classDate") == null ? "" : String.valueOf(body.get("classDate")).trim();
+        return ApiResponse.ok(bookingService.restoreSession(scheduleId, classDate));
+    }
+
+    @GetMapping("/upcoming-students")
+    public ApiResponse<?> upcomingStudents(@RequestParam(defaultValue = "7") String range,
+                                           @RequestParam(required = false) String campusId) {
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Shanghai"));
+        String fromDate = today.toString();
+        String toDate = "";
+        String key = range == null ? "7" : range.trim().toLowerCase(Locale.ROOT);
+        if ("15".equals(key)) {
+            toDate = today.plusDays(15).toString();
+        } else if ("30".equals(key)) {
+            toDate = today.plusDays(30).toString();
+        } else if ("future".equals(key) || "all".equals(key)) {
+            toDate = "";
+        } else {
+            toDate = today.plusDays(7).toString();
+            key = "7";
+        }
+        var campuses = adminAccessService.resolveCampusScope(campusId);
+        List<Booking> bookings = bookingRepo.findUpcomingInCampuses(
+                List.of("待上课", "排队中"), fromDate, toDate, campuses);
+        Map<Long, Map<String, Object>> byUser = new LinkedHashMap<>();
+        for (Booking booking : bookings) {
+            if (booking.getUserId() == null) {
+                continue;
+            }
+            Map<String, Object> row = byUser.computeIfAbsent(booking.getUserId(), id -> {
+                Map<String, Object> item = new LinkedHashMap<>();
+                item.put("userId", id);
+                item.put("nickname", booking.getNickname());
+                item.put("upcomingCount", 0);
+                item.put("classes", new ArrayList<Map<String, Object>>());
+                return item;
+            });
+            row.put("nickname", booking.getNickname() != null ? booking.getNickname() : row.get("nickname"));
+            row.put("upcomingCount", ((Number) row.get("upcomingCount")).intValue() + 1);
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> classes = (List<Map<String, Object>>) row.get("classes");
+            Map<String, Object> cls = new LinkedHashMap<>();
+            cls.put("bookingId", booking.getId());
+            cls.put("name", booking.getName());
+            cls.put("classDate", booking.getClassDate());
+            cls.put("timeText", booking.getTimeText());
+            cls.put("teacherName", booking.getTeacherName());
+            cls.put("status", booking.getStatus());
+            cls.put("room", booking.getRoom());
+            scheduleRepo.findById(booking.getScheduleId()).ifPresent(schedule -> {
+                cls.put("campusId", schedule.getCampusId());
+                cls.put("campusName", campusCatalogService.displayName(schedule.getCampusId()));
+            });
+            classes.add(cls);
+        }
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("range", key);
+        data.put("fromDate", fromDate);
+        data.put("toDate", toDate.isBlank() ? null : toDate);
+        data.put("list", new ArrayList<>(byUser.values()));
+        return ApiResponse.ok(data);
+    }
+
     private Map<String, Object> toBookingRow(Booking booking) {
         Map<String, Object> row = new LinkedHashMap<>();
         row.put("id", booking.getId());
@@ -243,6 +311,8 @@ public class AdminOpsController {
         row.put("teacherName", booking.getTeacherName());
         row.put("room", booking.getRoom());
         row.put("status", booking.getStatus());
+        row.put("cancelSource", booking.getCancelSource());
+        row.put("cancelSourceLabel", cancelSourceLabel(booking.getCancelSource(), booking.getStatus()));
         row.put("tab", booking.getTab());
         row.put("createdAt", booking.getCreatedAt());
         row.put("cardConsumed", Boolean.TRUE.equals(booking.getCardConsumed()));
@@ -294,6 +364,22 @@ public class AdminOpsController {
         } catch (NumberFormatException e) {
             return null;
         }
+    }
+
+    private static String cancelSourceLabel(String source, String status) {
+        if (!"已取消".equals(status)) {
+            return "";
+        }
+        if ("user".equals(source)) {
+            return "自主取消";
+        }
+        if ("system_low_enrollment".equals(source)) {
+            return "系统强制取消";
+        }
+        if ("admin".equals(source)) {
+            return "后台取消";
+        }
+        return "已取消";
     }
 
     @GetMapping("/opportunities")

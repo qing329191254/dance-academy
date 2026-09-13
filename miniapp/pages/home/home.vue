@@ -136,7 +136,7 @@ import { computed, ref, reactive, watch } from 'vue'
 import { onLoad, onShow, onUnload, onPageScroll } from '@dcloudio/uni-app'
 import { getHome, getCourseIntro } from '@/common/api.js'
 import { teachers as mockTeachers, studio as mockStudio, trialCourse as mockTrial } from '@/common/mock.js'
-import { currentCampus, selectedCampusId } from '@/common/campus.js'
+import { applyCampusFromQuery, currentCampus, selectedCampusId } from '@/common/campus.js'
 import { preloadTabPagesAsync } from '@/common/preloadTabs.js'
 import { openPage, switchTabPage } from '@/common/navigate.js'
 import { applyPageBackground, PAGE_BG, SPLASH_BG } from '@/common/pageTheme.js'
@@ -197,7 +197,8 @@ function startSplashTimer() {
   }, 4500)
 }
 
-onLoad(() => {
+onLoad((query) => {
+  applyCampusFromQuery(query || {})
   preloadTabPagesAsync()
   loadHome()
   if (showSplash.value) startSplashTimer()

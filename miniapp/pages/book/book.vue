@@ -315,7 +315,12 @@ function actionLabel(item) {
   if (isBooked(item)) return '取消预约'
   if (isQueued(item)) return '退出排队'
   if (active.value === 'group' && item.status === '已满') return '排队'
-  if (active.value === 'group' && item.canBook === false) return '无可用卡'
+  if (active.value === 'group' && item.canBook === false) {
+    if (item.closedDoor && item.closedDoorAccessible === false) {
+      return item.audienceGroupLabel ? `仅限${item.audienceGroupLabel}` : '闭门课'
+    }
+    return '无可用卡'
+  }
   return '预约'
 }
 

@@ -1,3 +1,5 @@
+import { selectedCampusId } from './campus.js'
+
 const STORAGE_KEY = 'forget_share_config'
 const DEFAULT_TITLE = '高校FOR-GET舞室'
 const SHARE_PATH = '/pages/home/home'
@@ -36,10 +38,16 @@ export function applyShareFromStudio(studio) {
   persist()
 }
 
+function shareCampusQuery() {
+  const id = String(selectedCampusId.value || '').trim()
+  return id ? `campusId=${encodeURIComponent(id)}` : ''
+}
+
 export function getShareMessage() {
+  const query = shareCampusQuery()
   const payload = {
     title: cached.title || DEFAULT_TITLE,
-    path: SHARE_PATH,
+    path: query ? `${SHARE_PATH}?${query}` : SHARE_PATH,
   }
   if (cached.imageUrl) payload.imageUrl = cached.imageUrl
   return payload
@@ -48,6 +56,7 @@ export function getShareMessage() {
 export function getShareTimeline() {
   const payload = {
     title: cached.title || DEFAULT_TITLE,
+    query: shareCampusQuery(),
   }
   if (cached.imageUrl) payload.imageUrl = cached.imageUrl
   return payload

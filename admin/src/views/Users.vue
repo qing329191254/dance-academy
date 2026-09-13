@@ -48,6 +48,7 @@
           <el-button link type="primary" class="copy-btn" @click="copyText(row.openid)">复制</el-button>
         </div>
         <div class="table-actions">
+          <el-button link type="primary" @click="openProfile(row)">档案</el-button>
           <el-button link type="primary" @click="edit(row)">编辑</el-button>
         </div>
       </div>
@@ -98,9 +99,10 @@
           </div>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="90" class-name="col-actions" label-class-name="col-actions" align="left" header-align="left" fixed="right">
+      <el-table-column label="操作" width="140" class-name="col-actions" label-class-name="col-actions" align="left" header-align="left" fixed="right">
         <template #default="{ row }">
           <div class="table-actions">
+            <el-button link type="primary" @click="openProfile(row)">档案</el-button>
             <el-button link type="primary" @click="edit(row)">编辑</el-button>
           </div>
         </template>
@@ -214,6 +216,32 @@
     </template>
   </el-dialog>
 
+  <el-drawer v-model="profileVisible" size="560px" :title="profileTitle" destroy-on-close>
+    <div v-loading="profileLoading" class="profile-drawer">
+      <div class="profile-summary">
+        <div>首次上课：{{ profile.firstClassDate || '暂无' }}</div>
+        <div>上课次数：{{ profile.classCount || 0 }}</div>
+      </div>
+      <h4>次卡与有效期</h4>
+      <el-table :data="profile.cards || []" size="small" empty-text="暂无卡包">
+        <el-table-column prop="name" label="卡名" min-width="120" />
+        <el-table-column label="剩余" width="90">
+          <template #default="{ row }">{{ row.remain ?? 0 }}/{{ row.total ?? 0 }}</template>
+        </el-table-column>
+        <el-table-column label="到期" min-width="120">
+          <template #default="{ row }">{{ row.expireDate || (row.validDays ? `首次到课后${row.validDays}天` : '不过期') }}</template>
+        </el-table-column>
+      </el-table>
+      <h4>上课记录</h4>
+      <el-table :data="profile.classHistory || []" size="small" max-height="360" empty-text="暂无上课记录">
+        <el-table-column prop="classDate" label="日期" width="110" />
+        <el-table-column prop="name" label="课程" min-width="120" />
+        <el-table-column prop="timeText" label="时间" width="110" />
+        <el-table-column prop="teacherName" label="老师" width="90" />
+      </el-table>
+    </div>
+  </el-drawer>
+
   <el-dialog v-model="claimVisible" title="添加学员到本校区" width="720px" class="claim-dialog">
     <el-alert
       v-if="!campusId"
@@ -318,6 +346,20 @@ const claimKeyword = ref('')
 const claimList = ref([])
 const claimLoading = ref(false)
 
+const profileVisible = ref(false)
+const profileLoading = ref(false)
+const profile = reactive({
+  firstClassDate: '',
+  classCount: 0,
+  classHistory: [],
+  cards: [],
+  user: null,
+})
+const profileTitle = computed(() => {
+  const name = profile.user?.nickname || '学员'
+  return `${name} · 个人档案`
+})
+
 const editableCampuses = computed(() => allowedCampuses(auth.profile))
 
 const otherCampusLabels = computed(() => {
@@ -395,6 +437,31 @@ function onFilterChange() {
 function search() {
   page.value = 1
   return load()
+}
+
+async function openProfile(row) {
+  profileVisible.value = true
+  profileLoading.value = true
+  Object.assign(profile, {
+    firstClassDate: '',
+    classCount: 0,
+    classHistory: [],
+    cards: [],
+    user: row,
+  })
+  try {
+    const res = await http.get(`/admin/users/${row.id}/profile`)
+    const data = res.data || {}
+    Object.assign(profile, {
+      firstClassDate: data.firstClassDate || '',
+      classCount: data.classCount || 0,
+      classHistory: data.classHistory || [],
+      cards: data.cards || [],
+      user: data.user || row,
+    })
+  } finally {
+    profileLoading.value = false
+  }
 }
 
 function edit(row) {
@@ -553,6 +620,21 @@ onMounted(async () => {
 
 .muted {
   color: #8a8a96;
+}
+
+.profile-drawer h4 {
+  margin: 20px 0 10px;
+  font-size: 15px;
+}
+
+.profile-summary {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  background: #f7f7f9;
+  border-radius: 8px;
+  color: #4a4a55;
+  font-size: 14px;
 }
 
 .tag-list {

@@ -5,6 +5,7 @@ import com.forget.academy.common.BizException;
 import com.forget.academy.common.MemberTags;
 import com.forget.academy.common.PageResult;
 import com.forget.academy.entity.AppUser;
+import com.forget.academy.entity.Booking;
 import com.forget.academy.entity.OpportunityApply;
 import com.forget.academy.entity.UserCard;
 import com.forget.academy.entity.UserCourse;
@@ -12,8 +13,10 @@ import com.forget.academy.entity.UserMemberTag;
 import com.forget.academy.entity.UserCampus;
 import com.forget.academy.entity.EmployeeProfile;
 import com.forget.academy.repo.AppUserRepo;
+import com.forget.academy.repo.BookingRepo;
 import com.forget.academy.repo.EmployeeProfileRepo;
 import com.forget.academy.repo.OpportunityApplyRepo;
+import com.forget.academy.repo.PracticeRecordRepo;
 import com.forget.academy.repo.UserCardRepo;
 import com.forget.academy.repo.UserCampusRepo;
 import com.forget.academy.repo.UserCourseRepo;
@@ -41,6 +44,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -65,6 +69,8 @@ public class AdminMemberController {
     private final CampusCatalogService campusCatalogService;
     private final DanceCategoryService danceCategoryService;
     private final UserCardService userCardService;
+    private final BookingRepo bookingRepo;
+    private final PracticeRecordRepo practiceRecordRepo;
 
     @GetMapping("/member-tag-options")
     public ApiResponse<?> memberTagOptions() {
@@ -138,6 +144,68 @@ public class AdminMemberController {
         AppUser user = appUserRepo.findById(id).orElseThrow(() -> new BizException("学员不存在"));
         adminAccessService.assertCanManageUser(user);
         return ApiResponse.ok(user);
+    }
+
+    @GetMapping("/users/{id}/profile")
+    public ApiResponse<?> userProfile(@PathVariable Long id) {
+        AppUser user = appUserRepo.findById(id).orElseThrow(() -> new BizException("学员不存在"));
+        adminAccessService.assertCanManageUser(user);
+
+        List<Booking> allBookings = bookingRepo.findByUserIdOrderByClassDateDescIdDesc(id);
+        List<Booking> doneBookings = allBookings.stream()
+                .filter(b -> "已完成".equals(b.getStatus()))
+                .toList();
+        String firstClassDate = doneBookings.stream()
+                .map(Booking::getClassDate)
+                .filter(d -> d != null && !d.isBlank() && !"default".equals(d))
+                .min(String::compareTo)
+                .orElse(null);
+        if (firstClassDate == null) {
+            firstClassDate = practiceRecordRepo.findByUserIdOrderByCheckedAtDesc(id).stream()
+                    .map(com.forget.academy.entity.PracticeRecord::getClassDate)
+                    .filter(d -> d != null && !d.isBlank())
+                    .min(String::compareTo)
+                    .orElse(null);
+        }
+
+        List<Map<String, Object>> classHistory = doneBookings.stream().map(b -> {
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("id", b.getId());
+            row.put("name", b.getName());
+            row.put("classDate", b.getClassDate());
+            row.put("timeText", b.getTimeText());
+            row.put("teacherName", b.getTeacherName());
+            row.put("room", b.getRoom());
+            row.put("status", b.getStatus());
+            row.put("cardConsumed", Boolean.TRUE.equals(b.getCardConsumed()));
+            return row;
+        }).toList();
+
+        List<UserCard> cards = userCardRepo.findByUserIdOrderByIdDesc(id);
+        fillCardUsers(cards);
+        List<Map<String, Object>> cardRows = cards.stream().map(c -> {
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("id", c.getId());
+            row.put("name", c.getName());
+            row.put("type", c.getType());
+            row.put("remain", c.getRemain());
+            row.put("total", c.getTotal());
+            row.put("sectionId", c.getSectionId());
+            row.put("sectionName", c.getSectionName());
+            row.put("expireMode", c.getExpireMode());
+            row.put("validDays", c.getValidDays());
+            row.put("activatedAt", c.getActivatedAt());
+            row.put("expireDate", c.getExpireDate());
+            return row;
+        }).toList();
+
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("user", user);
+        data.put("firstClassDate", firstClassDate);
+        data.put("classCount", classHistory.size());
+        data.put("classHistory", classHistory);
+        data.put("cards", cardRows);
+        return ApiResponse.ok(data);
     }
 
     @PutMapping("/users/{id}")
@@ -289,6 +357,7 @@ public class AdminMemberController {
                                 @RequestParam(required = false) Integer size,
                                 @RequestParam(defaultValue = "") String keyword,
                                 @RequestParam(defaultValue = "") String type,
+                                @RequestParam(required = false) Integer expiringWithinDays,
                                 @RequestParam(required = false) String campusId) {
         adminAccessService.requireSuperAdmin();
         if (page == null) {
@@ -296,6 +365,9 @@ public class AdminMemberController {
                     ? userCardRepo.findByUserIdOrderByIdDesc(userId)
                     : userCardRepo.findAll();
             fillCardUsers(cards);
+            if (expiringWithinDays != null && expiringWithinDays > 0) {
+                cards = filterExpiringCards(cards, expiringWithinDays);
+            }
             return ApiResponse.ok(cards);
         }
         int pageSize = size == null ? 20 : Math.min(Math.max(size, 1), 100);
@@ -304,11 +376,35 @@ public class AdminMemberController {
         String cardType = type == null ? "" : type.trim();
         boolean campusFiltered = campusId != null && !campusId.isBlank();
         var campuses = adminAccessService.resolveCampusScope(campusId);
+        if (expiringWithinDays != null && expiringWithinDays > 0) {
+            // 即将过期：先拉较大范围再内存过滤分页
+            var allPageable = PageRequest.of(0, 2000, Sort.by(Sort.Direction.ASC, "expireDate"));
+            var raw = campusFiltered
+                    ? userCardRepo.searchInCampuses(query, userId, cardType, campuses, allPageable)
+                    : userCardRepo.search(query, userId, cardType, allPageable);
+            List<UserCard> filtered = filterExpiringCards(raw.getContent(), expiringWithinDays);
+            fillCardUsers(filtered);
+            int from = Math.max(page - 1, 0) * pageSize;
+            int to = Math.min(from + pageSize, filtered.size());
+            List<UserCard> slice = from >= filtered.size() ? List.of() : filtered.subList(from, to);
+            return ApiResponse.ok(new PageResult<>(slice, filtered.size(), page, pageSize));
+        }
         var result = campusFiltered
                 ? userCardRepo.searchInCampuses(query, userId, cardType, campuses, pageable)
                 : userCardRepo.search(query, userId, cardType, pageable);
         fillCardUsers(result.getContent());
         return ApiResponse.ok(PageResult.of(result));
+    }
+
+    private List<UserCard> filterExpiringCards(List<UserCard> cards, int withinDays) {
+        java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Shanghai"));
+        java.time.LocalDate end = today.plusDays(withinDays);
+        return cards.stream()
+                .filter(c -> c.getExpireDate() != null)
+                .filter(c -> !c.getExpireDate().isBefore(today) && !c.getExpireDate().isAfter(end))
+                .filter(c -> c.getRemain() == null || c.getRemain() > 0)
+                .sorted((a, b) -> a.getExpireDate().compareTo(b.getExpireDate()))
+                .toList();
     }
 
     @PostMapping("/cards")

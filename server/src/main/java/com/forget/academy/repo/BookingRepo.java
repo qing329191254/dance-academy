@@ -67,6 +67,7 @@ public interface BookingRepo extends JpaRepository<Booking, Long> {
                 or lower(coalesce(b.nickname, '')) like lower(concat('%', :keyword, '%'))
                 or lower(coalesce(b.teacherName, '')) like lower(concat('%', :keyword, '%')))
               and (:status = '' or b.status = :status)
+              and (:cancelSource = '' or coalesce(b.cancelSource, '') = :cancelSource)
               and (:scheduleId is null or b.scheduleId = :scheduleId)
               and (:classDate = '' or b.classDate = :classDate)
               and s.campusId in :campusIds
@@ -74,10 +75,26 @@ public interface BookingRepo extends JpaRepository<Booking, Long> {
             """)
     Page<Booking> searchInCampuses(@Param("keyword") String keyword,
                                    @Param("status") String status,
+                                   @Param("cancelSource") String cancelSource,
                                    @Param("scheduleId") Long scheduleId,
                                    @Param("classDate") String classDate,
                                    @Param("campusIds") List<String> campusIds,
                                    Pageable pageable);
+
+    @Query("""
+            select b from Booking b join Schedule s on b.scheduleId = s.id
+            where b.status in :statuses
+              and b.classDate >= :fromDate
+              and (:toDate = '' or b.classDate <= :toDate)
+              and s.campusId in :campusIds
+            order by b.classDate asc, b.timeText asc, b.id asc
+            """)
+    List<Booking> findUpcomingInCampuses(@Param("statuses") Collection<String> statuses,
+                                         @Param("fromDate") String fromDate,
+                                         @Param("toDate") String toDate,
+                                         @Param("campusIds") List<String> campusIds);
+
+    List<Booking> findByUserIdOrderByClassDateDescIdDesc(Long userId);
 
     @Query("""
             select b from Booking b

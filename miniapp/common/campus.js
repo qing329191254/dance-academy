@@ -46,6 +46,34 @@ export function selectCampus(id) {
   } catch (e) {}
 }
 
+/** 从分享/启动参数切换校区；校区列表未加载完时先记下待应用 id */
+let pendingShareCampusId = ''
+
+export function applyCampusFromQuery(query) {
+  const raw = query?.campusId ?? query?.campus_id ?? ''
+  const id = String(raw || '').trim()
+  if (!id) return false
+  if (CAMPUSES.value.some((item) => item.id === id)) {
+    selectCampus(id)
+    pendingShareCampusId = ''
+    return true
+  }
+  pendingShareCampusId = id
+  selectedCampusId.value = id
+  try {
+    uni.setStorageSync(STORAGE_KEY, id)
+  } catch (e) {}
+  return true
+}
+
+function flushPendingShareCampus() {
+  if (!pendingShareCampusId) return
+  if (CAMPUSES.value.some((item) => item.id === pendingShareCampusId)) {
+    selectCampus(pendingShareCampusId)
+    pendingShareCampusId = ''
+  }
+}
+
 function applyCampusList(list) {
   if (!Array.isArray(list) || !list.length) return
   CAMPUSES.value = list.map((item) => ({
@@ -53,6 +81,7 @@ function applyCampusList(list) {
     name: item.name,
     shortName: shortNameOf(item.name),
   }))
+  flushPendingShareCampus()
   if (!CAMPUSES.value.some((item) => item.id === selectedCampusId.value)) {
     selectCampus(CAMPUSES.value[0].id)
   }

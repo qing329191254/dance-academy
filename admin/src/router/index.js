@@ -17,6 +17,7 @@ const routes = [
       { path: '/courses', component: () => import('../views/Courses.vue'), meta: { title: '课程产品' } },
       { path: '/schedules', component: () => import('../views/Schedules.vue'), meta: { title: '课表管理' } },
       { path: '/bookings', component: () => import('../views/Bookings.vue'), meta: { title: '预约管理' } },
+      { path: '/upcoming-students', component: () => import('../views/UpcomingStudents.vue'), meta: { title: '上课学员名单' } },
       { path: '/users', component: () => import('../views/Users.vue'), meta: { title: '小程序用户' } },
       { path: '/cards', component: () => import('../views/Cards.vue'), meta: { title: '卡包发放', superOnly: true } },
       { path: '/opportunities', component: () => import('../views/Opportunities.vue'), meta: { title: '成长机会' } },

@@ -24,6 +24,7 @@
       <el-menu-item index="/courses">课程产品</el-menu-item>
       <el-menu-item index="/schedules">课表管理</el-menu-item>
       <el-menu-item index="/bookings">预约管理</el-menu-item>
+      <el-menu-item index="/upcoming-students">上课学员名单</el-menu-item>
       <el-menu-item index="/class-archives">课堂档案</el-menu-item>
     </el-sub-menu>
 
@@ -78,6 +79,7 @@ const defaultOpeneds = computed(() => {
     path.startsWith('/courses') ||
     path.startsWith('/schedules') ||
     path.startsWith('/bookings') ||
+    path.startsWith('/upcoming-students') ||
     path.startsWith('/class-archives')
   ) {
     return ['group-course']

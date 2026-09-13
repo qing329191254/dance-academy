@@ -28,6 +28,12 @@ public class Booking extends BaseEntity {
     private String room;
     /** 待上课 / 排队中 / 已完成 / 已取消 */
     private String status;
+    /**
+     * 取消来源（仅已取消有意义）：
+     * user=学员自主 / admin=后台取消 / system_low_enrollment=人数不足系统取消
+     */
+    @Column(length = 40)
+    private String cancelSource;
     /** 团课开课前提醒是否已发送（或已跳过） */
     private Boolean remindSent = false;
     /** 预约锁定的卡 ID，到课成功后再扣次 */

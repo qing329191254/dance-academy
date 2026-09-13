@@ -2,7 +2,7 @@
 import { applyPageBackground, SPLASH_BG } from '@/common/pageTheme.js'
 import { preloadTabPagesAsync } from '@/common/preloadTabs.js'
 import { USE_CLOUD } from '@/common/config.js'
-import { loadCampuses, selectedCampusId } from '@/common/campus.js'
+import { applyCampusFromQuery, loadCampuses, selectedCampusId } from '@/common/campus.js'
 import { getBrand } from '@/common/api.js'
 
 const HOME_TAB = '/pages/home/home'
@@ -26,6 +26,7 @@ export default {
       })
     }
     // #endif
+    applyCampusFromQuery(options?.query || {})
     loadCampuses()
     preloadTabPagesAsync()
     getBrand(selectedCampusId.value).catch(() => {})
@@ -35,6 +36,9 @@ export default {
       return
     }
     applyPageBackground()
+  },
+  onShow(options) {
+    applyCampusFromQuery(options?.query || {})
   },
   onPageNotFound(res) {
     if (res?.path?.includes('splash/splash')) {
