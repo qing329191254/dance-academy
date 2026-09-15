@@ -1,4 +1,5 @@
 import { selectedCampusId } from './campus.js'
+import { sharePathWithCampus } from './campusQuery.js'
 
 const STORAGE_KEY = 'forget_share_config'
 const DEFAULT_TITLE = '高校FOR-GET舞室'
@@ -44,10 +45,9 @@ function shareCampusQuery() {
 }
 
 export function getShareMessage() {
-  const query = shareCampusQuery()
   const payload = {
     title: cached.title || DEFAULT_TITLE,
-    path: query ? `${SHARE_PATH}?${query}` : SHARE_PATH,
+    path: sharePathWithCampus(selectedCampusId.value, SHARE_PATH),
   }
   if (cached.imageUrl) payload.imageUrl = cached.imageUrl
   return payload

@@ -131,7 +131,7 @@ import { ensureLogin } from '@/common/auth.js'
 import { showSuccess, showToast, showError } from '@/common/toast.js'
 import { getStatusBarHeight } from '@/common/statusBar.js'
 import { BOOKING_TMPL_ID } from '@/common/config.js'
-import { selectedCampusId, currentCampus } from '@/common/campus.js'
+import { applyCampusFromQuery, selectedCampusId, currentCampus } from '@/common/campus.js'
 
 const statusBarHeight = getStatusBarHeight()
 
@@ -182,7 +182,8 @@ function getTeacherAvatar(name) {
   return teacherAvatars.value[name] || ''
 }
 
-onLoad(async () => {
+onLoad(async (query) => {
+  applyCampusFromQuery(query || {})
   weekDates.value = buildWeekDates()
   try {
     const teachers = await getTeachers()
