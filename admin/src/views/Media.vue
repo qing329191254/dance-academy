@@ -101,7 +101,7 @@
 
     <el-dialog v-model="visible" :title="dialogTitle" width="520px">
       <el-form :model="form" label-width="90px">
-        <el-form-item label="图片"><ImageField v-model="form.imageUrl" /></el-form-item>
+        <el-form-item label="图片"><ImageField v-model="form.imageUrl" purpose="hero" /></el-form-item>
         <el-form-item label="排序"><el-input-number v-model="form.sortOrder" :min="0" /></el-form-item>
         <el-form-item v-if="kind === 'banner'" label="启用">
           <el-switch v-model="form.enabled" />

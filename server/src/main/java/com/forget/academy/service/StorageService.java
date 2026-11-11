@@ -79,6 +79,10 @@ public class StorageService {
         if (file == null || file.isEmpty()) {
             throw new BizException("请选择文件");
         }
+        // Admin image uploads: hard cap after frontend compression (hero ≤1MB target).
+        if (file.getSize() > 2L * 1024 * 1024) {
+            throw new BizException("图片过大，请压缩后上传（需 2MB 以内）");
+        }
         String ext = extension(file.getOriginalFilename());
         if (ext.isEmpty()) {
             ext = ".jpg";

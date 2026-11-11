@@ -133,11 +133,11 @@
           </el-select>
         </el-form-item>
         <el-form-item v-if="!form.actionTab" label="客服二维码">
-          <ImageField v-model="form.customerServiceQr" />
+          <ImageField v-model="form.customerServiceQr" purpose="share" />
           <div class="form-tip">无课程预约入口时，小程序详情页会直接展示此二维码。</div>
         </el-form-item>
       </template>
-      <el-form-item label="封面"><ImageField v-model="form.cover" /></el-form-item>
+      <el-form-item label="封面"><ImageField v-model="form.cover" purpose="default" /></el-form-item>
       <el-form-item label="排序"><el-input-number v-model="form.sortOrder" :min="0" /></el-form-item>
       <el-form-item label="启用"><el-switch v-model="form.enabled" /></el-form-item>
     </el-form>

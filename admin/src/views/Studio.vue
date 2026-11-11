@@ -41,16 +41,16 @@
           <el-input v-model="form.legalUpdateDate" maxlength="32" placeholder="如 2026年8月31日" />
         </el-form-item>
         <el-form-item label="Logo">
-          <ImageField v-model="form.logo" auto-persist @uploaded="onLogoUploaded" />
+          <ImageField v-model="form.logo" purpose="avatar" auto-persist @uploaded="onLogoUploaded" />
         </el-form-item>
         <el-form-item label="开屏图">
-          <ImageField v-model="form.splashImage" auto-persist @uploaded="onSplashUploaded" />
+          <ImageField v-model="form.splashImage" purpose="hero" auto-persist @uploaded="onSplashUploaded" />
         </el-form-item>
         <el-form-item label="分享标题">
           <el-input v-model="form.shareTitle" maxlength="32" show-word-limit placeholder="转发好友、朋友圈共用，如：高校FOR-GET舞室" />
         </el-form-item>
         <el-form-item label="分享封面">
-          <ImageField v-model="form.shareImage" auto-persist @uploaded="onShareImageUploaded" />
+          <ImageField v-model="form.shareImage" purpose="share" auto-persist @uploaded="onShareImageUploaded" />
           <div class="form-tip">建议 5:4（如 500×400），好友转发与朋友圈共用。不上传则使用微信默认截图。</div>
         </el-form-item>
         <el-form-item label="品牌介绍"><el-input v-model="form.intro" type="textarea" :rows="4" /></el-form-item>

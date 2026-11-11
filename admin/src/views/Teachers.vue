@@ -96,7 +96,7 @@
       <el-form-item label="姓名"><el-input v-model="form.name" /></el-form-item>
       <el-form-item label="风格"><el-input v-model="form.style" /></el-form-item>
       <el-form-item label="介绍"><el-input v-model="form.intro" type="textarea" :rows="3" /></el-form-item>
-      <el-form-item label="头像"><ImageField v-model="form.avatar" /></el-form-item>
+      <el-form-item label="头像"><ImageField v-model="form.avatar" purpose="avatar" /></el-form-item>
       <el-form-item label="排序"><el-input-number v-model="form.sortOrder" :min="0" /></el-form-item>
       <el-form-item label="启用"><el-switch v-model="form.enabled" /></el-form-item>
       <el-form-item v-if="form.id" label="简历">

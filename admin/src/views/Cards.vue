@@ -126,7 +126,7 @@
         <el-date-picker v-model="form.expireDate" value-format="YYYY-MM-DD" clearable />
         <div class="form-tip">一般由首次到课自动填写，也可手动改</div>
       </el-form-item>
-      <el-form-item label="封面"><ImageField v-model="form.cover" /></el-form-item>
+      <el-form-item label="封面"><ImageField v-model="form.cover" purpose="default" /></el-form-item>
     </el-form>
     <template #footer>
       <el-button @click="visible = false">取消</el-button>
